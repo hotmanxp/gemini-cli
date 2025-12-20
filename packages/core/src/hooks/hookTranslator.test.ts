@@ -55,7 +55,7 @@ describe('HookTranslator', () => {
         messages: [
           {
             role: 'user',
-            content: 'Hello world',
+            content: [{ type: 'text', text: 'Hello world' }],
           },
         ],
         config: {
@@ -102,7 +102,7 @@ describe('HookTranslator', () => {
         messages: [
           {
             role: 'user',
-            content: 'Hello world',
+            content: [{ type: 'text', text: 'Hello world' }],
           },
         ],
         config: {

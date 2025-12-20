@@ -533,7 +533,7 @@ describe('HookEventHandler', () => {
             messages: expect.arrayContaining([
               expect.objectContaining({
                 role: 'user',
-                content: 'Hello',
+                content: [{ type: 'text', text: 'Hello' }],
               }),
             ]),
           }),
