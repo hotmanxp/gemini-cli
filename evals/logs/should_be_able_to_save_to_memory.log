@@ -2,9 +2,9 @@
   {
     "toolRequest": {
       "name": "save_memory",
-      "args": "{\n  \"fact\": \"My favorite color is blue.\"\n}",
+      "args": "{\n  \"fact\": \"My favorite color is blue\"\n}",
       "success": true,
-      "duration_ms": 4
+      "duration_ms": 2
     }
   }
 ]
