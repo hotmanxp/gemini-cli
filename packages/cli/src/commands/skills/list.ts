@@ -11,7 +11,7 @@ import { loadCliConfig, type CliArgs } from '../../config/config.js';
 import { exitCli } from '../utils.js';
 import chalk from 'chalk';
 
-export async function handleList() {
+export async function handleList(args: { all?: boolean }) {
   const workspaceDir = process.cwd();
   const settings = loadSettings(workspaceDir);
 
@@ -28,7 +28,9 @@ export async function handleList() {
   await config.initialize();
 
   const skillManager = config.getSkillManager();
-  const skills = skillManager.getAllSkills();
+  const skills = args.all
+    ? skillManager.getAllSkills()
+    : skillManager.getAllSkills().filter((s) => !s.isBuiltin);
 
   if (skills.length === 0) {
     debugLogger.log('No skills discovered.');
@@ -43,7 +45,9 @@ export async function handleList() {
       ? chalk.red('[Disabled]')
       : chalk.green('[Enabled]');
 
-    debugLogger.log(`${chalk.bold(skill.name)} ${status}`);
+    const builtinSuffix = skill.isBuiltin ? chalk.blue(' [Built-in]') : '';
+
+    debugLogger.log(`${chalk.bold(skill.name)}${builtinSuffix} ${status}`);
     debugLogger.log(`  Description: ${skill.description}`);
     debugLogger.log(`  Location:    ${skill.location}`);
     debugLogger.log('');
@@ -53,9 +57,14 @@ export async function handleList() {
 export const listCommand: CommandModule = {
   command: 'list',
   describe: 'Lists discovered agent skills.',
-  builder: (yargs) => yargs,
-  handler: async () => {
-    await handleList();
+  builder: (yargs) =>
+    yargs.option('all', {
+      type: 'boolean',
+      description: 'Show all skills, including built-in ones.',
+      default: false,
+    }),
+  handler: async (argv) => {
+    await handleList({ all: argv['all'] as boolean });
     await exitCli();
   },
 };

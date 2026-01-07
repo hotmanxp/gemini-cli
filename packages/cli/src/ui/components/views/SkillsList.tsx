@@ -36,6 +36,7 @@ export const SkillsList: React.FC<SkillsListProps> = ({
         >
           {skill.name}
         </Text>
+        {skill.isBuiltin && <Text color={theme.text.link}> [Built-in]</Text>}
         {showDescriptions && skill.description && (
           <Box marginLeft={2}>
             <Text
