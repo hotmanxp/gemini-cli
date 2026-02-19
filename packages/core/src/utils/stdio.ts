@@ -37,13 +37,13 @@ export function patchStdio(): () => void {
   const previousStdoutWrite = process.stdout.write;
   const previousStderrWrite = process.stderr.write;
 
-  process.stdout.write = (
+  process.stdout.write = function(
     chunk: Uint8Array | string,
     encodingOrCb?:
       | BufferEncoding
       | ((err?: NodeJS.ErrnoException | null) => void),
     cb?: (err?: NodeJS.ErrnoException | null) => void,
-  ) => {
+  ): boolean {
     const encoding =
       typeof encodingOrCb === 'string' ? encodingOrCb : undefined;
     coreEvents.emitOutput(false, chunk, encoding);
@@ -52,15 +52,15 @@ export function patchStdio(): () => void {
       callback();
     }
     return true;
-  };
+  } as typeof process.stdout.write;
 
-  process.stderr.write = (
+  process.stderr.write = function(
     chunk: Uint8Array | string,
     encodingOrCb?:
       | BufferEncoding
       | ((err?: NodeJS.ErrnoException | null) => void),
     cb?: (err?: NodeJS.ErrnoException | null) => void,
-  ) => {
+  ): boolean {
     const encoding =
       typeof encodingOrCb === 'string' ? encodingOrCb : undefined;
     coreEvents.emitOutput(true, chunk, encoding);
@@ -69,7 +69,7 @@ export function patchStdio(): () => void {
       callback();
     }
     return true;
-  };
+  } as typeof process.stderr.write;
 
   return () => {
     process.stdout.write = previousStdoutWrite;

@@ -67,6 +67,11 @@ export function AuthDialog({
           ]
         : []),
     {
+      label: 'Use Qwen OAuth (Read from ~/.qwen/oauth_creds.json)',
+      value: AuthType.USE_QWEN,
+      key: AuthType.USE_QWEN,
+    },
+    {
       label: 'Use Gemini API Key',
       value: AuthType.USE_GEMINI,
       key: AuthType.USE_GEMINI,

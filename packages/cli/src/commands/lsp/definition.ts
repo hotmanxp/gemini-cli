@@ -1,0 +1,120 @@
+/**
+ * @license
+ * Copyright 2025 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import type { CommandModule, Argv } from 'yargs';
+import { LspService } from '@google/gemini-cli-core';
+import * as path from 'node:path';
+
+export const definitionCommand: CommandModule = {
+  command: 'definition <file>',
+  describe: 'Go to definition for a symbol in a file',
+  aliases: ['def', 'goto'],
+  builder: (yargs: Argv) => {
+    return yargs
+      .positional('file', {
+        desc: 'File path',
+        type: 'string',
+        demandOption: true,
+      })
+      .option('line', {
+        alias: 'l',
+        desc: 'Line number (0-based)',
+        type: 'number',
+        default: 0,
+      })
+      .option('column', {
+        alias: 'c',
+        desc: 'Column number (0-based)',
+        type: 'number',
+        default: 0,
+      })
+      .option('workspace', {
+        alias: 'w',
+        desc: 'Workspace root directory',
+        type: 'string',
+        default: process.cwd(),
+      });
+  },
+  handler: async (argv) => {
+    const file = argv['file'] as string;
+    const line = argv['line'] as number;
+    const column = argv['column'] as number;
+    const workspace = argv['workspace'] as string;
+
+    const lspService = new LspService();
+    
+    try {
+      // Auto-start language server based on file extension
+      const started = await lspService.autoStartLanguage(file, workspace);
+      if (!started) {
+        console.log(`No LSP server configured for this file type`);
+        return;
+      }
+
+      // Read file content
+      const fs = await import('fs/promises');
+      const content = await fs.readFile(file, 'utf-8');
+      const uri = `file://${file}`;
+      
+      // Determine language ID from file extension
+      const ext = file.split('.').pop()?.toLowerCase() || '';
+      const languageId = getLanguageIdFromExtension(ext);
+      
+      // Open document
+      await lspService.openDocument(uri, languageId, content);
+      
+      // Get definitions
+      const definitions = await lspService.goToDefinition(uri, line, column);
+      
+      if (!definitions || definitions.length === 0) {
+        console.log('No definitions found');
+        return;
+      }
+
+      console.log(`Definitions at line ${line}, column ${column}:`);
+      console.log('─'.repeat(50));
+      
+      const items = Array.isArray(definitions) ? definitions : [definitions];
+      for (const def of items as any[]) {
+        const targetUri = (def as any).uri || (def as any).targetUri;
+        const range = (def as any).range || (def as any).targetRange;
+        const startLine = range?.start?.line ?? range?.start?.line ?? 'unknown';
+        const startChar = range?.start?.character ?? range?.start?.character ?? 'unknown';
+        
+        // Convert file:// URI to path
+        const targetPath = targetUri?.replace('file://', '') || 'unknown';
+        const relativePath = path.relative(workspace, targetPath);
+        
+        console.log(`  📍 ${relativePath || targetPath}`);
+        console.log(`     Line ${startLine}, Column ${startChar}`);
+      }
+      
+      // Close document
+      await lspService.closeDocument(uri);
+    } catch (error) {
+      console.error('Failed to get definitions:', error);
+      process.exit(1);
+    }
+  },
+};
+
+function getLanguageIdFromExtension(ext: string): string {
+  const map: Record<string, string> = {
+    'ts': 'typescript',
+    'tsx': 'typescript',
+    'js': 'javascript',
+    'jsx': 'javascript',
+    'py': 'python',
+    'java': 'java',
+    'go': 'go',
+    'rs': 'rust',
+    'c': 'c',
+    'cpp': 'cpp',
+    'h': 'c',
+    'hpp': 'cpp',
+  };
+  return map[ext] || 'plaintext';
+}

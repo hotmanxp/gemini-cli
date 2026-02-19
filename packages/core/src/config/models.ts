@@ -68,12 +68,25 @@ export function resolveModel(requestedModel: string): string {
  *
  * @param requestedModel The current requested model (e.g. auto-gemini-2.5).
  * @param modelAlias The alias selected by the classifier ('flash' or 'pro').
+ * @param authType Optional authType to determine which model family to use.
  * @returns The resolved concrete model name.
  */
 export function resolveClassifierModel(
   requestedModel: string,
   modelAlias: string,
+  authType?: string,
 ): string {
+  // For Qwen OAuth, use Qwen models
+  // Check both explicit authType and environment variable
+  const isQwenOAuth = authType === 'qwen-oauth' || process.env['USE_QWEN_OAUTH'] === 'true';
+  
+  if (isQwenOAuth) {
+    // Qwen uses 'coder-model' as the default/pro model
+    // For now, we use the same model for both flash and pro
+    // In the future, we could have different Qwen models for different complexities
+    return 'coder-model';
+  }
+  
   if (modelAlias === GEMINI_MODEL_ALIAS_FLASH) {
     if (
       requestedModel === DEFAULT_GEMINI_MODEL_AUTO ||

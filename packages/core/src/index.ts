@@ -43,6 +43,7 @@ export * from './scheduler/scheduler.js';
 export * from './scheduler/types.js';
 export * from './scheduler/tool-executor.js';
 export * from './core/recordingContentGenerator.js';
+export * from './core/qwenContentGenerator.js';
 
 export * from './fallback/types.js';
 
@@ -198,3 +199,33 @@ export * from './utils/terminal.js';
 
 // Export types from @google/genai
 export type { Content, Part, FunctionCall } from '@google/genai';
+// Export LSP (Language Server Protocol)
+export * from './services/lsp/index.js';
+
+// Export Qwen OAuth and Content Generator (explicit exports to avoid conflicts)
+export {
+  getQwenOAuthClient,
+  qwenOAuth2Events,
+  QwenOAuth2Event,
+  type IQwenOAuth2Client,
+  type AuthResult,
+  generateCodeVerifier,
+  generateCodeChallenge,
+  generatePKCEPair,
+} from './qwen/qwenOAuth2.js';
+export {
+  SharedTokenManager,
+  sharedTokenManager,
+  TokenManagerError,
+  TokenError,
+  getQwenCredentialsFilePath,
+  readQwenCredentials,
+  writeQwenCredentials,
+  clearQwenCredentials,
+  areCredentialsExpired,
+  type QwenCredentials,
+} from './qwen/sharedTokenManager.js';
+export {
+  QwenContentGenerator,
+  createQwenContentGenerator,
+} from './core/qwenContentGenerator.js';

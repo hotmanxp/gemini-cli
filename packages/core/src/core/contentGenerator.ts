@@ -57,17 +57,22 @@ export enum AuthType {
   USE_VERTEX_AI = 'vertex-ai',
   LEGACY_CLOUD_SHELL = 'cloud-shell',
   COMPUTE_ADC = 'compute-default-credentials',
+  USE_QWEN = 'qwen-oauth',
 }
 
 /**
  * Detects the best authentication type based on environment variables.
  *
  * Checks in order:
- * 1. GOOGLE_GENAI_USE_GCA=true -> LOGIN_WITH_GOOGLE
- * 2. GOOGLE_GENAI_USE_VERTEXAI=true -> USE_VERTEX_AI
- * 3. GEMINI_API_KEY -> USE_GEMINI
+ * 1. USE_QWEN_OAUTH=true -> USE_QWEN (Qwen OAuth)
+ * 2. GOOGLE_GENAI_USE_GCA=true -> LOGIN_WITH_GOOGLE
+ * 3. GOOGLE_GENAI_USE_VERTEXAI=true -> USE_VERTEX_AI
+ * 4. GEMINI_API_KEY -> USE_GEMINI
  */
 export function getAuthTypeFromEnv(): AuthType | undefined {
+  if (process.env['USE_QWEN_OAUTH'] === 'true') {
+    return AuthType.USE_QWEN;
+  }
   if (process.env['GOOGLE_GENAI_USE_GCA'] === 'true') {
     return AuthType.LOGIN_WITH_GOOGLE;
   }
@@ -207,6 +212,14 @@ export async function createContentGenerator(
       });
       return new LoggingContentGenerator(googleGenAI.models, gcConfig);
     }
+
+    // Qwen OAuth authentication
+    if (config.authType === AuthType.USE_QWEN) {
+      const { createQwenContentGenerator } = await import('./qwenContentGenerator.js');
+      const model = gcConfig.getModel() || 'qwen-plus';
+      return await createQwenContentGenerator(gcConfig, model);
+    }
+
     throw new Error(
       `Error creating contentGenerator: Unsupported authType: ${config.authType}`,
     );

@@ -18,6 +18,7 @@
   },
   "scripts": {
     "start": "cross-env NODE_ENV=development node scripts/start.js",
+    "start:qwen": "cross-env NODE_ENV=development USE_QWEN_OAUTH=true node scripts/start.js",
     "start:a2a-server": "CODER_AGENT_PORT=41242 npm run start --workspace @google/gemini-cli-a2a-server",
     "debug": "cross-env DEBUG=1 node --inspect-brk scripts/start.js",
     "deflake": "node scripts/deflake.js",
@@ -128,6 +129,7 @@
   "dependencies": {
     "ink": "npm:@jrichman/ink@6.4.10",
     "latest-version": "^9.0.0",
+    "openai": "^6.22.0",
     "proper-lockfile": "^4.1.2",
     "simple-git": "^3.28.0"
   },

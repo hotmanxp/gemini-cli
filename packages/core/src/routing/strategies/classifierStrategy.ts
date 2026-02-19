@@ -12,7 +12,7 @@ import type {
   RoutingDecision,
   RoutingStrategy,
 } from '../routingStrategy.js';
-import { resolveClassifierModel, isGemini3Model } from '../../config/models.js';
+import { isGemini3Model } from '../../config/models.js';
 import { createUserContent, Type } from '@google/genai';
 import type { Config } from '../../config/config.js';
 import {
@@ -169,10 +169,9 @@ export class ClassifierStrategy implements RoutingStrategy {
 
       const reasoning = routerResponse.reasoning;
       const latencyMs = Date.now() - startTime;
-      const selectedModel = resolveClassifierModel(
-        model,
-        routerResponse.model_choice,
-      );
+      
+      // TEMPORARY: Hardcode to coder-model for Qwen OAuth testing
+      const selectedModel = 'coder-model';
 
       return {
         model: selectedModel,

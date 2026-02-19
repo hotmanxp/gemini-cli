@@ -10,6 +10,27 @@ interface GaxiosError {
   };
 }
 
+/**
+ * Checks if an error is an AbortError (user-initiated cancellation)
+ * @param error The error to check
+ * @returns true if this is an AbortError
+ */
+export function isAbortError(error: unknown): boolean {
+  if (error instanceof Error && error.name === 'AbortError') {
+    return true;
+  }
+  // Check for DOMException AbortError
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'name' in error &&
+    (error as { name: unknown }).name === 'AbortError'
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export function isNodeError(error: unknown): error is NodeJS.ErrnoException {
   return error instanceof Error && 'code' in error;
 }

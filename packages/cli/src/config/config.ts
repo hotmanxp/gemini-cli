@@ -11,6 +11,8 @@ import { mcpCommand } from '../commands/mcp.js';
 import { extensionsCommand } from '../commands/extensions.js';
 import { skillsCommand } from '../commands/skills.js';
 import { hooksCommand } from '../commands/hooks.js';
+import { lspCommand } from '../commands/lsp.js';
+import { qwenAuthCommand } from '../commands/qwen/auth.js';
 import {
   setGeminiMdFilename as setServerGeminiMdFilename,
   getCurrentGeminiMdFilename,
@@ -289,6 +291,8 @@ export async function parseArguments(
     )
     // Register MCP subcommands
     .command(mcpCommand)
+    // Register LSP subcommands
+    .command(lspCommand)
     // Ensure validation flows through .fail() for clean UX
     .fail((msg, err) => {
       if (err) throw err;
@@ -335,6 +339,9 @@ export async function parseArguments(
   if (settings.hooksConfig.enabled) {
     yargsInstance.command(hooksCommand);
   }
+
+  // Register Qwen auth command
+  yargsInstance.command(qwenAuthCommand);
 
   yargsInstance
     .version(await getVersion()) // This will enable the --version flag based on package.json
