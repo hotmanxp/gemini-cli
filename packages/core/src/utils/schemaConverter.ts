@@ -31,6 +31,7 @@ export function convertSchema(
     convertTypes(converted);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
   return converted as Record<string, unknown>;
 }
 
@@ -51,11 +52,7 @@ function convertTypes(obj: unknown): unknown {
     if (key === 'type' && typeof value === 'string') {
       // Convert to lowercase for consistency
       result[key] = value.toLowerCase();
-    } else if (
-      key === 'minimum' ||
-      key === 'maximum' ||
-      key === 'multipleOf'
-    ) {
+    } else if (key === 'minimum' || key === 'maximum' || key === 'multipleOf') {
       // Ensure numeric constraints are actual numbers, not strings
       if (typeof value === 'string' && !isNaN(Number(value))) {
         result[key] = Number(value);

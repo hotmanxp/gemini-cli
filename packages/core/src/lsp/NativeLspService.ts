@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-type-assertion */
+
 import type { Config as CoreConfig } from '../config/config.js';
 import type { FileDiscoveryService } from '../services/fileDiscoveryService.js';
 import type { WorkspaceContext } from '../utils/workspaceContext.js';
@@ -56,7 +58,7 @@ export class NativeLspService {
     workspaceContext: WorkspaceContext,
     _eventEmitter: EventEmitter,
     fileDiscoveryService: FileDiscoveryService,
-    
+
     options: NativeLspServiceOptions = {},
   ) {
     this.config = config;

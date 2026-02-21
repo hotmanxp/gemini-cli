@@ -23,6 +23,7 @@ export const stopCommand: CommandModule = {
         default: false,
       }),
   handler: async (argv) => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
     const language = argv['language'] as string | undefined;
     const stopAll = Boolean(argv['all']);
 

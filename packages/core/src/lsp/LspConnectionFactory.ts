@@ -4,12 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
+
 import * as cp from 'node:child_process';
 import * as net from 'node:net';
 import { DEFAULT_LSP_REQUEST_TIMEOUT_MS } from './constants.js';
 import type { JsonRpcMessage } from './types.js';
 import { debugLogger } from '../utils/debugLogger.js';
-
 
 interface PendingRequest {
   resolve: (value: unknown) => void;

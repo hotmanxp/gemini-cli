@@ -68,6 +68,7 @@ export const qwenAuthCommand: CommandModule = {
       );
 
       // Get OAuth client (this will trigger device flow if needed)
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
       const config = (await createMinimalConfig(model)) as unknown as Config;
       const client = await getQwenOAuthClient(config);
 

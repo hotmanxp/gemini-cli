@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-type-assertion */
+
 import type { GenerateContentParameters } from '@google/genai';
 import { debugLogger } from '../../utils/debugLogger.js';
 
@@ -76,9 +78,7 @@ export class EnhancedErrorHandler implements ErrorHandler {
       error instanceof Error
         ? error.message.toLowerCase()
         : String(error).toLowerCase();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const errorCode = (error as any)?.code;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const errorType = (error as any)?.type;
 
     // Check for common timeout indicators

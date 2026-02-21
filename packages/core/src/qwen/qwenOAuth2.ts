@@ -6,6 +6,8 @@
  * @license
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
+
 import crypto from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import type { Config } from '../config/config.js';
@@ -242,8 +244,9 @@ export class QwenOAuth2Client implements IQwenOAuth2Client {
 
     if (!response.ok) {
       const responseText = await response.text();
-      let errorData: { error?: string; error_description?: string } | null = null;
-      
+      let errorData: { error?: string; error_description?: string } | null =
+        null;
+
       try {
         errorData = JSON.parse(responseText);
       } catch {
@@ -251,7 +254,10 @@ export class QwenOAuth2Client implements IQwenOAuth2Client {
       }
 
       // Handle OAuth RFC 8628 standard responses
-      if (response.status === 400 && errorData?.error === 'authorization_pending') {
+      if (
+        response.status === 400 &&
+        errorData?.error === 'authorization_pending'
+      ) {
         return { status: 'pending' };
       }
 
@@ -289,7 +295,7 @@ export class QwenOAuth2Client implements IQwenOAuth2Client {
 
     if (!response.ok) {
       const errorData = await response.text();
-      
+
       // Handle 400 errors which indicate refresh token expiry
       if (response.status === 400) {
         await clearQwenCredentials();
@@ -297,7 +303,7 @@ export class QwenOAuth2Client implements IQwenOAuth2Client {
           `Refresh token expired. Please re-authenticate. Response: ${errorData}`,
         );
       }
-      
+
       throw new Error(
         `Token refresh failed: ${response.status} ${response.statusText}. Response: ${errorData}`,
       );
@@ -309,7 +315,8 @@ export class QwenOAuth2Client implements IQwenOAuth2Client {
     const tokens: QwenCredentials = {
       access_token: responseData.access_token,
       token_type: responseData.token_type,
-      refresh_token: responseData.refresh_token || this.credentials.refresh_token,
+      refresh_token:
+        responseData.refresh_token || this.credentials.refresh_token,
       resource_url: responseData.resource_url,
       expiry_date: Date.now() + responseData.expires_in * 1000,
     };
@@ -413,7 +420,9 @@ async function authWithQwenDeviceFlow(
 
     // Poll for token
     let pollInterval = 2000;
-    const maxAttempts = Math.ceil(deviceAuth.expires_in / (pollInterval / 1000));
+    const maxAttempts = Math.ceil(
+      deviceAuth.expires_in / (pollInterval / 1000),
+    );
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       const cancellationResult = checkCancellation();
@@ -505,7 +514,12 @@ function showAuthorizationMessage(url: string): void {
   const totalDashes = boxWidth - 2 - titleWithSpaces.length;
   const leftDashes = Math.floor(totalDashes / 2);
   const rightDashes = totalDashes - leftDashes;
-  const topBorder = '+' + '-'.repeat(leftDashes) + titleWithSpaces + '-'.repeat(rightDashes) + '+';
+  const topBorder =
+    '+' +
+    '-'.repeat(leftDashes) +
+    titleWithSpaces +
+    '-'.repeat(rightDashes) +
+    '+';
   const emptyLine = '|' + ' '.repeat(boxWidth - 2) + '|';
   const bottomBorder = '+' + '-'.repeat(boxWidth - 2) + '+';
 
@@ -520,17 +534,23 @@ function showAuthorizationMessage(url: string): void {
   process.stderr.write(emptyLine + '\n');
 
   for (const line of instructionLines) {
-    process.stderr.write('| ' + line + ' '.repeat(contentWidth - line.length) + ' |\n');
+    process.stderr.write(
+      '| ' + line + ' '.repeat(contentWidth - line.length) + ' |\n',
+    );
   }
 
   process.stderr.write(emptyLine + '\n');
 
   for (const line of urlLines) {
-    process.stderr.write('| ' + line + ' '.repeat(contentWidth - line.length) + ' |\n');
+    process.stderr.write(
+      '| ' + line + ' '.repeat(contentWidth - line.length) + ' |\n',
+    );
   }
 
   process.stderr.write(emptyLine + '\n');
-  process.stderr.write('| ' + waitingLine + ' '.repeat(contentWidth - waitingLine.length) + ' |\n');
+  process.stderr.write(
+    '| ' + waitingLine + ' '.repeat(contentWidth - waitingLine.length) + ' |\n',
+  );
 
   process.stderr.write(emptyLine + '\n');
   process.stderr.write(bottomBorder + '\n\n');

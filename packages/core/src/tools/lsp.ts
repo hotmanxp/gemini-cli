@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
+
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import type { ToolInvocation, ToolResult } from './tools.js';
@@ -119,7 +121,6 @@ class LspToolInvocation extends BaseToolInvocation<LspToolParams, ToolResult> {
   ) {
     super(params, messageBus);
   }
-
 
   getDescription(): string {
     const operationLabel = this.getOperationLabel();
@@ -1017,7 +1018,10 @@ class LspToolInvocation extends BaseToolInvocation<LspToolParams, ToolResult> {
 export class LspTool extends BaseDeclarativeTool<LspToolParams, ToolResult> {
   static readonly Name = 'lsp';
 
-  constructor(private readonly config: Config, messageBus: MessageBus) {
+  constructor(
+    private readonly config: Config,
+    messageBus: MessageBus,
+  ) {
     super(
       LspTool.Name,
       'LSP',

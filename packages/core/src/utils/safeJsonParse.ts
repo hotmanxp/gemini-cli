@@ -19,6 +19,7 @@ export function safeJsonParse<T>(
   }
 
   try {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
     return JSON.parse(jsonString) as T;
   } catch {
     return defaultValue;

@@ -57,14 +57,13 @@ export class RequestTokenEstimator {
   /**
    * Extract text from a single content item
    */
-  private extractTextFromContent(
-    content: unknown,
-  ): string {
+  private extractTextFromContent(content: unknown): string {
     if (typeof content === 'string') {
       return content;
     }
 
     if (content && typeof content === 'object' && 'parts' in content) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
       const contentObj = content as { parts?: unknown[] };
       if (Array.isArray(contentObj.parts)) {
         return contentObj.parts
@@ -85,6 +84,7 @@ export class RequestTokenEstimator {
     }
 
     if (part && typeof part === 'object' && 'text' in part) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
       const partObj = part as { text?: string };
       return partObj.text || '';
     }

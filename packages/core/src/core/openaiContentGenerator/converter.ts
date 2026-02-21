@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
+
 import type {
   GenerateContentParameters,
   Part,
@@ -282,7 +284,9 @@ export class OpenAIContentConverter {
         const toolObj = callableTool as unknown as Record<string, unknown>;
         const toolId = toolObj?.['id'] as string | undefined;
         const toolDescription = toolObj?.['description'] as string | undefined;
-        const toolParams = toolObj?.['parameters'] as Record<string, unknown> | undefined;
+        const toolParams = toolObj?.['parameters'] as
+          | Record<string, unknown>
+          | undefined;
 
         actualTool = {
           functionDeclarations: [
@@ -407,7 +411,8 @@ export class OpenAIContentConverter {
       if (contentParts.length > 0) {
         messages.push({
           role: 'user',
-          content: contentParts as unknown as OpenAI.Chat.ChatCompletionContentPart[],
+          content:
+            contentParts as unknown as OpenAI.Chat.ChatCompletionContentPart[],
         });
       }
     } else if (role === 'model') {
@@ -865,7 +870,10 @@ export class OpenAIContentConverter {
         for (const toolCall of completedToolCalls) {
           if (toolCall.name) {
             // Map tool call arguments to match expected parameter names
-            const mappedArgs = this.mapToolCallArgs(toolCall.name, toolCall.args);
+            const mappedArgs = this.mapToolCallArgs(
+              toolCall.name,
+              toolCall.args,
+            );
 
             parts.push({
               functionCall: {

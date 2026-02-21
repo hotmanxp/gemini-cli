@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
+
 import type OpenAI from 'openai';
 import type { ContentGeneratorConfig } from '../../contentGenerator.js';
 import type { OpenAIContentGeneratorConfig } from '../types.js';
@@ -31,8 +33,7 @@ export class ModelScopeOpenAICompatibleProvider extends DefaultOpenAICompatibleP
   ): OpenAI.Chat.ChatCompletionCreateParams {
     const newRequest = super.buildRequest(request, userPromptId);
     if (!newRequest.stream) {
-      delete (newRequest)
-        .stream_options;
+      delete newRequest.stream_options;
     }
 
     return newRequest;

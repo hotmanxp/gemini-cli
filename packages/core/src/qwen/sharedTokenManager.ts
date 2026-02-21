@@ -6,6 +6,8 @@
  * @license
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
+
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -86,12 +88,15 @@ export async function writeQwenCredentials(
     const dir = path.dirname(filePath);
     await fs.mkdir(dir, { recursive: true });
     await fs.writeFile(filePath, JSON.stringify(credentials, null, 2), 'utf-8');
-    
+
     // Set restrictive permissions (owner read/write only)
     try {
       await fs.chmod(filePath, 0o600);
     } catch (chmodError) {
-      debugLogger.warn('Failed to set credential file permissions:', chmodError);
+      debugLogger.warn(
+        'Failed to set credential file permissions:',
+        chmodError,
+      );
     }
   } catch (error) {
     debugLogger.error('Failed to write Qwen credentials:', error);
@@ -143,7 +148,7 @@ export interface IQwenOAuth2Client {
 
 /**
  * Shared Token Manager for cross-session token synchronization
- * 
+ *
  * This class provides:
  * - In-memory caching for performance
  * - File-based persistence for cross-session sharing
@@ -171,7 +176,7 @@ export class SharedTokenManager {
 
   /**
    * Get valid credentials, refreshing if necessary
-   * 
+   *
    * @param client - OAuth2 client for token refresh
    * @param forceRefresh - Force token refresh even if not expired
    * @returns Valid credentials
@@ -188,7 +193,7 @@ export class SharedTokenManager {
     try {
       // Check if we need to refresh
       const needsRefresh = await this.needsRefresh(client, forceRefresh);
-      
+
       if (!needsRefresh && this.credentials?.access_token) {
         return this.credentials;
       }
@@ -269,7 +274,7 @@ export class SharedTokenManager {
 
     // Try to load from file first
     const credentials = await readQwenCredentials();
-    
+
     if (credentials?.access_token && !areCredentialsExpired(credentials)) {
       // File has valid credentials, use them
       this.credentials = credentials;
@@ -291,12 +296,12 @@ export class SharedTokenManager {
       client.setCredentials(credentials);
       await client.refreshAccessToken();
       const newCredentials = client.getCredentials();
-      
+
       // Save to file and cache
       await writeQwenCredentials(newCredentials);
       this.credentials = newCredentials;
       this.lastFileRead = Date.now();
-      
+
       debugLogger.debug('Successfully refreshed credentials');
       return newCredentials;
     } catch (error) {
@@ -304,7 +309,7 @@ export class SharedTokenManager {
       if (error instanceof TokenManagerError) {
         throw error;
       }
-      
+
       throw new TokenManagerError(
         TokenError.REFRESH_FAILED,
         'Failed to refresh access token',

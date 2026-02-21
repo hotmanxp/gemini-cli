@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
+
 import OpenAI from 'openai';
 import type { GenerateContentConfig } from '@google/genai';
 import type { Config } from '../../../config/config.js';
@@ -36,7 +38,8 @@ export class DashScopeOpenAICompatibleProvider
     cliConfig: Config,
   ) {
     this.cliConfig = cliConfig;
-    this.contentGeneratorConfig = contentGeneratorConfig as OpenAIContentGeneratorConfig;
+    this.contentGeneratorConfig =
+      contentGeneratorConfig as OpenAIContentGeneratorConfig;
   }
 
   static isDashScopeProvider(
@@ -80,10 +83,7 @@ export class DashScopeOpenAICompatibleProvider
     // Configure fetch options to ensure user-configured timeout works as expected
     // bodyTimeout is always disabled (0) to let OpenAI SDK timeout control the request
     // Note: We set the global proxy via buildRuntimeFetchOptions
-    buildRuntimeFetchOptions(
-      'openai',
-      this.cliConfig.getProxy(),
-    );
+    buildRuntimeFetchOptions('openai', this.cliConfig.getProxy());
     return new OpenAI({
       apiKey,
       baseURL: baseUrl,

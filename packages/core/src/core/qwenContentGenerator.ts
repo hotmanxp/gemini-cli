@@ -6,6 +6,8 @@
  * @license
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-type-assertion */
+
 import { OpenAIContentGenerator } from './openaiContentGenerator/index.js';
 import { DashScopeOpenAICompatibleProvider } from './openaiContentGenerator/provider/dashscope.js';
 import type { IQwenOAuth2Client } from '../qwen/qwenOAuth2.js';
@@ -173,7 +175,10 @@ export class QwenContentGenerator extends OpenAIContentGenerator {
         ? error.message.toLowerCase()
         : String(error).toLowerCase();
 
-    const errorWithCode = error as { status?: number | string; code?: number | string };
+    const errorWithCode = error as {
+      status?: number | string;
+      code?: number | string;
+    };
     const errorCode = errorWithCode?.status || errorWithCode?.code;
 
     return (
@@ -199,7 +204,7 @@ export async function createQwenContentGenerator(
 ): Promise<QwenContentGenerator> {
   const { getQwenOAuthClient } = await import('../qwen/qwenOAuth2.js');
   const qwenClient = await getQwenOAuthClient(config);
-  
+
   const contentGeneratorConfig: OpenAIContentGeneratorConfig = {
     authType: 'qwen-oauth' as any,
     apiKey: 'QWEN_OAUTH_DYNAMIC_TOKEN', // Placeholder, will be replaced dynamically

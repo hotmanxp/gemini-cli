@@ -86,6 +86,7 @@ export const referencesCommand: CommandModule = {
       // Group by file
       const byFile = new Map<string, Reference[]>();
       for (const ref of items) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
         const refTyped = ref as Reference;
         const refUri = refTyped.uri ?? '';
         if (!byFile.has(refUri)) {

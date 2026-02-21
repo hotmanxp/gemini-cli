@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-type-assertion */
+
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -17,19 +19,28 @@ import { debugLogger } from '../utils/debugLogger.js';
 /**
  * Replace template variables in a string.
  */
-function hydrateString(template: string, variables: Record<string, string>): string {
-  return template.replace(/\$\{([^}]+)\}/g, (_match, key) => variables[key] ?? _match);
+function hydrateString(
+  template: string,
+  variables: Record<string, string>,
+): string {
+  return template.replace(
+    /\$\{([^}]+)\}/g,
+    (_match, key) => variables[key] ?? _match,
+  );
 }
 
 /**
  * Recursively hydrate JSON values with template variables.
  */
-function hydrateJsonValue(value: unknown, variables: Record<string, string>): unknown {
+function hydrateJsonValue(
+  value: unknown,
+  variables: Record<string, string>,
+): unknown {
   if (typeof value === 'string') {
     return hydrateString(value, variables);
   }
   if (Array.isArray(value)) {
-    return value.map(item => hydrateJsonValue(item, variables));
+    return value.map((item) => hydrateJsonValue(item, variables));
   }
   if (value !== null && typeof value === 'object') {
     const result: Record<string, unknown> = {};
@@ -67,9 +78,7 @@ export class LspConfigLoader {
   /**
    * Load LSP configurations declared by extensions (Claude plugins).
    */
-  async loadExtensionConfigs(
-    _extensions: any[],
-  ): Promise<LspServerConfig[]> {
+  async loadExtensionConfigs(_extensions: any[]): Promise<LspServerConfig[]> {
     const configs: any[] = [];
 
     for (const extension of _extensions) {
@@ -159,9 +168,7 @@ export class LspConfigLoader {
     return mergedConfigs;
   }
 
-  collectExtensionToLanguageOverrides(
-    configs: any[],
-  ): Record<string, string> {
+  collectExtensionToLanguageOverrides(configs: any[]): Record<string, string> {
     const overrides: Record<string, string> = {};
     for (const config of configs) {
       if (!config.extensionToLanguage) {
@@ -267,8 +274,7 @@ export class LspConfigLoader {
 
       // In basic format: key is language name, server name comes from command.
       const languages = [key];
-      const name =
-        typeof spec['command'] === 'string' ? (spec['command']) : key;
+      const name = typeof spec['command'] === 'string' ? spec['command'] : key;
 
       const config = this.buildServerConfig(name, languages, spec, origin);
       if (config) {
@@ -310,16 +316,14 @@ export class LspConfigLoader {
   ): LspServerConfig | null {
     const transport = this.normalizeTransport(spec['transport']);
     const command =
-      typeof spec['command'] === 'string'
-        ? (spec['command'])
-        : undefined;
+      typeof spec['command'] === 'string' ? spec['command'] : undefined;
     const args = this.normalizeStringArray(spec['args']) ?? [];
     const env = this.normalizeEnv(spec['env']);
     const initializationOptions = this.isRecord(spec['initializationOptions'])
       ? (spec['initializationOptions'] as LspInitializationOptions)
       : undefined;
     const settings = this.isRecord(spec['settings'])
-      ? (spec['settings'])
+      ? spec['settings']
       : undefined;
     const extensionToLanguage = this.normalizeExtensionToLanguage(
       spec['extensionToLanguage'],
@@ -332,13 +336,11 @@ export class LspConfigLoader {
     const shutdownTimeout = this.normalizeTimeout(spec['shutdownTimeout']);
     const restartOnCrash =
       typeof spec['restartOnCrash'] === 'boolean'
-        ? (spec['restartOnCrash'])
+        ? spec['restartOnCrash']
         : undefined;
     const maxRestarts = this.normalizeMaxRestarts(spec['maxRestarts']);
     const trustRequired =
-      typeof spec['trustRequired'] === 'boolean'
-        ? (spec['trustRequired'])
-        : true;
+      typeof spec['trustRequired'] === 'boolean' ? spec['trustRequired'] : true;
     const socket = this.normalizeSocketOptions(spec);
 
     if (transport === 'stdio' && !command) {
@@ -465,14 +467,12 @@ export class LspConfigLoader {
 
     const source = this.isRecord(socketValue) ? socketValue : value;
     const host =
-      typeof source['host'] === 'string'
-        ? (source['host'])
-        : undefined;
+      typeof source['host'] === 'string' ? source['host'] : undefined;
     const pathValue =
       typeof source['path'] === 'string'
-        ? (source['path'])
+        ? source['path']
         : typeof source['socketPath'] === 'string'
-          ? (source['socketPath'])
+          ? source['socketPath']
           : undefined;
     const portValue = source['port'];
     const port =

@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
+
 import type OpenAI from 'openai';
 import {
   type GenerateContentParameters,
@@ -42,7 +44,8 @@ export class ContentGenerationPipeline {
   contentGeneratorConfig: OpenAIContentGeneratorConfig;
 
   constructor(private config: PipelineConfig) {
-    this.contentGeneratorConfig = config.contentGeneratorConfig as OpenAIContentGeneratorConfig;
+    this.contentGeneratorConfig =
+      config.contentGeneratorConfig as OpenAIContentGeneratorConfig;
     this.client = this.config.provider.buildClient();
     this.converter = new OpenAIContentConverter(
       this.contentGeneratorConfig.model,
@@ -58,7 +61,7 @@ export class ContentGenerationPipeline {
     // that is not valid/available for the OpenAI-compatible backend.
     const effectiveModel = this.contentGeneratorConfig.model;
     this.converter.setModel(effectiveModel);
-    
+
     return this.executeWithErrorHandling(
       request,
       userPromptId,
@@ -299,7 +302,8 @@ export class ContentGenerationPipeline {
   ): Record<string, unknown> {
     const defaultSamplingParams =
       this.config.provider.getDefaultGenerationConfig();
-    const configSamplingParams = this.contentGeneratorConfig.samplingParams || {};
+    const configSamplingParams =
+      this.contentGeneratorConfig.samplingParams || {};
 
     // Helper function to get parameter value with priority: config > request > default
     const getParameterValue = <T>(
@@ -336,19 +340,17 @@ export class ContentGenerationPipeline {
       ...addParameterIfDefined('top_p', 'topP', 'topP'),
 
       // Max tokens (special case: different property names)
-      ...addParameterIfDefined('max_tokens', 'maxOutputTokens', 'maxOutputTokens'),
+      ...addParameterIfDefined(
+        'max_tokens',
+        'maxOutputTokens',
+        'maxOutputTokens',
+      ),
 
       // Config-only parameters (no request fallback)
       ...addParameterIfDefined('top_k', 'topK'),
       ...addParameterIfDefined('repetition_penalty', 'repetitionPenalty'),
-      ...addParameterIfDefined(
-        'presence_penalty',
-        'presencePenalty',
-      ),
-      ...addParameterIfDefined(
-        'frequency_penalty',
-        'frequencyPenalty',
-      ),
+      ...addParameterIfDefined('presence_penalty', 'presencePenalty'),
+      ...addParameterIfDefined('frequency_penalty', 'frequencyPenalty'),
       ...this.buildReasoningConfig(request),
     };
 

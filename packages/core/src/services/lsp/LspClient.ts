@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
+
 import { EventEmitter } from 'node:events';
 import type { ChildProcess } from 'node:child_process';
 import type {

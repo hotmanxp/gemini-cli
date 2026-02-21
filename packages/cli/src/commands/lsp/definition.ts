@@ -79,6 +79,7 @@ export const definitionCommand: CommandModule = {
 
       const items = Array.isArray(definitions) ? definitions : [definitions];
       for (const def of items) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
         const defTyped = def as DefinitionResult;
         const targetUri = defTyped.uri ?? defTyped.targetUri ?? 'unknown';
 

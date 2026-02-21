@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-type-assertion */
+
 import { LspClient } from './LspClient.js';
 import { LspServerManager } from './LspServerManager.js';
 import { getLanguageConfigById, getLanguageConfig } from './languages.js';

@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
+
 import { coreEvents } from './events.js';
 
 // Capture the original stdout and stderr write methods before any monkey patching occurs.
@@ -37,7 +39,7 @@ export function patchStdio(): () => void {
   const previousStdoutWrite = process.stdout.write;
   const previousStderrWrite = process.stderr.write;
 
-  process.stdout.write = function(
+  process.stdout.write = function (
     chunk: Uint8Array | string,
     encodingOrCb?:
       | BufferEncoding
@@ -52,9 +54,9 @@ export function patchStdio(): () => void {
       callback();
     }
     return true;
-  } as typeof process.stdout.write;
+  } as unknown as typeof process.stdout.write;
 
-  process.stderr.write = function(
+  process.stderr.write = function (
     chunk: Uint8Array | string,
     encodingOrCb?:
       | BufferEncoding
@@ -69,7 +71,7 @@ export function patchStdio(): () => void {
       callback();
     }
     return true;
-  } as typeof process.stderr.write;
+  } as unknown as typeof process.stderr.write;
 
   return () => {
     process.stdout.write = previousStdoutWrite;

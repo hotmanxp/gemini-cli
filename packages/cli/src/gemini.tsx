@@ -350,20 +350,19 @@ export async function main() {
       'qwen-oauth',
     );
     // Also set default model for Qwen OAuth if not already set
-    const mergedModel = (settings.merged as Record<string, unknown>)['model'] as
-      | { model?: string }
-      | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+    const mergedModel = (settings.merged as Record<string, unknown>)[
+      'model'
+    ] as { model?: string } | undefined;
     if (!mergedModel?.model) {
-      settings.setValue(
-        SettingScope.User,
-        'model.model',
-        'coder-model',
-      );
+      settings.setValue(SettingScope.User, 'model.model', 'coder-model');
     }
   } else if (!settings.merged.security.auth.selectedType) {
     // If no auth type is set and USE_QWEN_OAUTH is not set,
     // check if Qwen credentials exist and suggest using them
-    const { readQwenCredentials, areCredentialsExpired } = await import('@google/gemini-cli-core');
+    const { readQwenCredentials, areCredentialsExpired } = await import(
+      '@google/gemini-cli-core'
+    );
     const qwenCreds = await readQwenCredentials();
     if (qwenCreds?.access_token && !areCredentialsExpired(qwenCreds)) {
       // Qwen credentials available, set as default
@@ -372,15 +371,12 @@ export async function main() {
         'security.auth.selectedType',
         'qwen-oauth',
       );
-      const mergedModel = (settings.merged as Record<string, unknown>)['model'] as
-        | { model?: string }
-        | undefined;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+      const mergedModel = (settings.merged as Record<string, unknown>)[
+        'model'
+      ] as { model?: string } | undefined;
       if (!mergedModel?.model) {
-        settings.setValue(
-          SettingScope.User,
-          'model.model',
-          'coder-model',
-        );
+        settings.setValue(SettingScope.User, 'model.model', 'coder-model');
       }
     }
   }

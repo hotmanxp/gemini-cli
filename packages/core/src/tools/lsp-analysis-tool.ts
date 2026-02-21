@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-type-assertion, no-console */
+
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { ToolInvocation, ToolResult } from './tools.js';
