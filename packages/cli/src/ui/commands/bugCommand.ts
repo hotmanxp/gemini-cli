@@ -27,7 +27,7 @@ import path from 'node:path';
 
 export const bugCommand: SlashCommand = {
   name: 'bug',
-  description: 'Submit a bug report to GitHub',
+  description: 'Submit a bug report to GitHub issues',
   kind: CommandKind.BUILT_IN,
   autoExecute: false,
   action: async (context: CommandContext, args?: string): Promise<void> => {
