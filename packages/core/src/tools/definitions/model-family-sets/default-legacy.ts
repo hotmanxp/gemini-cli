@@ -342,7 +342,7 @@ A good instruction should concisely answer:
           minimum: 1,
         },
       },
-      required: ['file_path', 'instruction', 'old_string', 'new_string'],
+      required: ['file_path', 'old_string', 'new_string'],
     },
   },
 

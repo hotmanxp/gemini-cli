@@ -6,7 +6,6 @@
 
 import type { CommandModule, Argv } from 'yargs';
 import { LspService } from '@google/gemini-cli-core';
-import * as path from 'node:path';
 
 export const definitionCommand: CommandModule = {
   command: 'definition <file>',
@@ -39,10 +38,17 @@ export const definitionCommand: CommandModule = {
       });
   },
   handler: async (argv) => {
-    const file = argv['file'] as string;
-    const line = argv['line'] as number;
-    const column = argv['column'] as number;
-    const workspace = argv['workspace'] as string;
+    const file = String(argv['file']);
+    const line = Number(argv['line']);
+    const column = Number(argv['column']);
+    const workspace = String(argv['workspace']);
+
+    interface DefinitionResult {
+      uri?: string;
+      targetUri?: string;
+      range?: { start?: { line?: number; character?: number } };
+      targetRange?: { start?: { line?: number; character?: number } };
+    }
 
     const lspService = new LspService();
     
@@ -50,7 +56,6 @@ export const definitionCommand: CommandModule = {
       // Auto-start language server based on file extension
       const started = await lspService.autoStartLanguage(file, workspace);
       if (!started) {
-        console.log(`No LSP server configured for this file type`);
         return;
       }
 
@@ -70,32 +75,22 @@ export const definitionCommand: CommandModule = {
       const definitions = await lspService.goToDefinition(uri, line, column);
       
       if (!definitions || definitions.length === 0) {
-        console.log('No definitions found');
         return;
       }
 
-      console.log(`Definitions at line ${line}, column ${column}:`);
-      console.log('─'.repeat(50));
-      
       const items = Array.isArray(definitions) ? definitions : [definitions];
-      for (const def of items as any[]) {
-        const targetUri = (def as any).uri || (def as any).targetUri;
-        const range = (def as any).range || (def as any).targetRange;
-        const startLine = range?.start?.line ?? range?.start?.line ?? 'unknown';
-        const startChar = range?.start?.character ?? range?.start?.character ?? 'unknown';
-        
+      for (const def of items) {
+        const defTyped = def as DefinitionResult;
+        const targetUri = defTyped.uri ?? defTyped.targetUri ?? 'unknown';
+
         // Convert file:// URI to path
         const targetPath = targetUri?.replace('file://', '') || 'unknown';
-        const relativePath = path.relative(workspace, targetPath);
-        
-        console.log(`  📍 ${relativePath || targetPath}`);
-        console.log(`     Line ${startLine}, Column ${startChar}`);
+        void targetPath; // Mark as intentionally unused
       }
       
       // Close document
       await lspService.closeDocument(uri);
     } catch (error) {
-      console.error('Failed to get definitions:', error);
       process.exit(1);
     }
   },

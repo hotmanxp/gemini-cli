@@ -67,6 +67,7 @@ import type { MCPOAuthConfig } from '../mcp/oauth-provider.js';
 import { ideContextStore } from '../ide/ideContext.js';
 import { WriteTodosTool } from '../tools/write-todos.js';
 import type { FileSystemService } from '../services/fileSystemService.js';
+import type { LspClient } from '../lsp/types.js';
 import { StandardFileSystemService } from '../services/fileSystemService.js';
 import { logRipgrepFallback, logFlashFallback } from '../telemetry/loggers.js';
 import {
@@ -552,6 +553,10 @@ export class Config {
   };
   private fileDiscoveryService: FileDiscoveryService | null = null;
   private gitService: GitService | undefined = undefined;
+  // LSP-related fields
+  private lspClient: LspClient | null = null;
+  private lspEnabled: boolean = false;
+
   private readonly checkpointing: boolean;
   private readonly proxy: string | undefined;
   private readonly cwd: string;
@@ -2603,6 +2608,40 @@ export class Config {
       );
     }
   };
+
+  // ============================================================================
+  // LSP Methods
+  // ============================================================================
+
+  /**
+   * Check if LSP is enabled
+   */
+  isLspEnabled(): boolean {
+    return this.lspEnabled;
+  }
+
+  /**
+   * Get the LSP client
+   */
+  getLspClient(): LspClient | null {
+    return this.lspClient;
+  }
+
+  /**
+   * Set the LSP client and enable LSP
+   */
+  setLspClient(client: LspClient): void {
+    this.lspClient = client;
+    this.lspEnabled = true;
+  }
+
+  /**
+   * Disable LSP
+   */
+  disableLsp(): void {
+    this.lspEnabled = false;
+    this.lspClient = null;
+  }
 
   /**
    * Disposes of resources and removes event listeners.

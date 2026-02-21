@@ -350,8 +350,10 @@ export async function main() {
       'qwen-oauth',
     );
     // Also set default model for Qwen OAuth if not already set
-    const mergedModel = (settings.merged as any)['model']?.model;
-    if (!mergedModel) {
+    const mergedModel = (settings.merged as Record<string, unknown>)['model'] as
+      | { model?: string }
+      | undefined;
+    if (!mergedModel?.model) {
       settings.setValue(
         SettingScope.User,
         'model.model',
@@ -370,8 +372,10 @@ export async function main() {
         'security.auth.selectedType',
         'qwen-oauth',
       );
-      const mergedModel = (settings.merged as any)['model']?.model;
-      if (!mergedModel) {
+      const mergedModel = (settings.merged as Record<string, unknown>)['model'] as
+        | { model?: string }
+        | undefined;
+      if (!mergedModel?.model) {
         settings.setValue(
           SettingScope.User,
           'model.model',

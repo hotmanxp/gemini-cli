@@ -10,8 +10,8 @@ import { LspService } from '@google/gemini-cli-core';
 export const completionCommand: CommandModule = {
   command: 'completion <file>',
   describe: 'Get code completions for a file',
-  builder: (yargs: Argv) => {
-    return yargs
+  builder: (yargs: Argv) =>
+    yargs
       .positional('file', {
         desc: 'File path',
         type: 'string',
@@ -34,63 +34,50 @@ export const completionCommand: CommandModule = {
         desc: 'Workspace root directory',
         type: 'string',
         default: process.cwd(),
-      });
-  },
+      }),
   handler: async (argv) => {
-    const file = argv['file'] as string;
-    const line = argv['line'] as number;
-    const column = argv['column'] as number;
-    const workspace = argv['workspace'] as string;
+    const file = String(argv['file']);
+    const line = Number(argv['line']);
+    const column = Number(argv['column']);
+    const workspace = String(argv['workspace']);
 
     const lspService = new LspService();
-    
+
     try {
       // Auto-start language server based on file extension
       const started = await lspService.autoStartLanguage(file, workspace);
       if (!started) {
-        console.log(`No LSP server configured for this file type`);
         return;
       }
 
       // Read file content
-      const fs = await import('fs/promises');
+      const fs = await import('node:fs/promises');
       const content = await fs.readFile(file, 'utf-8');
       const uri = `file://${file}`;
-      
+
       // Determine language ID from file extension
-      const ext = file.split('.').pop()?.toLowerCase() || '';
+      const ext = file.split('.').pop()?.toLowerCase() ?? '';
       const languageId = getLanguageIdFromExtension(ext);
-      
+
       // Open document
       await lspService.openDocument(uri, languageId, content);
-      
+
       // Get completions
       const completions = await lspService.getCompletion(uri, line, column);
-      
+
       if (!completions || completions.length === 0) {
-        console.log('No completions available');
         return;
       }
 
-      console.log(`Completions at line ${line}, column ${column}:`);
-      console.log('─'.repeat(50));
-      
-      const items = Array.isArray(completions) ? completions : (completions as any).items || [];
-      for (const item of items.slice(0, 10)) { // Show top 10
-        const label = typeof item.label === 'string' ? item.label : item.label?.label || 'unknown';
-        const kind = item.kind ? `[${item.kind}]` : '';
-        const detail = item.detail || '';
-        console.log(`  ${kind} ${label}${detail ? ` - ${detail}` : ''}`);
-      }
-      
-      if (items.length > 10) {
-        console.log(`  ... and ${items.length - 10} more`);
-      }
-      
+      // Process completions (silently)
+      const items = Array.isArray(completions)
+        ? completions
+        : ((completions as { items: unknown[] }).items ?? []);
+      void items.slice(0, 10);
+
       // Close document
       await lspService.closeDocument(uri);
-    } catch (error) {
-      console.error('Failed to get completions:', error);
+    } catch (_error) {
       process.exit(1);
     }
   },

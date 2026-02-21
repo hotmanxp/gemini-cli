@@ -83,6 +83,9 @@ export class OpenAIContentConverter {
   private model: string;
   private streamingToolCallParser: StreamingToolCallParser =
     new StreamingToolCallParser();
+  // Store tool parameter schemas for parameter name mapping
+  private toolParameterSchemas: Map<string, Record<string, unknown>> =
+    new Map();
 
   constructor(model: string) {
     this.model = model;
@@ -94,6 +97,85 @@ export class OpenAIContentConverter {
    */
   setModel(model: string): void {
     this.model = model;
+  }
+
+  /**
+   * Store tool parameter schemas for parameter name mapping during tool call conversion.
+   * This is called when tools are converted from Gemini to OpenAI format.
+   */
+  setToolParameterSchemas(tools: OpenAI.Chat.ChatCompletionTool[]): void {
+    this.toolParameterSchemas.clear();
+    for (const tool of tools) {
+      if (tool.function?.name && tool.function?.parameters) {
+        this.toolParameterSchemas.set(
+          tool.function.name,
+          tool.function.parameters as Record<string, unknown>,
+        );
+      }
+    }
+  }
+
+  /**
+   * Map tool call arguments to match the expected parameter names.
+   * This handles cases where model outputs different parameter names than expected.
+   * For example, maps 'path' to 'dir_path' for the list_directory tool.
+   */
+  private mapToolCallArgs(
+    toolName: string,
+    args: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const schema = this.toolParameterSchemas.get(toolName);
+    if (!schema) {
+      return args;
+    }
+
+    const requiredParams = (schema['required'] as string[]) || [];
+    const properties = (schema['properties'] as Record<string, unknown>) || {};
+    const propertyNames = new Set(Object.keys(properties));
+
+    // Create a mapping from common alternative names to expected names
+    // This handles cases where models use different parameter names
+    const paramNameMapping: Record<string, string> = {
+      // list_directory tool: path -> dir_path
+      path: 'dir_path',
+      // Common mappings for other tools
+      file_path: 'file_path',
+      query: 'query',
+      pattern: 'pattern',
+      dir_path: 'dir_path',
+      content: 'content',
+      text: 'text',
+    };
+
+    const mappedArgs: Record<string, unknown> = {};
+
+    // First, copy all args that are already valid parameter names
+    for (const key of Object.keys(args)) {
+      if (propertyNames.has(key)) {
+        mappedArgs[key] = args[key];
+      }
+    }
+
+    // Then, map alternative names to expected names for required parameters
+    for (const requiredParam of requiredParams) {
+      if (mappedArgs[requiredParam] === undefined) {
+        // Find if there's an alternative name for this parameter
+        for (const [altName, expectedName] of Object.entries(
+          paramNameMapping,
+        )) {
+          if (
+            expectedName === requiredParam &&
+            args[altName] !== undefined &&
+            !propertyNames.has(altName)
+          ) {
+            mappedArgs[requiredParam] = args[altName];
+            break;
+          }
+        }
+      }
+    }
+
+    return mappedArgs;
   }
 
   /**
@@ -201,7 +283,7 @@ export class OpenAIContentConverter {
         const toolId = toolObj?.['id'] as string | undefined;
         const toolDescription = toolObj?.['description'] as string | undefined;
         const toolParams = toolObj?.['parameters'] as Record<string, unknown> | undefined;
-        
+
         actualTool = {
           functionDeclarations: [
             {
@@ -232,6 +314,9 @@ export class OpenAIContentConverter {
         }
       }
     }
+
+    // Store tool parameter schemas for parameter name mapping during tool call conversion
+    this.setToolParameterSchemas(openAITools);
 
     return openAITools;
   }
@@ -645,6 +730,9 @@ export class OpenAIContentConverter {
             args = safeJsonParse(toolCall.function.arguments, {});
           }
 
+          // Map tool call arguments to match expected parameter names
+          args = this.mapToolCallArgs(toolCall.function.name, args);
+
           parts.push({
             functionCall: {
               id: toolCall.id,
@@ -776,13 +864,16 @@ export class OpenAIContentConverter {
 
         for (const toolCall of completedToolCalls) {
           if (toolCall.name) {
+            // Map tool call arguments to match expected parameter names
+            const mappedArgs = this.mapToolCallArgs(toolCall.name, toolCall.args);
+
             parts.push({
               functionCall: {
                 id:
                   toolCall.id ||
                   `call_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
                 name: toolCall.name,
-                args: toolCall.args,
+                args: mappedArgs,
               },
             });
           }

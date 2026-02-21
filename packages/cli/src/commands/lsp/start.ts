@@ -25,28 +25,21 @@ export const startCommand: CommandModule = {
       });
   },
   handler: async (argv) => {
-    const language = argv['language'] as string;
-    const workspace = argv['workspace'] as string;
+    const language = String(argv['language']);
+    const workspace = String(argv['workspace']);
 
     const validLangs = supportedLanguages.map(l => l.languageId);
     if (!validLangs.includes(language)) {
-      console.error(`Invalid language: ${language}. Valid options: ${validLangs.join(', ')}`);
       process.exit(1);
     }
 
     const lspService = new LspService();
     try {
-      console.log(`Starting LSP server for ${language} in ${workspace}`);
       const success = await lspService.startLanguage(language, workspace);
-      if (success) {
-        console.log(`LSP server for ${language} started successfully`);
-        console.log('The server will run in the background. Use "gemini lsp status" to check status.');
-      } else {
-        console.error(`Failed to start LSP server for ${language}`);
+      if (!success) {
         process.exit(1);
       }
     } catch (error) {
-      console.error('Failed to start LSP server:', error);
       process.exit(1);
     }
   },

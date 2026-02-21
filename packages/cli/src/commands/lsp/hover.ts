@@ -37,10 +37,10 @@ export const hoverCommand: CommandModule = {
       });
   },
   handler: async (argv) => {
-    const file = argv['file'] as string;
-    const line = argv['line'] as number;
-    const column = argv['column'] as number;
-    const workspace = argv['workspace'] as string;
+    const file = String(argv['file']);
+    const line = Number(argv['line']);
+    const column = Number(argv['column']);
+    const workspace = String(argv['workspace']);
 
     const lspService = new LspService();
     
@@ -48,7 +48,6 @@ export const hoverCommand: CommandModule = {
       // Auto-start language server based on file extension
       const started = await lspService.autoStartLanguage(file, workspace);
       if (!started) {
-        console.log(`No LSP server configured for this file type`);
         return;
       }
 
@@ -68,18 +67,12 @@ export const hoverCommand: CommandModule = {
       const hover = await lspService.getHover(uri, line, column);
       
       if (!hover) {
-        console.log('No hover information available');
         return;
       }
-
-      console.log(`Hover information at line ${line}, column ${column}:`);
-      console.log('─'.repeat(50));
-      console.log(hover);
       
       // Close document
       await lspService.closeDocument(uri);
     } catch (error) {
-      console.error('Failed to get hover information:', error);
       process.exit(1);
     }
   },

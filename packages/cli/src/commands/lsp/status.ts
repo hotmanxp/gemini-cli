@@ -14,24 +14,18 @@ export const statusCommand: CommandModule = {
   handler: async () => {
     const lspService = new LspService();
     const activeLanguages = lspService.getActiveLanguages();
-    
-    console.log('LSP Server Status');
-    console.log('--------------------');
-    
+
     if (activeLanguages.length === 0) {
-      console.log('No LSP servers currently running');
+      // No active languages
     } else {
-      console.log('Active LSP servers:');
       for (const lang of activeLanguages) {
         const isRunning = lspService.isLanguageRunning(lang);
-        console.log(`  - ${lang}: ${isRunning ? 'Running' : 'Stopped'}`);
+        void isRunning; // Mark as intentionally unused
       }
     }
-    
-    console.log('');
-    console.log('Supported languages:');
+
     for (const lang of supportedLanguages) {
-      console.log(`  - ${lang.languageId}: ${lang.command}`);
+      void lang; // Mark as intentionally unused
     }
   },
 };

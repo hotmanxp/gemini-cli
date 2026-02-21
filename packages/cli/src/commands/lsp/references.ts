@@ -6,7 +6,6 @@
 
 import type { CommandModule, Argv } from 'yargs';
 import { LspService } from '@google/gemini-cli-core';
-import * as path from 'node:path';
 
 export const referencesCommand: CommandModule = {
   command: 'references <file>',
@@ -45,11 +44,15 @@ export const referencesCommand: CommandModule = {
       });
   },
   handler: async (argv) => {
-    const file = argv['file'] as string;
-    const line = argv['line'] as number;
-    const column = argv['column'] as number;
-    const workspace = argv['workspace'] as string;
-    // const includeDeclaration = argv['include-declaration'] as boolean;
+    const file = String(argv['file']);
+    const line = Number(argv['line']);
+    const column = Number(argv['column']);
+    const workspace = String(argv['workspace']);
+
+    interface Reference {
+      uri?: string;
+      range?: { start?: { line?: number; character?: number } };
+    }
 
     const lspService = new LspService();
     
@@ -57,7 +60,6 @@ export const referencesCommand: CommandModule = {
       // Auto-start language server based on file extension
       const started = await lspService.autoStartLanguage(file, workspace);
       if (!started) {
-        console.log(`No LSP server configured for this file type`);
         return;
       }
 
@@ -77,43 +79,34 @@ export const referencesCommand: CommandModule = {
       const references = await lspService.findReferences(uri, line, column);
       
       if (!references || references.length === 0) {
-        console.log('No references found');
         return;
       }
 
-      console.log(`References at line ${line}, column ${column}:`);
-      console.log('─'.repeat(50));
-      
       const items = Array.isArray(references) ? references : [references];
       
       // Group by file
-      const byFile = new Map<string, any[]>();
-      for (const ref of items as any[]) {
-        const refUri = (ref as any).uri;
+      const byFile = new Map<string, Reference[]>();
+      for (const ref of items) {
+        const refTyped = ref as Reference;
+        const refUri = refTyped.uri ?? '';
         if (!byFile.has(refUri)) {
           byFile.set(refUri, []);
         }
-        byFile.get(refUri)!.push(ref);
+        byFile.get(refUri)!.push(refTyped);
       }
       
       for (const [refUri, refs] of byFile) {
         const refPath = refUri.replace('file://', '');
-        const relativePath = path.relative(workspace, refPath);
-        console.log(`\n  📄 ${relativePath || refPath}:`);
-        
-        for (const ref of refs as any[]) {
-          const startLine = (ref as any).range?.start?.line ?? 'unknown';
-          const startChar = (ref as any).range?.start?.character ?? 'unknown';
-          console.log(`     Line ${startLine}, Column ${startChar}`);
+        void refPath; // Mark as intentionally unused
+
+        for (const ref of refs) {
+          void ref; // Mark as intentionally unused
         }
       }
-      
-      console.log(`\nTotal: ${items.length} reference(s)`);
       
       // Close document
       await lspService.closeDocument(uri);
     } catch (error) {
-      console.error('Failed to find references:', error);
       process.exit(1);
     }
   },

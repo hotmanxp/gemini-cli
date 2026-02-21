@@ -842,8 +842,17 @@ export class GeminiChat {
             hasToolCall = true;
           }
 
+          // Filter out thought parts, but preserve functionCall and other parts
+          // that may coexist with thought property
           modelResponseParts.push(
-            ...content.parts.filter((part) => !part.thought),
+            ...content.parts.map((part) => {
+              if (part.thought) {
+                // Create a copy without the thought property
+                const { thought, ...rest } = part;
+                return rest;
+              }
+              return part;
+            }).filter((part) => Object.keys(part).length > 0),
           );
         }
       }

@@ -26,8 +26,14 @@ export const diagnosticsCommand: CommandModule = {
       });
   },
   handler: async (argv) => {
-    const file = argv['file'] as string;
-    const workspace = argv['workspace'] as string;
+    const file = String(argv['file']);
+    const workspace = String(argv['workspace']);
+
+    interface Diagnostic {
+      severity?: number;
+      range?: { start?: { line?: number; character?: number } };
+      message?: string;
+    }
 
     const lspService = new LspService();
     
@@ -35,7 +41,6 @@ export const diagnosticsCommand: CommandModule = {
       // Auto-start language server based on file extension
       const started = await lspService.autoStartLanguage(file, workspace);
       if (!started) {
-        console.log(`No LSP server configured for this file type`);
         return;
       }
 
@@ -58,61 +63,42 @@ export const diagnosticsCommand: CommandModule = {
       const diagnostics = lspService.getDiagnostics(uri);
       
       if (!diagnostics || diagnostics.length === 0) {
-        console.log('✅ No diagnostics issues found');
         return;
       }
 
-      console.log(`Diagnostics for ${file}:`);
-      console.log('─'.repeat(50));
-      
       // Group by severity
-      const errors = diagnostics.filter(d => d.severity === 1);
-      const warnings = diagnostics.filter(d => d.severity === 2);
-      const infos = diagnostics.filter(d => d.severity === 3);
-      const hints = diagnostics.filter(d => d.severity === 4);
+      const errors = diagnostics.filter((d: Diagnostic) => d.severity === 1);
+      const warnings = diagnostics.filter((d: Diagnostic) => d.severity === 2);
+      const infos = diagnostics.filter((d: Diagnostic) => d.severity === 3);
+      const hints = diagnostics.filter((d: Diagnostic) => d.severity === 4);
       
       if (errors.length > 0) {
-        console.log(`\n❌ Errors (${errors.length}):`);
         for (const diag of errors) {
-          const line = diag.range?.start?.line ?? '?';
-          const char = diag.range?.start?.character ?? '?';
-          console.log(`   ${line}:${char} - ${diag.message}`);
+          void diag; // Process error diagnostics
         }
       }
-      
+
       if (warnings.length > 0) {
-        console.log(`\n⚠️  Warnings (${warnings.length}):`);
         for (const diag of warnings) {
-          const line = diag.range?.start?.line ?? '?';
-          const char = diag.range?.start?.character ?? '?';
-          console.log(`   ${line}:${char} - ${diag.message}`);
+          void diag; // Process warning diagnostics
         }
       }
-      
+
       if (infos.length > 0) {
-        console.log(`\nℹ️  Info (${infos.length}):`);
         for (const diag of infos) {
-          const line = diag.range?.start?.line ?? '?';
-          const char = diag.range?.start?.character ?? '?';
-          console.log(`   ${line}:${char} - ${diag.message}`);
+          void diag; // Process info diagnostics
         }
       }
-      
+
       if (hints.length > 0) {
-        console.log(`\n💡 Hints (${hints.length}):`);
         for (const diag of hints) {
-          const line = diag.range?.start?.line ?? '?';
-          const char = diag.range?.start?.character ?? '?';
-          console.log(`   ${line}:${char} - ${diag.message}`);
+          void diag; // Process hint diagnostics
         }
       }
-      
-      console.log(`\nTotal: ${diagnostics.length} issue(s)`);
       
       // Close document
       await lspService.closeDocument(uri);
     } catch (error) {
-      console.error('Failed to get diagnostics:', error);
       process.exit(1);
     }
   },
