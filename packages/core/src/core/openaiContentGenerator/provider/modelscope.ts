@@ -31,7 +31,7 @@ export class ModelScopeOpenAICompatibleProvider extends DefaultOpenAICompatibleP
   ): OpenAI.Chat.ChatCompletionCreateParams {
     const newRequest = super.buildRequest(request, userPromptId);
     if (!newRequest.stream) {
-      delete (newRequest as OpenAI.Chat.ChatCompletionCreateParamsNonStreaming)
+      delete (newRequest)
         .stream_options;
     }
 

@@ -1,7 +1,9 @@
 /**
  * @license
- * Copyright 2025 Qwen
+ * Copyright 2026 Google LLC
  * SPDX-License-Identifier: Apache-2.0
+ *
+ * @license
  */
 
 import { promises as fs } from 'node:fs';
@@ -266,7 +268,7 @@ export class SharedTokenManager {
     debugLogger.debug('Refreshing Qwen credentials');
 
     // Try to load from file first
-    let credentials = await readQwenCredentials();
+    const credentials = await readQwenCredentials();
     
     if (credentials?.access_token && !areCredentialsExpired(credentials)) {
       // File has valid credentials, use them

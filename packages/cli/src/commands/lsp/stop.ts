@@ -10,8 +10,8 @@ import { LspService, supportedLanguages } from '@google/gemini-cli-core';
 export const stopCommand: CommandModule = {
   command: 'stop [language]',
   describe: 'Stop an LSP server for a specific language or all servers',
-  builder: (yargs: Argv) => {
-    return yargs
+  builder: (yargs: Argv) =>
+    yargs
       .positional('language', {
         desc: 'Language ID (typescript, python, java, go, rust). If omitted, stops all servers.',
         type: 'string',
@@ -21,21 +21,20 @@ export const stopCommand: CommandModule = {
         desc: 'Stop all LSP servers',
         type: 'boolean',
         default: false,
-      });
-  },
+      }),
   handler: async (argv) => {
     const language = argv['language'] as string | undefined;
     const stopAll = Boolean(argv['all']);
 
     const lspService = new LspService();
-    
+
     try {
       if (stopAll || !language) {
         // Stop all servers
         await lspService.shutdown();
       } else {
         // Stop specific language server
-        const validLangs = supportedLanguages.map(l => l.languageId);
+        const validLangs = supportedLanguages.map((l) => l.languageId);
         if (!validLangs.includes(language)) {
           process.exit(1);
         }
@@ -47,7 +46,7 @@ export const stopCommand: CommandModule = {
 
         await lspService.stopLanguage(language);
       }
-    } catch (error) {
+    } catch (_error) {
       process.exit(1);
     }
   },

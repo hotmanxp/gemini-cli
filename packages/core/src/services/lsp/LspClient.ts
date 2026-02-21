@@ -25,6 +25,7 @@ import type {
   PublishDiagnosticsParams,
   ServerCapabilities,
 } from './types.js';
+import { debugLogger } from '../../utils/debugLogger.js';
 
 interface PendingRequest {
   resolve: (value: unknown) => void;
@@ -48,7 +49,11 @@ export class LspClient extends EventEmitter<LspClientEventMap> {
   private initialized = false;
   private serverCapabilities?: ServerCapabilities;
 
-  async start(command: string, args: string[], env?: Record<string, string>): Promise<void> {
+  async start(
+    command: string,
+    args: string[],
+    env?: Record<string, string>,
+  ): Promise<void> {
     const { spawn } = await import('node:child_process');
     return new Promise((resolve, reject) => {
       this.process = spawn(command, args, {
@@ -59,11 +64,23 @@ export class LspClient extends EventEmitter<LspClientEventMap> {
         reject(new Error('Failed to spawn LSP process'));
         return;
       }
-      this.process.on('error', (err) => { this.emit('error', err); reject(err); });
-      this.process.on('exit', (code, signal) => { this.emit('exit', code, signal); this.cleanup(); });
-      this.process.stdout.on('data', (data: Buffer) => { this.handleData(data.toString()); });
-      this.process.stderr?.on('data', (data: Buffer) => { console.error('[LSP stderr]', data.toString()); });
-      setTimeout(() => { if (this.process) resolve(); }, 100);
+      this.process.on('error', (err) => {
+        this.emit('error', err);
+        reject(err);
+      });
+      this.process.on('exit', (code, signal) => {
+        this.emit('exit', code, signal);
+        this.cleanup();
+      });
+      this.process.stdout.on('data', (data: Buffer) => {
+        this.handleData(data.toString());
+      });
+      this.process.stderr?.on('data', (data: Buffer) => {
+        debugLogger.debug('[LSP stderr]', data.toString());
+      });
+      setTimeout(() => {
+        if (this.process) resolve();
+      }, 100);
     });
   }
 
@@ -74,14 +91,22 @@ export class LspClient extends EventEmitter<LspClientEventMap> {
       if (headerEnd === -1) break;
       const headerSection = this.buffer.substring(0, headerEnd);
       const contentLengthMatch = headerSection.match(/Content-Length: (\\d+)/);
-      if (!contentLengthMatch) { this.buffer = this.buffer.substring(headerEnd + 4); continue; }
+      if (!contentLengthMatch) {
+        this.buffer = this.buffer.substring(headerEnd + 4);
+        continue;
+      }
       const contentLength = parseInt(contentLengthMatch[1], 10);
       const bodyStart = headerEnd + 4;
       const bodyEnd = bodyStart + contentLength;
       if (this.buffer.length < bodyEnd) break;
       const body = this.buffer.substring(bodyStart, bodyEnd);
       this.buffer = this.buffer.substring(bodyEnd);
-      try { const message = JSON.parse(body); this.handleMessage(message); } catch (err) { console.error('Failed to parse LSP message:', err); }
+      try {
+        const message = JSON.parse(body);
+        this.handleMessage(message);
+      } catch (err) {
+        debugLogger.debug('Failed to parse LSP message:', err);
+      }
     }
   }
 
@@ -90,8 +115,11 @@ export class LspClient extends EventEmitter<LspClientEventMap> {
       const pending = this.pendingRequests.get(message.id);
       if (pending) {
         this.pendingRequests.delete(message.id);
-        if ('error' in message && message.error) { pending.reject(new Error(message.error.message)); }
-        else { pending.resolve(message.result); }
+        if ('error' in message && message.error) {
+          pending.reject(new Error(message.error.message));
+        } else {
+          pending.resolve(message.result);
+        }
       }
     } else if ('method' in message) {
       this.emit('notification', message.method, message.params);
@@ -101,15 +129,31 @@ export class LspClient extends EventEmitter<LspClientEventMap> {
     }
   }
 
-  private async sendRequest<T>(method: string, params?: unknown, timeout = 30000): Promise<T> {
+  private async sendRequest<T>(
+    method: string,
+    params?: unknown,
+    timeout = 30000,
+  ): Promise<T> {
     if (!this.process?.stdin) throw new Error('LSP process not started');
     const id = ++this.requestId;
     const request: JsonRpcRequest = { jsonrpc: '2.0', id, method, params };
     return new Promise((resolve, reject) => {
-      const timeoutId = setTimeout(() => { this.pendingRequests.delete(id); reject(new Error('Request timed out')); }, timeout);
-      this.pendingRequests.set(id, { resolve: (value) => { clearTimeout(timeoutId); resolve(value as T); }, reject, method, timestamp: Date.now() });
+      const timeoutId = setTimeout(() => {
+        this.pendingRequests.delete(id);
+        reject(new Error('Request timed out'));
+      }, timeout);
+      this.pendingRequests.set(id, {
+        resolve: (value) => {
+          clearTimeout(timeoutId);
+          resolve(value as T);
+        },
+        reject,
+        method,
+        timestamp: Date.now(),
+      });
       const content = JSON.stringify(request);
-      const header = 'Content-Length: ' + Buffer.byteLength(content) + '\\r\\n\\r\\n';
+      const header =
+        'Content-Length: ' + Buffer.byteLength(content) + '\\r\\n\\r\\n';
       if (this.process?.stdin) {
         this.process.stdin.write(header + content);
       } else {
@@ -120,30 +164,46 @@ export class LspClient extends EventEmitter<LspClientEventMap> {
 
   private sendNotification(method: string, params?: unknown): void {
     if (!this.process?.stdin) throw new Error('LSP process not started');
-    const notification: JsonRpcNotification = { jsonrpc: '2.0', method, params };
+    const notification: JsonRpcNotification = {
+      jsonrpc: '2.0',
+      method,
+      params,
+    };
     const content = JSON.stringify(notification);
-    const header = 'Content-Length: ' + Buffer.byteLength(content) + '\\r\\n\\r\\n';
+    const header =
+      'Content-Length: ' + Buffer.byteLength(content) + '\\r\\n\\r\\n';
     this.process.stdin.write(header + content);
   }
 
   async initialize(params: InitializeParams): Promise<InitializeResult> {
-    const result = await this.sendRequest<InitializeResult>('initialize', params);
+    const result = await this.sendRequest<InitializeResult>(
+      'initialize',
+      params,
+    );
     this.serverCapabilities = result.capabilities;
     this.sendNotification('initialized');
     this.initialized = true;
     return result;
   }
 
-  didOpen(params: DidOpenTextDocumentParams): void { this.sendNotification('textDocument/didOpen', params); }
-  didChange(params: DidChangeTextDocumentParams): void { this.sendNotification('textDocument/didChange', params); }
-  didClose(params: DidCloseTextDocumentParams): void { this.sendNotification('textDocument/didClose', params); }
+  didOpen(params: DidOpenTextDocumentParams): void {
+    this.sendNotification('textDocument/didOpen', params);
+  }
+  didChange(params: DidChangeTextDocumentParams): void {
+    this.sendNotification('textDocument/didChange', params);
+  }
+  didClose(params: DidCloseTextDocumentParams): void {
+    this.sendNotification('textDocument/didClose', params);
+  }
 
   async completion(params: CompletionParams): Promise<CompletionList | null> {
     if (!this.initialized) throw new Error('LSP not initialized');
     return this.sendRequest('textDocument/completion', params);
   }
 
-  async definition(params: DefinitionParams): Promise<Location | Location[] | null> {
+  async definition(
+    params: DefinitionParams,
+  ): Promise<Location | Location[] | null> {
     if (!this.initialized) throw new Error('LSP not initialized');
     return this.sendRequest('textDocument/definition', params);
   }
@@ -160,22 +220,37 @@ export class LspClient extends EventEmitter<LspClientEventMap> {
 
   async shutdown(): Promise<void> {
     if (!this.initialized) return;
-    try { await this.sendRequest('shutdown'); this.sendNotification('exit'); } catch (err) { console.error('Error during LSP shutdown:', err); }
-    finally { this.dispose(); }
+    try {
+      await this.sendRequest('shutdown');
+      this.sendNotification('exit');
+    } catch (err) {
+      debugLogger.debug('Error during LSP shutdown:', err);
+    } finally {
+      this.dispose();
+    }
   }
 
   private cleanup(): void {
-    this.pendingRequests.forEach((pending) => { pending.reject(new Error('LSP process exited')); });
+    this.pendingRequests.forEach((pending) => {
+      pending.reject(new Error('LSP process exited'));
+    });
     this.pendingRequests.clear();
     this.initialized = false;
   }
 
   dispose(): void {
-    if (this.process) { this.process.kill(); this.process = null; }
+    if (this.process) {
+      this.process.kill();
+      this.process = null;
+    }
     this.cleanup();
     this.buffer = '';
   }
 
-  getCapabilities(): ServerCapabilities | undefined { return this.serverCapabilities; }
-  isInitialized(): boolean { return this.initialized; }
+  getCapabilities(): ServerCapabilities | undefined {
+    return this.serverCapabilities;
+  }
+  isInitialized(): boolean {
+    return this.initialized;
+  }
 }

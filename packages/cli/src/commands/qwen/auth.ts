@@ -1,7 +1,9 @@
 /**
  * @license
- * Copyright 2025 Qwen
+ * Copyright 2026 Google LLC
  * SPDX-License-Identifier: Apache-2.0
+ *
+ * @license
  */
 
 import type { CommandModule, Argv } from 'yargs';
@@ -16,8 +18,8 @@ import {
 export const qwenAuthCommand: CommandModule = {
   command: 'qwen-auth',
   describe: 'Authenticate with Qwen OAuth',
-  builder: (yargs: Argv) => {
-    return yargs
+  builder: (yargs: Argv) =>
+    yargs
       .option('model', {
         alias: 'm',
         desc: 'Qwen model to use',
@@ -29,8 +31,7 @@ export const qwenAuthCommand: CommandModule = {
         desc: 'Clear stored credentials',
         type: 'boolean',
         default: false,
-      });
-  },
+      }),
   handler: async (argv) => {
     const clear = Boolean(argv['clear']);
     const model = String(argv['model']);
@@ -42,10 +43,15 @@ export const qwenAuthCommand: CommandModule = {
 
     try {
       // Try to get existing credentials first
-      const { readQwenCredentials, areCredentialsExpired } = await import('@google/gemini-cli-core');
+      const { readQwenCredentials, areCredentialsExpired } = await import(
+        '@google/gemini-cli-core'
+      );
       const existingCreds = await readQwenCredentials();
 
-      if (existingCreds?.access_token && !areCredentialsExpired(existingCreds)) {
+      if (
+        existingCreds?.access_token &&
+        !areCredentialsExpired(existingCreds)
+      ) {
         return;
       }
 
@@ -56,11 +62,13 @@ export const qwenAuthCommand: CommandModule = {
         }
       });
 
-      qwenOAuth2Events.on(QwenOAuth2Event.AuthUri, (data: { user_code: string; verification_uri_complete: string }) => {
-      });
+      qwenOAuth2Events.on(
+        QwenOAuth2Event.AuthUri,
+        (_data: { user_code: string; verification_uri_complete: string }) => {},
+      );
 
       // Get OAuth client (this will trigger device flow if needed)
-      const config = await createMinimalConfig(model) as unknown as Config;
+      const config = (await createMinimalConfig(model)) as unknown as Config;
       const client = await getQwenOAuthClient(config);
 
       // Verify we got a token
@@ -69,7 +77,7 @@ export const qwenAuthCommand: CommandModule = {
       if (!token) {
         process.exit(1);
       }
-    } catch (error) {
+    } catch (_error) {
       process.exit(1);
     }
   },

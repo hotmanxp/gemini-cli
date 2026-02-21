@@ -6,14 +6,9 @@
 
 import { LspClient } from './LspClient.js';
 import { LspServerManager } from './LspServerManager.js';
-import {
-  getLanguageConfigById,
-  getLanguageConfig,
-} from './languages.js';
-import type {
-  TextDocumentItem,
-  Diagnostic,
-} from './types.js';
+import { getLanguageConfigById, getLanguageConfig } from './languages.js';
+import type { TextDocumentItem, Diagnostic } from './types.js';
+import { debugLogger } from '../../utils/debugLogger.js';
 
 interface DocumentState {
   item: TextDocumentItem;
@@ -37,14 +32,17 @@ export class LspService {
   /**
    * Start a language LSP server
    */
-  async startLanguage(languageId: string, workspaceRoot: string): Promise<boolean> {
+  async startLanguage(
+    languageId: string,
+    workspaceRoot: string,
+  ): Promise<boolean> {
     const config = getLanguageConfigById(languageId);
     if (!config) return false;
     try {
       await this.manager.startServer(config, workspaceRoot);
       return true;
     } catch (err) {
-      console.error(`Failed to start LSP server for ${languageId}:`, err);
+      debugLogger.debug(`Failed to start LSP server for ${languageId}:`, err);
       return false;
     }
   }
@@ -52,7 +50,10 @@ export class LspService {
   /**
    * Auto-start language based on file path
    */
-  async autoStartLanguage(filePath: string, workspaceRoot: string): Promise<boolean> {
+  async autoStartLanguage(
+    filePath: string,
+    workspaceRoot: string,
+  ): Promise<boolean> {
     const config = getLanguageConfig(filePath);
     if (!config) return false;
     if (this.manager.isServerRunning(config.languageId)) return true;
@@ -60,7 +61,10 @@ export class LspService {
       await this.manager.startServer(config, workspaceRoot);
       return true;
     } catch (err) {
-      console.error(`Failed to start LSP server for ${config.languageId}:`, err);
+      debugLogger.debug(
+        `Failed to start LSP server for ${config.languageId}:`,
+        err,
+      );
       return false;
     }
   }
@@ -68,7 +72,11 @@ export class LspService {
   /**
    * Open a document
    */
-  async openDocument(uri: string, languageId: string, content: string): Promise<void> {
+  async openDocument(
+    uri: string,
+    languageId: string,
+    content: string,
+  ): Promise<void> {
     const client = this.manager.getClient(languageId);
     if (!client) return;
     const version = 1;
@@ -87,13 +95,18 @@ export class LspService {
     if (!client) return;
     doc.version++;
     const lines = doc.content.split('\n');
-    const contentChanges = [{
-      range: {
-        start: { line: 0, character: 0 },
-        end: { line: lines.length - 1, character: lines[lines.length - 1]?.length || 0 },
+    const contentChanges = [
+      {
+        range: {
+          start: { line: 0, character: 0 },
+          end: {
+            line: lines.length - 1,
+            character: lines[lines.length - 1]?.length || 0,
+          },
+        },
+        text: content,
       },
-      text: content,
-    }];
+    ];
     client.didChange({
       textDocument: { uri, version: doc.version },
       contentChanges,
@@ -116,7 +129,11 @@ export class LspService {
   /**
    * Get code completions
    */
-  async getCompletion(uri: string, line: number, column: number): Promise<unknown[] | null> {
+  async getCompletion(
+    uri: string,
+    line: number,
+    column: number,
+  ): Promise<unknown[] | null> {
     const doc = this.documents.get(uri);
     if (!doc) return null;
     const client = this.manager.getClient(doc.item.languageId);
@@ -129,7 +146,7 @@ export class LspService {
       if (!result) return null;
       return Array.isArray(result) ? result : (result as any).items;
     } catch (err) {
-      console.error('Completion error:', err);
+      debugLogger.debug('Completion error:', err);
       return null;
     }
   }
@@ -137,7 +154,11 @@ export class LspService {
   /**
    * Go to definition
    */
-  async goToDefinition(uri: string, line: number, column: number): Promise<unknown[] | null> {
+  async goToDefinition(
+    uri: string,
+    line: number,
+    column: number,
+  ): Promise<unknown[] | null> {
     const doc = this.documents.get(uri);
     if (!doc) return null;
     const client = this.manager.getClient(doc.item.languageId);
@@ -150,7 +171,7 @@ export class LspService {
       if (!result) return null;
       return Array.isArray(result) ? result : [result];
     } catch (err) {
-      console.error('Definition error:', err);
+      debugLogger.debug('Definition error:', err);
       return null;
     }
   }
@@ -158,7 +179,11 @@ export class LspService {
   /**
    * Find references
    */
-  async findReferences(uri: string, line: number, column: number): Promise<unknown[] | null> {
+  async findReferences(
+    uri: string,
+    line: number,
+    column: number,
+  ): Promise<unknown[] | null> {
     const doc = this.documents.get(uri);
     if (!doc) return null;
     const client = this.manager.getClient(doc.item.languageId);
@@ -171,7 +196,7 @@ export class LspService {
       });
       return result || null;
     } catch (err) {
-      console.error('References error:', err);
+      debugLogger.debug('References error:', err);
       return null;
     }
   }
@@ -179,7 +204,11 @@ export class LspService {
   /**
    * Get hover information
    */
-  async getHover(uri: string, line: number, column: number): Promise<string | null> {
+  async getHover(
+    uri: string,
+    line: number,
+    column: number,
+  ): Promise<string | null> {
     const doc = this.documents.get(uri);
     if (!doc) return null;
     const client = this.manager.getClient(doc.item.languageId);
@@ -197,7 +226,7 @@ export class LspService {
       }
       return null;
     } catch (err) {
-      console.error('Hover error:', err);
+      debugLogger.debug('Hover error:', err);
       return null;
     }
   }

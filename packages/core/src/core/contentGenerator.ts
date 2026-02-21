@@ -217,7 +217,7 @@ export async function createContentGenerator(
     if (config.authType === AuthType.USE_QWEN) {
       const { createQwenContentGenerator } = await import('./qwenContentGenerator.js');
       const model = gcConfig.getModel() || 'qwen-plus';
-      return await createQwenContentGenerator(gcConfig, model);
+      return createQwenContentGenerator(gcConfig, model);
     }
 
     throw new Error(

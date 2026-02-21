@@ -1,7 +1,9 @@
 /**
  * @license
- * Copyright 2025 Qwen
+ * Copyright 2026 Google LLC
  * SPDX-License-Identifier: Apache-2.0
+ *
+ * @license
  */
 
 import { OpenAIContentGenerator } from './openaiContentGenerator/index.js';
@@ -110,7 +112,7 @@ export class QwenContentGenerator extends OpenAIContentGenerator {
         this.pipeline.contentGeneratorConfig.model = 'coder-model';
       }
 
-      return await operation();
+      return operation();
     };
 
     try {
@@ -119,7 +121,7 @@ export class QwenContentGenerator extends OpenAIContentGenerator {
       if (this.isAuthError(error)) {
         debugLogger.debug('Auth error detected, refreshing token...');
         await this.sharedManager.getValidCredentials(this.qwenClient, true);
-        return await attemptOperation();
+        return attemptOperation();
       }
       throw error;
     }

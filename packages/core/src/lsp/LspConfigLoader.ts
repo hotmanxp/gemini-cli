@@ -5,8 +5,8 @@
  */
 
 import * as fs from 'node:fs';
-import * as path from 'path';
-import { pathToFileURL } from 'url';
+import * as path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import type {
   LspInitializationOptions,
   LspServerConfig,
@@ -268,7 +268,7 @@ export class LspConfigLoader {
       // In basic format: key is language name, server name comes from command.
       const languages = [key];
       const name =
-        typeof spec['command'] === 'string' ? (spec['command'] as string) : key;
+        typeof spec['command'] === 'string' ? (spec['command']) : key;
 
       const config = this.buildServerConfig(name, languages, spec, origin);
       if (config) {
@@ -311,7 +311,7 @@ export class LspConfigLoader {
     const transport = this.normalizeTransport(spec['transport']);
     const command =
       typeof spec['command'] === 'string'
-        ? (spec['command'] as string)
+        ? (spec['command'])
         : undefined;
     const args = this.normalizeStringArray(spec['args']) ?? [];
     const env = this.normalizeEnv(spec['env']);
@@ -319,7 +319,7 @@ export class LspConfigLoader {
       ? (spec['initializationOptions'] as LspInitializationOptions)
       : undefined;
     const settings = this.isRecord(spec['settings'])
-      ? (spec['settings'] as Record<string, unknown>)
+      ? (spec['settings'])
       : undefined;
     const extensionToLanguage = this.normalizeExtensionToLanguage(
       spec['extensionToLanguage'],
@@ -332,12 +332,12 @@ export class LspConfigLoader {
     const shutdownTimeout = this.normalizeTimeout(spec['shutdownTimeout']);
     const restartOnCrash =
       typeof spec['restartOnCrash'] === 'boolean'
-        ? (spec['restartOnCrash'] as boolean)
+        ? (spec['restartOnCrash'])
         : undefined;
     const maxRestarts = this.normalizeMaxRestarts(spec['maxRestarts']);
     const trustRequired =
       typeof spec['trustRequired'] === 'boolean'
-        ? (spec['trustRequired'] as boolean)
+        ? (spec['trustRequired'])
         : true;
     const socket = this.normalizeSocketOptions(spec);
 
@@ -466,13 +466,13 @@ export class LspConfigLoader {
     const source = this.isRecord(socketValue) ? socketValue : value;
     const host =
       typeof source['host'] === 'string'
-        ? (source['host'] as string)
+        ? (source['host'])
         : undefined;
     const pathValue =
       typeof source['path'] === 'string'
-        ? (source['path'] as string)
+        ? (source['path'])
         : typeof source['socketPath'] === 'string'
-          ? (source['socketPath'] as string)
+          ? (source['socketPath'])
           : undefined;
     const portValue = source['port'];
     const port =

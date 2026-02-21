@@ -11,8 +11,8 @@ export const definitionCommand: CommandModule = {
   command: 'definition <file>',
   describe: 'Go to definition for a symbol in a file',
   aliases: ['def', 'goto'],
-  builder: (yargs: Argv) => {
-    return yargs
+  builder: (yargs: Argv) =>
+    yargs
       .positional('file', {
         desc: 'File path',
         type: 'string',
@@ -35,8 +35,7 @@ export const definitionCommand: CommandModule = {
         desc: 'Workspace root directory',
         type: 'string',
         default: process.cwd(),
-      });
-  },
+      }),
   handler: async (argv) => {
     const file = String(argv['file']);
     const line = Number(argv['line']);
@@ -51,7 +50,7 @@ export const definitionCommand: CommandModule = {
     }
 
     const lspService = new LspService();
-    
+
     try {
       // Auto-start language server based on file extension
       const started = await lspService.autoStartLanguage(file, workspace);
@@ -60,20 +59,20 @@ export const definitionCommand: CommandModule = {
       }
 
       // Read file content
-      const fs = await import('fs/promises');
+      const fs = await import('node:fs/promises');
       const content = await fs.readFile(file, 'utf-8');
       const uri = `file://${file}`;
-      
+
       // Determine language ID from file extension
       const ext = file.split('.').pop()?.toLowerCase() || '';
       const languageId = getLanguageIdFromExtension(ext);
-      
+
       // Open document
       await lspService.openDocument(uri, languageId, content);
-      
+
       // Get definitions
       const definitions = await lspService.goToDefinition(uri, line, column);
-      
+
       if (!definitions || definitions.length === 0) {
         return;
       }
@@ -87,10 +86,10 @@ export const definitionCommand: CommandModule = {
         const targetPath = targetUri?.replace('file://', '') || 'unknown';
         void targetPath; // Mark as intentionally unused
       }
-      
+
       // Close document
       await lspService.closeDocument(uri);
-    } catch (error) {
+    } catch (_error) {
       process.exit(1);
     }
   },
@@ -98,18 +97,18 @@ export const definitionCommand: CommandModule = {
 
 function getLanguageIdFromExtension(ext: string): string {
   const map: Record<string, string> = {
-    'ts': 'typescript',
-    'tsx': 'typescript',
-    'js': 'javascript',
-    'jsx': 'javascript',
-    'py': 'python',
-    'java': 'java',
-    'go': 'go',
-    'rs': 'rust',
-    'c': 'c',
-    'cpp': 'cpp',
-    'h': 'c',
-    'hpp': 'cpp',
+    ts: 'typescript',
+    tsx: 'typescript',
+    js: 'javascript',
+    jsx: 'javascript',
+    py: 'python',
+    java: 'java',
+    go: 'go',
+    rs: 'rust',
+    c: 'c',
+    cpp: 'cpp',
+    h: 'c',
+    hpp: 'cpp',
   };
   return map[ext] || 'plaintext';
 }

@@ -23,13 +23,13 @@ import type {
  * LSP 分析操作类型
  */
 export type LspAnalysisOperation =
-  | 'analyzeSymbol'       // 分析符号（定义 + 引用）
-  | 'findImplementations'  // 查找实现
-  | 'getCodeDiagnostics'  // 获取代码诊断
-  | 'searchSymbols'        // 搜索符号
+  | 'analyzeSymbol' // 分析符号（定义 + 引用）
+  | 'findImplementations' // 查找实现
+  | 'getCodeDiagnostics' // 获取代码诊断
+  | 'searchSymbols' // 搜索符号
   | 'analyzeCallHierarchy' // 分析调用层次
-  | 'getHoverInfo'         // 获取悬停信息
-  | 'getDocumentSymbols';  // 获取文档符号
+  | 'getHoverInfo' // 获取悬停信息
+  | 'getDocumentSymbols'; // 获取文档符号
 
 /**
  * LSP 分析工具参数
@@ -80,19 +80,19 @@ class LspAnalysisToolInvocation extends BaseToolInvocation<
     };
 
     const label = operationLabels[this.params.operation];
-    
+
     if (this.params.operation === 'searchSymbols') {
       return `LSP ${label}: "${this.params.query ?? ''}"`;
     }
-    
+
     if (this.params.line !== undefined) {
       return `LSP ${label} ${this.params.filePath}:${this.params.line}:${this.params.character ?? 1}`;
     }
-    
+
     return `LSP ${label} ${this.params.filePath}`;
   }
 
-  async execute(signal: AbortSignal): Promise<ToolResult> {
+  async execute(_signal: AbortSignal): Promise<ToolResult> {
     const client = this.config.getLspClient();
     if (!client || !this.config.isLspEnabled()) {
       const message = 'LSP 分析工具不可用（LSP 未启用或未初始化）';
@@ -102,19 +102,19 @@ class LspAnalysisToolInvocation extends BaseToolInvocation<
     try {
       switch (this.params.operation) {
         case 'analyzeSymbol':
-          return await this.executeAnalyzeSymbol(client, signal);
+          return await this.executeAnalyzeSymbol(client, _signal);
         case 'findImplementations':
-          return await this.executeFindImplementations(client, signal);
+          return await this.executeFindImplementations(client, _signal);
         case 'getCodeDiagnostics':
-          return await this.executeGetCodeDiagnostics(client, signal);
+          return await this.executeGetCodeDiagnostics(client, _signal);
         case 'searchSymbols':
-          return await this.executeSearchSymbols(client, signal);
+          return await this.executeSearchSymbols(client, _signal);
         case 'analyzeCallHierarchy':
-          return await this.executeAnalyzeCallHierarchy(client, signal);
+          return await this.executeAnalyzeCallHierarchy(client, _signal);
         case 'getHoverInfo':
-          return await this.executeGetHoverInfo(client, signal);
+          return await this.executeGetHoverInfo(client, _signal);
         case 'getDocumentSymbols':
-          return await this.executeGetDocumentSymbols(client, signal);
+          return await this.executeGetDocumentSymbols(client, _signal);
         default: {
           const message = `不支持的 LSP 操作：${this.params.operation}`;
           return { llmContent: message, returnDisplay: message };
@@ -132,7 +132,7 @@ class LspAnalysisToolInvocation extends BaseToolInvocation<
    */
   private async executeAnalyzeSymbol(
     client: LspClient,
-    signal: AbortSignal,
+    __signal: AbortSignal,
   ): Promise<ToolResult> {
     const target = this.resolveLocationTarget();
     if ('error' in target) {
@@ -140,26 +140,21 @@ class LspAnalysisToolInvocation extends BaseToolInvocation<
     }
 
     const limit = this.params.limit ?? 20;
-    
+
     // 并行获取定义和引用
     const [definitions, references] = await Promise.all([
-      client.definitions(target.location, this.params.serverName, limit).catch(
-        (error) => {
+      client
+        .definitions(target.location, this.params.serverName, limit)
+        .catch((error) => {
           console.error('LSP definition error:', error);
           return [];
-        },
-      ),
-      client.references(
-        target.location,
-        this.params.serverName,
-        false,
-        limit,
-      ).catch(
-        (error) => {
+        }),
+      client
+        .references(target.location, this.params.serverName, false, limit)
+        .catch((error) => {
           console.error('LSP references error:', error);
           return [];
-        },
-      ),
+        }),
     ]);
 
     const workspaceRoot = this.config.getProjectRoot();
@@ -170,7 +165,10 @@ class LspAnalysisToolInvocation extends BaseToolInvocation<
       definitions.length > 0
         ? definitions
             .slice(0, limit)
-            .map((def, i) => `${i + 1}. ${this.formatLocation(def, workspaceRoot)}`)
+            .map(
+              (def, i) =>
+                `${i + 1}. ${this.formatLocation(def, workspaceRoot)}`,
+            )
             .join('\n')
         : '未找到定义',
       '',
@@ -178,7 +176,10 @@ class LspAnalysisToolInvocation extends BaseToolInvocation<
       references.length > 0
         ? references
             .slice(0, limit)
-            .map((ref, i) => `${i + 1}. ${this.formatLocation(ref, workspaceRoot)}`)
+            .map(
+              (ref, i) =>
+                `${i + 1}. ${this.formatLocation(ref, workspaceRoot)}`,
+            )
             .join('\n')
         : '未找到引用',
     ];
@@ -195,7 +196,7 @@ class LspAnalysisToolInvocation extends BaseToolInvocation<
    */
   private async executeFindImplementations(
     client: LspClient,
-    signal: AbortSignal,
+    _signal: AbortSignal,
   ): Promise<ToolResult> {
     const target = this.resolveLocationTarget();
     if ('error' in target) {
@@ -223,7 +224,10 @@ class LspAnalysisToolInvocation extends BaseToolInvocation<
       implementations.length > 0
         ? implementations
             .slice(0, limit)
-            .map((impl, i) => `${i + 1}. ${this.formatLocation(impl, workspaceRoot)}`)
+            .map(
+              (impl, i) =>
+                `${i + 1}. ${this.formatLocation(impl, workspaceRoot)}`,
+            )
             .join('\n')
         : '未找到实现',
     ];
@@ -239,7 +243,7 @@ class LspAnalysisToolInvocation extends BaseToolInvocation<
    */
   private async executeGetCodeDiagnostics(
     client: LspClient,
-    signal: AbortSignal,
+    _signal: AbortSignal,
   ): Promise<ToolResult> {
     if (!this.params.filePath) {
       return {
@@ -248,7 +252,10 @@ class LspAnalysisToolInvocation extends BaseToolInvocation<
       };
     }
 
-    const filePath = path.resolve(this.config.getProjectRoot(), this.params.filePath);
+    const filePath = path.resolve(
+      this.config.getProjectRoot(),
+      this.params.filePath,
+    );
     const fileUri = pathToFileURL(filePath).toString();
 
     let diagnostics: LspDiagnostic[] = [];
@@ -265,7 +272,7 @@ class LspAnalysisToolInvocation extends BaseToolInvocation<
       '',
       diagnostics.length > 0
         ? diagnostics
-            .map((diag, i) => {
+            .map((diag, _i) => {
               const severity = diag.severity || 'error';
               const line = diag.range?.start?.line ?? 0;
               const char = diag.range?.start?.character ?? 0;
@@ -277,9 +284,10 @@ class LspAnalysisToolInvocation extends BaseToolInvocation<
 
     return {
       llmContent: content.join('\n'),
-      returnDisplay: diagnostics.length > 0
-        ? `发现 ${diagnostics.length} 个问题`
-        : '✓ 没有发现诊断问题',
+      returnDisplay:
+        diagnostics.length > 0
+          ? `发现 ${diagnostics.length} 个问题`
+          : '✓ 没有发现诊断问题',
     };
   }
 
@@ -288,7 +296,7 @@ class LspAnalysisToolInvocation extends BaseToolInvocation<
    */
   private async executeSearchSymbols(
     client: LspClient,
-    signal: AbortSignal,
+    _signal: AbortSignal,
   ): Promise<ToolResult> {
     if (!this.params.query) {
       return {
@@ -316,7 +324,9 @@ class LspAnalysisToolInvocation extends BaseToolInvocation<
             .slice(0, limit)
             .map((sym, i) => {
               const location = this.formatLocation(sym.location, workspaceRoot);
-              const container = sym.containerName ? ` (${sym.containerName})` : '';
+              const container = sym.containerName
+                ? ` (${sym.containerName})`
+                : '';
               return `${i + 1}. ${sym.name}${container} - ${location}`;
             })
             .join('\n')
@@ -334,7 +344,7 @@ class LspAnalysisToolInvocation extends BaseToolInvocation<
    */
   private async executeAnalyzeCallHierarchy(
     client: LspClient,
-    signal: AbortSignal,
+    _signal: AbortSignal,
   ): Promise<ToolResult> {
     const target = this.resolveLocationTarget();
     if ('error' in target) {
@@ -364,11 +374,11 @@ class LspAnalysisToolInvocation extends BaseToolInvocation<
     }
 
     const item = items[0];
-    
+
     // 声明变量以便在 return 中使用
     let incomingCallsLength = 0;
     let outgoingCallsLength = 0;
-    
+
     const content: string[] = [
       `调用层次分析：${target.description}`,
       '',
@@ -380,7 +390,11 @@ class LspAnalysisToolInvocation extends BaseToolInvocation<
 
     // 获取入向调用
     try {
-      const incomingCalls = await client.incomingCalls(item, this.params.serverName, limit);
+      const incomingCalls = await client.incomingCalls(
+        item,
+        this.params.serverName,
+        limit,
+      );
       incomingCallsLength = incomingCalls.length;
       if (incomingCalls.length > 0) {
         content.push('## 入向调用（谁调用了这个函数）');
@@ -398,7 +412,11 @@ class LspAnalysisToolInvocation extends BaseToolInvocation<
 
     // 获取出向调用
     try {
-      const outgoingCalls = await client.outgoingCalls(item, this.params.serverName, limit);
+      const outgoingCalls = await client.outgoingCalls(
+        item,
+        this.params.serverName,
+        limit,
+      );
       outgoingCallsLength = outgoingCalls.length;
       if (outgoingCalls.length > 0) {
         content.push('## 出向调用（这个函数调用了谁）');
@@ -425,7 +443,7 @@ class LspAnalysisToolInvocation extends BaseToolInvocation<
    */
   private async executeGetHoverInfo(
     client: LspClient,
-    signal: AbortSignal,
+    _signal: AbortSignal,
   ): Promise<ToolResult> {
     const target = this.resolveLocationTarget();
     if ('error' in target) {
@@ -444,7 +462,7 @@ class LspAnalysisToolInvocation extends BaseToolInvocation<
       return {
         llmContent: '没有可用的悬停信息',
         returnDisplay: '没有可用的悬停信息',
-      }
+      };
     }
 
     return {
@@ -458,7 +476,7 @@ class LspAnalysisToolInvocation extends BaseToolInvocation<
    */
   private async executeGetDocumentSymbols(
     client: LspClient,
-    signal: AbortSignal,
+    _signal: AbortSignal,
   ): Promise<ToolResult> {
     if (!this.params.filePath) {
       return {
@@ -467,12 +485,19 @@ class LspAnalysisToolInvocation extends BaseToolInvocation<
       };
     }
 
-    const filePath = path.resolve(this.config.getProjectRoot(), this.params.filePath);
+    const filePath = path.resolve(
+      this.config.getProjectRoot(),
+      this.params.filePath,
+    );
     const fileUri = pathToFileURL(filePath).toString();
 
     let symbols: LspSymbolInformation[] = [];
     try {
-      symbols = await client.documentSymbols(fileUri, this.params.serverName, this.params.limit ?? 50);
+      symbols = await client.documentSymbols(
+        fileUri,
+        this.params.serverName,
+        this.params.limit ?? 50,
+      );
     } catch (error) {
       const message = `LSP 获取文档符号失败：${(error as Error)?.message || String(error)}`;
       return { llmContent: message, returnDisplay: message };
@@ -484,7 +509,9 @@ class LspAnalysisToolInvocation extends BaseToolInvocation<
       symbols.length > 0
         ? symbols
             .map((sym, i) => {
-              const container = sym.containerName ? ` (${sym.containerName})` : '';
+              const container = sym.containerName
+                ? ` (${sym.containerName})`
+                : '';
               return `${i + 1}. ${sym.name}${container} - ${sym.kind || 'unknown'}`;
             })
             .join('\n')
@@ -511,7 +538,10 @@ class LspAnalysisToolInvocation extends BaseToolInvocation<
       return { error: '错误：需要提供行号' };
     }
 
-    const filePath = path.resolve(this.config.getProjectRoot(), this.params.filePath);
+    const filePath = path.resolve(
+      this.config.getProjectRoot(),
+      this.params.filePath,
+    );
     const uri = pathToFileURL(filePath).toString();
     const line = this.params.line - 1; // Convert to 0-based
     const character = (this.params.character ?? 1) - 1; // Convert to 0-based
@@ -545,7 +575,7 @@ class LspAnalysisToolInvocation extends BaseToolInvocation<
    */
   private formatUri(uri: string, workspaceRoot: string): string {
     if (uri.startsWith('file://')) {
-      let filePath = uri.slice(7);
+      const filePath = uri.slice(7);
       if (filePath.startsWith(workspaceRoot)) {
         return path.relative(workspaceRoot, filePath);
       }
@@ -557,7 +587,7 @@ class LspAnalysisToolInvocation extends BaseToolInvocation<
 
 /**
  * LSP 分析工具
- * 
+ *
  * 提供简化的 LSP 操作接口，用于代码分析场景
  */
 export class LspAnalysisTool extends BaseDeclarativeTool<
@@ -566,7 +596,10 @@ export class LspAnalysisTool extends BaseDeclarativeTool<
 > {
   static readonly Name = 'lsp_analysis';
 
-  constructor(private readonly config: Config, messageBus: MessageBus) {
+  constructor(
+    private readonly config: Config,
+    messageBus: MessageBus,
+  ) {
     super(
       LspAnalysisTool.Name,
       'LSP 代码分析',

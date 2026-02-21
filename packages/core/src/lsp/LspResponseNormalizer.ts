@@ -16,7 +16,6 @@ import type {
   LspCallHierarchyItem,
   LspCallHierarchyOutgoingCall,
   LspCodeAction,
-  LspCodeActionKind,
   LspDiagnostic,
   LspDiagnosticSeverity,
   LspFileDiagnostics,
@@ -57,17 +56,13 @@ export class LspResponseNormalizer {
     }
 
     const message =
-      typeof itemObj['message'] === 'string'
-        ? (itemObj['message'] as string)
-        : '';
+      typeof itemObj['message'] === 'string' ? itemObj['message'] : '';
     if (!message) {
       return null;
     }
 
     const severityNum =
-      typeof itemObj['severity'] === 'number'
-        ? (itemObj['severity'] as number)
-        : undefined;
+      typeof itemObj['severity'] === 'number' ? itemObj['severity'] : undefined;
     const severity = severityNum
       ? DIAGNOSTIC_SEVERITY_LABELS[severityNum]
       : undefined;
@@ -77,9 +72,7 @@ export class LspResponseNormalizer {
       typeof code === 'string' || typeof code === 'number' ? code : undefined;
 
     const source =
-      typeof itemObj['source'] === 'string'
-        ? (itemObj['source'] as string)
-        : undefined;
+      typeof itemObj['source'] === 'string' ? itemObj['source'] : undefined;
 
     const tags = this.normalizeDiagnosticTags(itemObj['tags']);
     const relatedInfo = this.normalizeDiagnosticRelatedInfo(
@@ -186,8 +179,7 @@ export class LspResponseNormalizer {
     }
 
     const itemObj = item as Record<string, unknown>;
-    const uri =
-      typeof itemObj['uri'] === 'string' ? (itemObj['uri'] as string) : '';
+    const uri = typeof itemObj['uri'] === 'string' ? itemObj['uri'] : '';
     if (!uri) {
       return null;
     }
@@ -234,9 +226,9 @@ export class LspResponseNormalizer {
     ) {
       // This is a raw Command, wrap it
       return {
-        title: itemObj['title'] as string,
+        title: itemObj['title'],
         command: {
-          title: itemObj['title'] as string,
+          title: itemObj['title'],
           command: (itemObj['command'] as string) ?? '',
           arguments: itemObj['arguments'] as unknown[] | undefined,
         },
@@ -244,21 +236,19 @@ export class LspResponseNormalizer {
       };
     }
 
-    const title =
-      typeof itemObj['title'] === 'string' ? (itemObj['title'] as string) : '';
+    const title = typeof itemObj['title'] === 'string' ? itemObj['title'] : '';
     if (!title) {
       return null;
     }
 
     const kind =
       typeof itemObj['kind'] === 'string'
-        ? (CODE_ACTION_KIND_LABELS[itemObj['kind'] as string] ??
-          (itemObj['kind'] as LspCodeActionKind))
+        ? (CODE_ACTION_KIND_LABELS[itemObj['kind']] ?? itemObj['kind'])
         : undefined;
 
     const isPreferred =
       typeof itemObj['isPreferred'] === 'boolean'
-        ? (itemObj['isPreferred'] as boolean)
+        ? itemObj['isPreferred']
         : undefined;
 
     const edit = this.normalizeWorkspaceEdit(itemObj['edit']);
@@ -357,9 +347,7 @@ export class LspResponseNormalizer {
     }
 
     const newText =
-      typeof editObj['newText'] === 'string'
-        ? (editObj['newText'] as string)
-        : '';
+      typeof editObj['newText'] === 'string' ? editObj['newText'] : '';
 
     return { range, newText };
   }
@@ -382,18 +370,13 @@ export class LspResponseNormalizer {
     }
 
     const textDocObj = textDocument as Record<string, unknown>;
-    const uri =
-      typeof textDocObj['uri'] === 'string'
-        ? (textDocObj['uri'] as string)
-        : '';
+    const uri = typeof textDocObj['uri'] === 'string' ? textDocObj['uri'] : '';
     if (!uri) {
       return null;
     }
 
     const version =
-      typeof textDocObj['version'] === 'number'
-        ? (textDocObj['version'] as number)
-        : null;
+      typeof textDocObj['version'] === 'number' ? textDocObj['version'] : null;
 
     const edits = docEditObj['edits'];
     if (!Array.isArray(edits)) {
@@ -429,12 +412,9 @@ export class LspResponseNormalizer {
     }
 
     const cmdObj = cmd as Record<string, unknown>;
-    const title =
-      typeof cmdObj['title'] === 'string' ? (cmdObj['title'] as string) : '';
+    const title = typeof cmdObj['title'] === 'string' ? cmdObj['title'] : '';
     const command =
-      typeof cmdObj['command'] === 'string'
-        ? (cmdObj['command'] as string)
-        : '';
+      typeof cmdObj['command'] === 'string' ? cmdObj['command'] : '';
 
     if (!command) {
       return null;
@@ -737,7 +717,7 @@ export class LspResponseNormalizer {
 
     const serverOverride =
       typeof itemObj['serverName'] === 'string'
-        ? (itemObj['serverName'] as string)
+        ? itemObj['serverName']
         : undefined;
 
     // Preserve raw numeric kind for server communication
@@ -758,9 +738,7 @@ export class LspResponseNormalizer {
       kind: this.normalizeSymbolKind(itemObj['kind']),
       rawKind,
       detail:
-        typeof itemObj['detail'] === 'string'
-          ? (itemObj['detail'] as string)
-          : undefined,
+        typeof itemObj['detail'] === 'string' ? itemObj['detail'] : undefined,
       uri,
       range,
       selectionRange,

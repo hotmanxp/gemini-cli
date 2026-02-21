@@ -39,7 +39,7 @@ export interface PipelineConfig {
 export class ContentGenerationPipeline {
   client: OpenAI;
   private converter: OpenAIContentConverter;
-  public contentGeneratorConfig: OpenAIContentGeneratorConfig;
+  contentGeneratorConfig: OpenAIContentGeneratorConfig;
 
   constructor(private config: PipelineConfig) {
     this.contentGeneratorConfig = config.contentGeneratorConfig as OpenAIContentGeneratorConfig;
@@ -311,7 +311,7 @@ export class ContentGenerationPipeline {
         ? (request.config?.[requestKey] as T | undefined)
         : undefined;
       const defaultValue = requestKey
-        ? (defaultSamplingParams[requestKey as keyof typeof defaultSamplingParams] as T)
+        ? (defaultSamplingParams[requestKey] as T)
         : undefined;
 
       if (configValue !== undefined) return configValue;
@@ -417,7 +417,7 @@ export class ContentGenerationPipeline {
       return result;
     } catch (error) {
       // Use shared error handling logic
-      return await this.handleError(error, context, request);
+      return this.handleError(error, context, request);
     }
   }
 

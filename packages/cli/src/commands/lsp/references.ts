@@ -11,8 +11,8 @@ export const referencesCommand: CommandModule = {
   command: 'references <file>',
   describe: 'Find all references to a symbol in a file',
   aliases: ['refs'],
-  builder: (yargs: Argv) => {
-    return yargs
+  builder: (yargs: Argv) =>
+    yargs
       .positional('file', {
         desc: 'File path',
         type: 'string',
@@ -41,8 +41,7 @@ export const referencesCommand: CommandModule = {
         desc: 'Include declarations in results',
         type: 'boolean',
         default: true,
-      });
-  },
+      }),
   handler: async (argv) => {
     const file = String(argv['file']);
     const line = Number(argv['line']);
@@ -55,7 +54,7 @@ export const referencesCommand: CommandModule = {
     }
 
     const lspService = new LspService();
-    
+
     try {
       // Auto-start language server based on file extension
       const started = await lspService.autoStartLanguage(file, workspace);
@@ -64,26 +63,26 @@ export const referencesCommand: CommandModule = {
       }
 
       // Read file content
-      const fs = await import('fs/promises');
+      const fs = await import('node:fs/promises');
       const content = await fs.readFile(file, 'utf-8');
       const uri = `file://${file}`;
-      
+
       // Determine language ID from file extension
       const ext = file.split('.').pop()?.toLowerCase() || '';
       const languageId = getLanguageIdFromExtension(ext);
-      
+
       // Open document
       await lspService.openDocument(uri, languageId, content);
-      
+
       // Get references
       const references = await lspService.findReferences(uri, line, column);
-      
+
       if (!references || references.length === 0) {
         return;
       }
 
       const items = Array.isArray(references) ? references : [references];
-      
+
       // Group by file
       const byFile = new Map<string, Reference[]>();
       for (const ref of items) {
@@ -94,7 +93,7 @@ export const referencesCommand: CommandModule = {
         }
         byFile.get(refUri)!.push(refTyped);
       }
-      
+
       for (const [refUri, refs] of byFile) {
         const refPath = refUri.replace('file://', '');
         void refPath; // Mark as intentionally unused
@@ -103,10 +102,10 @@ export const referencesCommand: CommandModule = {
           void ref; // Mark as intentionally unused
         }
       }
-      
+
       // Close document
       await lspService.closeDocument(uri);
-    } catch (error) {
+    } catch (_error) {
       process.exit(1);
     }
   },
@@ -114,18 +113,18 @@ export const referencesCommand: CommandModule = {
 
 function getLanguageIdFromExtension(ext: string): string {
   const map: Record<string, string> = {
-    'ts': 'typescript',
-    'tsx': 'typescript',
-    'js': 'javascript',
-    'jsx': 'javascript',
-    'py': 'python',
-    'java': 'java',
-    'go': 'go',
-    'rs': 'rust',
-    'c': 'c',
-    'cpp': 'cpp',
-    'h': 'c',
-    'hpp': 'cpp',
+    ts: 'typescript',
+    tsx: 'typescript',
+    js: 'javascript',
+    jsx: 'javascript',
+    py: 'python',
+    java: 'java',
+    go: 'go',
+    rs: 'rust',
+    c: 'c',
+    cpp: 'cpp',
+    h: 'c',
+    hpp: 'cpp',
   };
   return map[ext] || 'plaintext';
 }

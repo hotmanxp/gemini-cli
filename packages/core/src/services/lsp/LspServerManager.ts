@@ -87,7 +87,7 @@ export class LspServerManager {
   }
 
   async shutdown(): Promise<void> {
-    const promises: Promise<void>[] = [];
+    const promises: Array<Promise<void>> = [];
     this.servers.forEach((_, languageId) => {
       promises.push(this.stopServer(languageId));
     });

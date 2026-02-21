@@ -9,8 +9,8 @@ import type { FileDiscoveryService } from '../services/fileDiscoveryService.js';
 import type { WorkspaceContext } from '../utils/workspaceContext.js';
 import { spawn, type ChildProcess } from 'node:child_process';
 import * as fs from 'node:fs';
-import * as path from 'path';
-import { pathToFileURL } from 'url';
+import * as path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { globSync } from 'glob';
 import { LspConnectionFactory } from './LspConnectionFactory.js';
 import {
@@ -438,7 +438,7 @@ export class LspServerManager {
         },
         exit: () => {
           if (lspConnection.process && !lspConnection.process.killed) {
-            (lspConnection.process as ChildProcess).kill();
+            (lspConnection.process).kill();
           }
           lspConnection.connection.end();
         },

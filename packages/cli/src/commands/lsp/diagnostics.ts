@@ -11,8 +11,8 @@ export const diagnosticsCommand: CommandModule = {
   command: 'diagnostics <file>',
   describe: 'Get diagnostic information (errors, warnings) for a file',
   aliases: ['diag', 'errors'],
-  builder: (yargs: Argv) => {
-    return yargs
+  builder: (yargs: Argv) =>
+    yargs
       .positional('file', {
         desc: 'File path',
         type: 'string',
@@ -23,8 +23,7 @@ export const diagnosticsCommand: CommandModule = {
         desc: 'Workspace root directory',
         type: 'string',
         default: process.cwd(),
-      });
-  },
+      }),
   handler: async (argv) => {
     const file = String(argv['file']);
     const workspace = String(argv['workspace']);
@@ -36,7 +35,7 @@ export const diagnosticsCommand: CommandModule = {
     }
 
     const lspService = new LspService();
-    
+
     try {
       // Auto-start language server based on file extension
       const started = await lspService.autoStartLanguage(file, workspace);
@@ -45,23 +44,23 @@ export const diagnosticsCommand: CommandModule = {
       }
 
       // Read file content
-      const fs = await import('fs/promises');
+      const fs = await import('node:fs/promises');
       const content = await fs.readFile(file, 'utf-8');
       const uri = `file://${file}`;
-      
+
       // Determine language ID from file extension
       const ext = file.split('.').pop()?.toLowerCase() || '';
       const languageId = getLanguageIdFromExtension(ext);
-      
+
       // Open document
       await lspService.openDocument(uri, languageId, content);
-      
+
       // Wait a bit for diagnostics to be published
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       // Get diagnostics
       const diagnostics = lspService.getDiagnostics(uri);
-      
+
       if (!diagnostics || diagnostics.length === 0) {
         return;
       }
@@ -71,7 +70,7 @@ export const diagnosticsCommand: CommandModule = {
       const warnings = diagnostics.filter((d: Diagnostic) => d.severity === 2);
       const infos = diagnostics.filter((d: Diagnostic) => d.severity === 3);
       const hints = diagnostics.filter((d: Diagnostic) => d.severity === 4);
-      
+
       if (errors.length > 0) {
         for (const diag of errors) {
           void diag; // Process error diagnostics
@@ -95,10 +94,10 @@ export const diagnosticsCommand: CommandModule = {
           void diag; // Process hint diagnostics
         }
       }
-      
+
       // Close document
       await lspService.closeDocument(uri);
-    } catch (error) {
+    } catch (_error) {
       process.exit(1);
     }
   },
@@ -106,18 +105,18 @@ export const diagnosticsCommand: CommandModule = {
 
 function getLanguageIdFromExtension(ext: string): string {
   const map: Record<string, string> = {
-    'ts': 'typescript',
-    'tsx': 'typescript',
-    'js': 'javascript',
-    'jsx': 'javascript',
-    'py': 'python',
-    'java': 'java',
-    'go': 'go',
-    'rs': 'rust',
-    'c': 'c',
-    'cpp': 'cpp',
-    'h': 'c',
-    'hpp': 'cpp',
+    ts: 'typescript',
+    tsx: 'typescript',
+    js: 'javascript',
+    jsx: 'javascript',
+    py: 'python',
+    java: 'java',
+    go: 'go',
+    rs: 'rust',
+    c: 'c',
+    cpp: 'cpp',
+    h: 'c',
+    hpp: 'cpp',
   };
   return map[ext] || 'plaintext';
 }

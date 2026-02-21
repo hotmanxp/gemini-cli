@@ -24,7 +24,7 @@ import type {
   LspTextEdit,
   LspWorkspaceEdit,
 } from './types.js';
-import type { EventEmitter } from 'events';
+import type { EventEmitter } from 'node:events';
 import { LspConfigLoader } from './LspConfigLoader.js';
 import { LspLanguageDetector } from './LspLanguageDetector.js';
 import { LspResponseNormalizer } from './LspResponseNormalizer.js';
@@ -35,8 +35,8 @@ import type {
   LspServerStatus,
   NativeLspServiceOptions,
 } from './types.js';
-import * as path from 'path';
-import { fileURLToPath } from 'url';
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import * as fs from 'node:fs';
 import { debugLogger } from '../utils/debugLogger.js';
 
@@ -795,7 +795,7 @@ export class NativeLspService {
     try {
       if (edit.changes) {
         for (const [uri, edits] of Object.entries(edit.changes)) {
-          await this.applyTextEdits(uri, edits as LspTextEdit[]);
+          await this.applyTextEdits(uri, edits);
         }
       }
 

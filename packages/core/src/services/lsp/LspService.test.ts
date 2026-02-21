@@ -7,7 +7,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // 跟踪 mock 调用
-const mockCalls: { method: string; args?: unknown[] }[] = [];
+const mockCalls: Array<{ method: string; args?: unknown[] }> = [];
 
 const createMockManager = () => ({
   startServer: vi.fn().mockImplementation(() => {
@@ -47,9 +47,7 @@ const createMockManager = () => ({
 let mockManager: ReturnType<typeof createMockManager>;
 
 vi.mock('./LspServerManager.js', () => ({
-  LspServerManager: vi.fn().mockImplementation(() => {
-    return mockManager;
-  }),
+  LspServerManager: vi.fn().mockImplementation(() => mockManager),
 }));
 
 vi.mock('./languages.js', () => ({

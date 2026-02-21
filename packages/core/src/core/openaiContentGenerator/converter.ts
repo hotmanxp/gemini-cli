@@ -384,7 +384,7 @@ export class OpenAIContentConverter {
       return;
     }
 
-    const geminiContent = content as Content;
+    const geminiContent = content;
     const role = geminiContent.role;
     const parts = geminiContent.parts || [];
 
