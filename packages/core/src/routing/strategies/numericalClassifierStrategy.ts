@@ -187,9 +187,11 @@ export class NumericalClassifierStrategy implements RoutingStrategy {
       const useCustomToolModel =
         useGemini3_1 &&
         config.getContentGeneratorConfig().authType === AuthType.USE_GEMINI;
+      const authType = config.getContentGeneratorConfig().authType;
       const selectedModel = resolveClassifierModel(
         model,
         modelAlias,
+        authType,
         useGemini3_1,
         useCustomToolModel,
       );

@@ -294,7 +294,8 @@ describe('resolveClassifierModel', () => {
       resolveClassifierModel(
         PREVIEW_GEMINI_MODEL_AUTO,
         GEMINI_MODEL_ALIAS_PRO,
-        true,
+        undefined, // authType
+        true, // useGemini3_1
       ),
     ).toBe(PREVIEW_GEMINI_3_1_MODEL);
   });
@@ -304,8 +305,9 @@ describe('resolveClassifierModel', () => {
       resolveClassifierModel(
         PREVIEW_GEMINI_MODEL_AUTO,
         GEMINI_MODEL_ALIAS_PRO,
-        true,
-        true,
+        undefined, // authType
+        true, // useGemini3_1
+        true, // useCustomToolModel
       ),
     ).toBe(PREVIEW_GEMINI_3_1_CUSTOM_TOOLS_MODEL);
   });
