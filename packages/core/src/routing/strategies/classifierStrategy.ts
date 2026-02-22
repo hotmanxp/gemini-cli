@@ -12,7 +12,7 @@ import type {
   RoutingDecision,
   RoutingStrategy,
 } from '../routingStrategy.js';
-import { isGemini3Model } from '../../config/models.js';
+import { isGemini3Model, resolveClassifierModel } from '../../config/models.js';
 import { createUserContent, Type } from '@google/genai';
 import type { Config } from '../../config/config.js';
 import {
@@ -21,6 +21,7 @@ import {
 } from '../../utils/messageInspectors.js';
 import { debugLogger } from '../../utils/debugLogger.js';
 import { LlmRole } from '../../telemetry/types.js';
+import { AuthType } from '../../core/contentGenerator.js';
 
 // The number of recent history turns to provide to the router for context.
 const HISTORY_TURNS_FOR_CONTEXT = 4;
@@ -169,9 +170,19 @@ export class ClassifierStrategy implements RoutingStrategy {
 
       const reasoning = routerResponse.reasoning;
       const latencyMs = Date.now() - startTime;
-      
-      // TEMPORARY: Hardcode to coder-model for Qwen OAuth testing
-      const selectedModel = 'coder-model';
+
+      const useGemini3_1 = (await config.getGemini31Launched?.()) ?? false;
+      const useCustomToolModel =
+        useGemini3_1 &&
+        config.getContentGeneratorConfig().authType === AuthType.USE_GEMINI;
+      const authType = config.getContentGeneratorConfig().authType;
+      const selectedModel = resolveClassifierModel(
+        model,
+        routerResponse.model_choice,
+        authType,
+        useGemini3_1,
+        useCustomToolModel,
+      );
 
       return {
         model: selectedModel,
