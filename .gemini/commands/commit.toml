@@ -1,6 +1,6 @@
-description = "Commit and push current changes to remote"
+description = "Commit current changes and ask before pushing to remote"
 prompt = """
-Commit all current changes and push to remote.
+Commit current changes and ask before pushing to remote.
 
 Steps:
 1. Run `git status` to see current changes
@@ -8,7 +8,8 @@ Steps:
 3. Analyze the changes and generate an appropriate commit message (use Conventional Commits format if possible)
 4. Run `git add -A` to stage all changes
 5. Run `git commit -m "<generated message>"` to commit
-6. Run `git push -u origin <current-branch>` to push to remote
+6. Use `ask-user` tool to ask the user if they want to push to remote (show the commit message and branch name)
+7. If user confirms, run `git push -u origin <current-branch>` to push to remote
 
 Args (optional): {{args}}
 """
