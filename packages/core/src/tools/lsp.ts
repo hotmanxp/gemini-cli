@@ -45,7 +45,8 @@ export type LspOperation =
   | 'outgoingCalls'
   | 'diagnostics'
   | 'workspaceDiagnostics'
-  | 'codeActions';
+  | 'codeActions'
+  | 'warmup';
 
 /**
  * Parameters for the unified LSP tool.
@@ -184,6 +185,8 @@ class LspToolInvocation extends BaseToolInvocation<LspToolParams, ToolResult> {
         return this.executeWorkspaceDiagnostics(client);
       case 'codeActions':
         return this.executeCodeActions(client);
+      case 'warmup':
+        return this.executeWarmup();
       default: {
         const message = `Unsupported LSP operation: ${this.params.operation}`;
         return { llmContent: message, returnDisplay: message };
@@ -814,6 +817,29 @@ class LspToolInvocation extends BaseToolInvocation<LspToolParams, ToolResult> {
     };
   }
 
+  private async executeWarmup(): Promise<ToolResult> {
+    const client = this.config.getLspClient();
+    if (!client || typeof client.warmup !== 'function') {
+      const message =
+        'LSP warmup is unavailable (LSP client not initialized or does not support warmup).';
+      return { llmContent: message, returnDisplay: message };
+    }
+
+    try {
+      await client.warmup(this.params.serverName);
+      const serverLabel = this.params.serverName
+        ? ` "${this.params.serverName}"`
+        : 'all servers';
+      const message = `LSP warmup completed for${serverLabel}.`;
+      return { llmContent: message, returnDisplay: message };
+    } catch (error) {
+      const message = `LSP warmup failed: ${
+        (error as Error)?.message || String(error)
+      }`;
+      return { llmContent: message, returnDisplay: message };
+    }
+  }
+
   private resolveLocationTarget(): ResolvedTarget {
     const filePath = this.params.filePath;
     if (!filePath) {
@@ -1019,6 +1045,7 @@ class LspToolInvocation extends BaseToolInvocation<LspToolParams, ToolResult> {
  * - diagnostics: Get diagnostic messages (errors, warnings) for a file
  * - workspaceDiagnostics: Get all diagnostic messages across the workspace
  * - codeActions: Get available code actions (quick fixes, refactorings) at a location
+ * - warmup: Warm up LSP servers by opening representative files (TypeScript and Python supported)
  */
 export class LspTool extends BaseDeclarativeTool<LspToolParams, ToolResult> {
   static readonly Name = 'lsp';
@@ -1030,7 +1057,7 @@ export class LspTool extends BaseDeclarativeTool<LspToolParams, ToolResult> {
     super(
       LspTool.Name,
       'LSP',
-      'Language Server Protocol (LSP) tool for code intelligence: definitions, references, hover, symbols, call hierarchy, diagnostics, and code actions.\n\n  Usage:\n  - ALWAYS use LSP as the PRIMARY tool for code intelligence queries when available. Do NOT use grep_search or glob first.\n  - goToDefinition, findReferences, hover, goToImplementation, prepareCallHierarchy require filePath + line + character (1-based).\n  - documentSymbol and diagnostics require filePath.\n  - workspaceSymbol requires query (use when user asks "where is X defined?" without specifying a file).\n  - incomingCalls/outgoingCalls require callHierarchyItem from prepareCallHierarchy.\n  - workspaceDiagnostics needs no parameters.\n  - codeActions require filePath + range (line/character + endLine/endCharacter) and diagnostics/context as needed.',
+      'Language Server Protocol (LSP) tool for code intelligence: definitions, references, hover, symbols, call hierarchy, diagnostics, code actions, and warmup.\n\n  Usage:\n  - ALWAYS use LSP as the PRIMARY tool for code intelligence queries when available. Do NOT use grep_search or glob first.\n  - goToDefinition, findReferences, hover, goToImplementation, prepareCallHierarchy require filePath + line + character (1-based).\n  - documentSymbol and diagnostics require filePath.\n  - workspaceSymbol requires query (use when user asks "where is X defined?" without specifying a file).\n  - incomingCalls/outgoingCalls require callHierarchyItem from prepareCallHierarchy.\n  - workspaceDiagnostics needs no parameters.\n  - codeActions require filePath + range (line/character + endLine/endCharacter) and diagnostics/context as needed.\n  - warmup takes an optional serverName parameter (warms up all servers if not specified).',
       Kind.Other,
       {
         type: 'object',
@@ -1051,6 +1078,7 @@ export class LspTool extends BaseDeclarativeTool<LspToolParams, ToolResult> {
               'diagnostics',
               'workspaceDiagnostics',
               'codeActions',
+              'warmup',
             ],
           },
           filePath: {

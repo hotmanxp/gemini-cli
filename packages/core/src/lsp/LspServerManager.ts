@@ -145,6 +145,53 @@ export class LspServerManager {
   }
 
   /**
+   * Ensure Python language server has at least one file open so it can analyze the project.
+   * Sets warmedUp flag only after successful warm-up to allow retry on failure.
+   */
+  async warmupPythonServer(
+    handle: LspServerHandle,
+    force = false,
+  ): Promise<void> {
+    if (!handle.connection || !this.isPythonServer(handle)) {
+      return;
+    }
+    if (handle.warmedUp && !force) {
+      return;
+    }
+    const pyFile = this.findFirstPythonFile();
+    if (!pyFile) {
+      return;
+    }
+
+    const uri = pathToFileURL(pyFile).toString();
+    const languageId = 'python';
+    try {
+      const text = fs.readFileSync(pyFile, 'utf-8');
+      handle.connection.send({
+        jsonrpc: '2.0',
+        method: 'textDocument/didOpen',
+        params: {
+          textDocument: {
+            uri,
+            languageId,
+            version: 1,
+            text,
+          },
+        },
+      });
+      // Give Python language server a moment to analyze the project.
+      await new Promise((resolve) =>
+        setTimeout(resolve, DEFAULT_LSP_WARMUP_DELAY_MS),
+      );
+      // Only mark as warmed up after successful completion
+      handle.warmedUp = true;
+    } catch (error) {
+      // Do not set warmedUp to true on failure, allowing retry
+      debugLogger.warn('Python server warm-up failed:', error);
+    }
+  }
+
+  /**
    * Check if the given handle is a TypeScript language server.
    *
    * @param handle - The LSP server handle
@@ -155,6 +202,61 @@ export class LspServerManager {
       handle.config.name.includes('typescript') ||
       (handle.config.command?.includes('typescript') ?? false)
     );
+  }
+
+  /**
+   * Check if the given handle is a Python language server.
+   *
+   * @param handle - The LSP server handle
+   * @returns true if it's a Python server
+   */
+  isPythonServer(handle: LspServerHandle): boolean {
+    return (
+      handle.config.name.includes('python') ||
+      handle.config.name.includes('pylsp') ||
+      handle.config.name.includes('pyright') ||
+      (handle.config.command?.includes('python') ?? false) ||
+      (handle.config.command?.includes('pylsp') ?? false) ||
+      (handle.config.command?.includes('pyright') ?? false)
+    );
+  }
+
+  /**
+   * Warm up a specific LSP server or all servers if no name is provided.
+   * This is the public API for manual warmup.
+   *
+   * @param serverName - Optional server name to warm up. If not provided, warms up all servers.
+   */
+  async warmupServer(serverName?: string): Promise<void> {
+    if (serverName) {
+      const handle = this.serverHandles.get(serverName);
+      if (handle) {
+        await this.warmupServerHandle(handle);
+      } else {
+        debugLogger.warn(`LSP server "${serverName}" not found for warmup`);
+      }
+    } else {
+      // Warm up all servers
+      for (const handle of this.serverHandles.values()) {
+        await this.warmupServerHandle(handle);
+      }
+    }
+  }
+
+  /**
+   * Internal method to warm up a single server handle.
+   */
+  private async warmupServerHandle(handle: LspServerHandle): Promise<void> {
+    if (!handle.connection) {
+      return;
+    }
+
+    if (this.isTypescriptServer(handle)) {
+      await this.warmupTypescriptServer(handle, true);
+    } else if (this.isPythonServer(handle)) {
+      await this.warmupPythonServer(handle, true);
+    }
+    // Other language servers can be added here as needed
   }
 
   /**
@@ -692,6 +794,46 @@ export class LspServerManager {
       '**/.git/**',
       '**/dist/**',
       '**/build/**',
+    ];
+
+    for (const root of this.workspaceContext.getDirectories()) {
+      for (const pattern of patterns) {
+        try {
+          const matches = globSync(pattern, {
+            cwd: root,
+            ignore: excludePatterns,
+            absolute: true,
+            nodir: true,
+          });
+          for (const file of matches) {
+            if (this.fileDiscoveryService.shouldIgnoreFile(file)) {
+              continue;
+            }
+            return file;
+          }
+        } catch (_error) {
+          // ignore glob errors
+        }
+      }
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Find a representative Python file to warm up Python language server.
+   */
+  private findFirstPythonFile(): string | undefined {
+    const patterns = ['**/*.py'];
+    const excludePatterns = [
+      '**/node_modules/**',
+      '**/.git/**',
+      '**/dist/**',
+      '**/build/**',
+      '**/__pycache__/**',
+      '**/*.pyc',
+      '**/.venv/**',
+      '**/venv/**',
     ];
 
     for (const root of this.workspaceContext.getDirectories()) {

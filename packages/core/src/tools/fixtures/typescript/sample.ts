@@ -62,7 +62,7 @@ export class ScientificCalculator extends Calculator {
   }
 
   // Override parent method
-  reset(): void {
+  override reset(): void {
     super.reset();
     this.clearMemory();
   }
@@ -81,12 +81,12 @@ export class AdvancedCalculator extends Calculator {
     this.history.push(operation);
   }
 
-  add(n: number): void {
+  override add(n: number): void {
     super.add(n);
     this.logOperation(`add ${n}`);
   }
 
-  subtract(n: number): void {
+  override subtract(n: number): void {
     super.subtract(n);
     this.logOperation(`subtract ${n}`);
   }

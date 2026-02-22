@@ -25,18 +25,16 @@ import type {
   LspSymbolInformation,
   LspTextEdit,
   LspWorkspaceEdit,
-} from './types.js';
+
+  LspConnectionInterface,
+  LspServerHandle,
+  LspServerStatus,
+  NativeLspServiceOptions} from './types.js';
 import type { EventEmitter } from 'node:events';
 import { LspConfigLoader } from './LspConfigLoader.js';
 import { LspLanguageDetector } from './LspLanguageDetector.js';
 import { LspResponseNormalizer } from './LspResponseNormalizer.js';
 import { LspServerManager } from './LspServerManager.js';
-import type {
-  LspConnectionInterface,
-  LspServerHandle,
-  LspServerStatus,
-  NativeLspServiceOptions,
-} from './types.js';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as fs from 'node:fs';
@@ -888,5 +886,15 @@ export class NativeLspService {
           ? ((response as Record<string, unknown>)['message'] as string)
           : '';
     return message.includes('No Project');
+  }
+
+  /**
+   * Warm up LSP servers by opening representative files.
+   * This triggers language server initialization and project analysis.
+   *
+   * @param serverName - Optional server name to warm up. If not provided, warms up all servers.
+   */
+  async warmup(serverName?: string): Promise<void> {
+    await this.serverManager.warmupServer(serverName);
   }
 }
