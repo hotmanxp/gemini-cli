@@ -36,6 +36,7 @@ import { WebSearchTool } from '../tools/web-search.js';
 import { AskUserTool } from '../tools/ask-user.js';
 import { ExitPlanModeTool } from '../tools/exit-plan-mode.js';
 import { EnterPlanModeTool } from '../tools/enter-plan-mode.js';
+import { LspTool } from '../tools/lsp.js';
 import { GeminiClient } from '../core/client.js';
 import { BaseLlmClient } from '../core/baseLlmClient.js';
 import type { HookDefinition, HookEventName } from '../hooks/types.js';
@@ -555,7 +556,7 @@ export class Config {
   private gitService: GitService | undefined = undefined;
   // LSP-related fields
   private lspClient: LspClient | null = null;
-  private lspEnabled: boolean = false;
+  private lspEnabled: boolean = true;
 
   private readonly checkpointing: boolean;
   private readonly proxy: string | undefined;
@@ -2470,6 +2471,10 @@ export class Config {
         registry.registerTool(new EnterPlanModeTool(this, this.messageBus)),
       );
     }
+
+    maybeRegister(LspTool, () =>
+      registry.registerTool(new LspTool(this, this.messageBus)),
+    );
 
     // Register Subagents as Tools
     this.registerSubAgentTools(registry);

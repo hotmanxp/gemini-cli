@@ -201,6 +201,7 @@ export * from './utils/terminal.js';
 export type { Content, Part, FunctionCall } from '@google/genai';
 // Export LSP (Language Server Protocol)
 export * from './services/lsp/index.js';
+export { NativeLspService, NativeLspClient } from './lsp/index.js';
 
 // Export Qwen OAuth and Content Generator (explicit exports to avoid conflicts)
 export {

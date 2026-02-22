@@ -66,6 +66,7 @@ import { requestConsentNonInteractive } from './extensions/consent.js';
 import { promptForSetting } from './extensions/extensionSettings.js';
 import type { EventEmitter } from 'node:stream';
 import { runExitCleanup } from '../utils/cleanup.js';
+import { NativeLspService, NativeLspClient } from '@google/gemini-cli-core';
 
 export interface CliArgs {
   query: string | undefined;
@@ -747,7 +748,7 @@ export async function loadCliConfig(
     }
   }
 
-  return new Config({
+  const config = new Config({
     sessionId,
     clientVersion: await getVersion(),
     embeddingModel: DEFAULT_GEMINI_EMBEDDING_MODEL,
@@ -870,6 +871,29 @@ export async function loadCliConfig(
       };
     },
   });
+
+  if (folderTrust) {
+    try {
+      const lspService = new NativeLspService(
+        config,
+        config.getWorkspaceContext(),
+        coreEvents,
+        fileService,
+        {
+          requireTrustedWorkspace: folderTrust,
+        },
+      );
+
+      await lspService.discoverAndPrepare();
+      await lspService.start();
+      const lspClient = new NativeLspClient(lspService);
+      config.setLspClient(lspClient);
+    } catch (err) {
+      debugLogger.warn('Failed to initialize native LSP service:', err);
+    }
+  }
+
+  return config;
 }
 
 function mergeExcludeTools(

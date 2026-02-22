@@ -148,9 +148,14 @@ class LspToolInvocation extends BaseToolInvocation<LspToolParams, ToolResult> {
   }
 
   async execute(_signal: AbortSignal): Promise<ToolResult> {
+    if (!this.config.isLspEnabled()) {
+      const message = `LSP ${this.getOperationLabel()} is unavailable (LSP disabled).`;
+      return { llmContent: message, returnDisplay: message };
+    }
+
     const client = this.config.getLspClient();
-    if (!client || !this.config.isLspEnabled()) {
-      const message = `LSP ${this.getOperationLabel()} is unavailable (LSP disabled or not initialized).`;
+    if (!client) {
+      const message = `LSP ${this.getOperationLabel()} is unavailable (LSP server not initialized).`;
       return { llmContent: message, returnDisplay: message };
     }
 
@@ -1160,6 +1165,10 @@ export class LspTool extends BaseDeclarativeTool<LspToolParams, ToolResult> {
   protected override validateToolParamValues(
     params: LspToolParams,
   ): string | null {
+    if (!params.operation) {
+      params.operation = 'diagnostics';
+    }
+
     const operation = params.operation;
 
     if (LOCATION_REQUIRED_OPERATIONS.has(operation)) {

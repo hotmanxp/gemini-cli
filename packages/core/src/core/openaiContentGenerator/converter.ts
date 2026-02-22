@@ -85,6 +85,8 @@ export class OpenAIContentConverter {
   private model: string;
   private streamingToolCallParser: StreamingToolCallParser =
     new StreamingToolCallParser();
+  // Store reasoning content across streaming chunks to accumulate full reasoning
+  private accumulatedReasoning: string = '';
   // Store tool parameter schemas for parameter name mapping
   private toolParameterSchemas: Map<string, Record<string, unknown>> =
     new Map();
@@ -187,6 +189,7 @@ export class OpenAIContentConverter {
    */
   resetStreamingToolCalls(): void {
     this.streamingToolCallParser.reset();
+    this.accumulatedReasoning = '';
   }
 
   /**
@@ -443,7 +446,9 @@ export class OpenAIContentConverter {
 
       const assistantMessage: ExtendedChatCompletionAssistantMessageParam = {
         role: 'assistant',
-        content: textParts.join('') || null,
+        // When there are tool_calls, content must be null (or the actual text if model responds with both text and tools)
+        // But if content is only whitespace/newlines, it should be null to avoid confusing the model
+        content: toolCalls.length > 0 ? null : textParts.join('') || null,
       };
 
       if (toolCalls.length > 0) {
@@ -511,6 +516,7 @@ export class OpenAIContentConverter {
     response: FunctionResponse,
   ): OpenAI.Chat.ChatCompletionToolMessageParam | null {
     const textContent = this.extractFunctionResponseContent(response.response);
+
     const contentParts: OpenAIContentPart[] = [];
 
     // Add text content first if present
@@ -823,11 +829,15 @@ export class OpenAIContentConverter {
     if (choice) {
       const parts: Part[] = [];
 
-      const reasoningText =
+      // Accumulate reasoning content across streaming chunks
+      const newReasoning =
         (choice.delta as ExtendedCompletionChunkDelta)?.reasoning_content ??
-        (choice.delta as ExtendedCompletionChunkDelta)?.reasoning;
-      if (reasoningText) {
-        parts.push({ text: reasoningText, thought: true });
+        (choice.delta as ExtendedCompletionChunkDelta)?.reasoning ??
+        '';
+
+      // Only accumulate - don't emit yet, emit only at end of stream
+      if (newReasoning) {
+        this.accumulatedReasoning += newReasoning;
       }
 
       // Handle text content
@@ -887,8 +897,15 @@ export class OpenAIContentConverter {
           }
         }
 
+        // Emit the final accumulated thought at end of stream
+        if (this.accumulatedReasoning) {
+          parts.push({ text: this.accumulatedReasoning, thought: true });
+        }
+
         // Clear the parser for the next stream
         this.streamingToolCallParser.reset();
+        // Clear accumulated reasoning for the next stream
+        this.accumulatedReasoning = '';
       }
 
       // Only include finishReason key if finish_reason is present
