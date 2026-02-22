@@ -313,7 +313,11 @@ export class OpenAIContentConverter {
               name: func.name || 'unknown_function',
               description: func.description,
               parameters: this.convertGeminiToolParametersToOpenAI(
-                func.parameters as Record<string, unknown>,
+                // Handle both 'parameters' field (some tool types) and 'parametersJsonSchema' field (DeclarativeTool)
+                (func.parameters ?? func.parametersJsonSchema) as Record<
+                  string,
+                  unknown
+                >,
               ) as OpenAI.FunctionParameters,
             },
           };
