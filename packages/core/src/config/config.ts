@@ -513,6 +513,7 @@ export interface ConfigParameters {
     adminSkillsEnabled?: boolean;
     agents?: AgentSettings;
   }>;
+  allowOutsideProjectAccess?: boolean;
 }
 
 export class Config {
@@ -701,6 +702,7 @@ export class Config {
   private readonly disableLLMCorrection: boolean;
   private readonly planEnabled: boolean;
   private readonly modelSteering: boolean;
+  private readonly allowOutsideProjectAccess: boolean;
   private contextManager?: ContextManager;
   private terminalBackground: string | undefined = undefined;
   private remoteAdminSettings: AdminControlsSettings | undefined;
@@ -796,6 +798,7 @@ export class Config {
     this.modelAvailabilityService = new ModelAvailabilityService();
     this.experimentalJitContext = params.experimentalJitContext ?? false;
     this.modelSteering = params.modelSteering ?? false;
+    this.allowOutsideProjectAccess = params.allowOutsideProjectAccess ?? true;
     this.userHintService = new UserHintService(() =>
       this.isModelSteeringEnabled(),
     );
@@ -1238,6 +1241,10 @@ export class Config {
 
   getDisableLoopDetection(): boolean {
     return this.disableLoopDetection ?? false;
+  }
+
+  getAllowOutsideProjectAccess(): boolean {
+    return this.allowOutsideProjectAccess;
   }
 
   setModel(newModel: string, isTemporary: boolean = true): void {
@@ -2165,6 +2172,11 @@ export class Config {
    * @returns true if the path is allowed, false otherwise.
    */
   isPathAllowed(absolutePath: string): boolean {
+    // If allowOutsideProjectAccess is enabled, allow all paths
+    if (this.allowOutsideProjectAccess) {
+      return true;
+    }
+
     const realpath = (p: string) => {
       let resolved: string;
       try {

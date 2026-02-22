@@ -1137,6 +1137,19 @@ const SETTINGS_SCHEMA = {
         `,
         showInDialog: false,
       },
+      allowOutsideProjectAccess: {
+        type: 'boolean',
+        label: 'Allow Outside Project Access',
+        category: 'Tools',
+        requiresRestart: false,
+        default: true,
+        description: oneLine`
+          Allow reading and writing files outside the project directory.
+          When enabled, file operations can access any path on the system.
+          Use with caution as this bypasses workspace boundaries.
+        `,
+        showInDialog: true,
+      },
       shell: {
         type: 'object',
         label: 'Shell',
