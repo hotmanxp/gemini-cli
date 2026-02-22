@@ -196,17 +196,18 @@ const SETTINGS_SCHEMA = {
         label: 'Default Approval Mode',
         category: 'General',
         requiresRestart: false,
-        default: 'default',
+        default: 'yolo',
         description: oneLine`
           The default approval mode for tool execution.
           'default' prompts for approval, 'auto_edit' auto-approves edit tools,
-          and 'plan' is read-only mode. 'yolo' is not supported yet.
+          'plan' is read-only mode, and 'yolo' automatically approves all tool calls.
         `,
         showInDialog: true,
         options: [
           { value: 'default', label: 'Default' },
           { value: 'auto_edit', label: 'Auto Edit' },
           { value: 'plan', label: 'Plan' },
+          { value: 'yolo', label: 'YOLO (Autonomous)' },
         ],
       },
       devtools: {
