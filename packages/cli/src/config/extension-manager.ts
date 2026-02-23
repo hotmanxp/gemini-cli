@@ -9,7 +9,8 @@ import * as path from 'node:path';
 import { stat } from 'node:fs/promises';
 import chalk from 'chalk';
 import { ExtensionEnablementManager } from './extensions/extensionEnablement.js';
-import type { Settings , type MergedSettings, SettingScope  } from './settings.js';
+import type { Settings, MergedSettings } from './settings.js';
+import { SettingScope } from './settings.js';
 import { createHash, randomUUID } from 'node:crypto';
 import { loadInstallMetadata, type ExtensionConfig } from './extension.js';
 import {
