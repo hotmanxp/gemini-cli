@@ -25,11 +25,11 @@ import type {
   LspSymbolInformation,
   LspTextEdit,
   LspWorkspaceEdit,
-
   LspConnectionInterface,
   LspServerHandle,
   LspServerStatus,
-  NativeLspServiceOptions} from './types.js';
+  NativeLspServiceOptions,
+} from './types.js';
 import type { EventEmitter } from 'node:events';
 import { LspConfigLoader } from './LspConfigLoader.js';
 import { LspLanguageDetector } from './LspLanguageDetector.js';
@@ -174,6 +174,70 @@ export class NativeLspService {
   }
 
   /**
+   * Open a file in the LSP server to ensure it's tracked for language features.
+   * This is necessary for TypeScript and other language servers that require
+   * files to be opened before they can provide definitions, references, etc.
+   *
+   * @param handle - The LSP server handle
+   * @param uri - The file URI to open
+   */
+  private async openFileInServer(
+    handle: LspServerHandle & { connection: LspConnectionInterface },
+    uri: string,
+  ): Promise<void> {
+    if (!handle.connection || !uri) {
+      return;
+    }
+
+    // Check if this is a TypeScript/JavaScript file
+    const isTypeScript =
+      this.serverManager.isTypescriptServer(handle) &&
+      (uri.endsWith('.ts') ||
+        uri.endsWith('.tsx') ||
+        uri.endsWith('.js') ||
+        uri.endsWith('.jsx') ||
+        uri.endsWith('.mts') ||
+        uri.endsWith('.cts'));
+
+    if (!isTypeScript) {
+      return;
+    }
+
+    try {
+      const filePath = fileURLToPath(uri);
+      // Check if file exists and is readable
+      if (!fs.existsSync(filePath)) {
+        return;
+      }
+
+      const text = await fs.promises.readFile(filePath, 'utf-8');
+      const languageId = uri.endsWith('.tsx')
+        ? 'typescriptreact'
+        : uri.endsWith('.jsx')
+          ? 'javascriptreact'
+          : uri.endsWith('.js') || uri.endsWith('.jsx')
+            ? 'javascript'
+            : 'typescript';
+
+      // Send didOpen notification to the LSP server
+      handle.connection.send({
+        jsonrpc: '2.0',
+        method: 'textDocument/didOpen',
+        params: {
+          textDocument: {
+            uri,
+            languageId,
+            version: 1,
+            text,
+          },
+        },
+      });
+    } catch (error) {
+      debugLogger.warn(`Failed to open file in LSP server: ${uri}`, error);
+    }
+  }
+
+  /**
    * Workspace symbol search across all ready LSP servers.
    */
   async workspaceSymbols(
@@ -240,6 +304,8 @@ export class NativeLspService {
 
     for (const [name, handle] of handles) {
       try {
+        // Ensure the file is opened in the LSP server before requesting definitions
+        await this.openFileInServer(handle, location.uri);
         await this.serverManager.warmupTypescriptServer(handle);
         const response = await handle.connection.request(
           'textDocument/definition',
@@ -290,6 +356,8 @@ export class NativeLspService {
 
     for (const [name, handle] of handles) {
       try {
+        // Ensure the file is opened in the LSP server before requesting references
+        await this.openFileInServer(handle, location.uri);
         await this.serverManager.warmupTypescriptServer(handle);
         const response = await handle.connection.request(
           'textDocument/references',
@@ -429,6 +497,8 @@ export class NativeLspService {
 
     for (const [name, handle] of handles) {
       try {
+        // Ensure the file is opened in the LSP server before requesting implementations
+        await this.openFileInServer(handle, location.uri);
         await this.serverManager.warmupTypescriptServer(handle);
         const response = await handle.connection.request(
           'textDocument/implementation',
