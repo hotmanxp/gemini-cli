@@ -291,6 +291,13 @@ export interface LspClient {
   ): Promise<LspDefinition[]>;
 
   /**
+   * Warm up LSP servers by opening representative files.
+   * This triggers language server initialization and project analysis.
+   * @param serverName - Optional server name to warm up. If not provided, warms up all servers.
+   */
+  warmup(serverName?: string): Promise<void>;
+
+  /**
    * Find all references to a symbol.
    */
   references(

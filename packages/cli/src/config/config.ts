@@ -552,9 +552,7 @@ export async function loadCliConfig(
   const rawApprovalMode =
     argv.approvalMode ||
     (argv.yolo ? 'yolo' : undefined) ||
-    ((settings.general?.defaultApprovalMode as string) !== 'yolo'
-      ? settings.general?.defaultApprovalMode
-      : undefined);
+    settings.general?.defaultApprovalMode;
 
   if (rawApprovalMode) {
     switch (rawApprovalMode) {
@@ -856,7 +854,6 @@ export async function loadCliConfig(
     enableShellOutputEfficiency:
       settings.tools?.shell?.enableShellOutputEfficiency ?? true,
     skipNextSpeakerCheck: settings.model?.skipNextSpeakerCheck,
-    enablePromptCompletion: settings.general?.enablePromptCompletion,
     truncateToolOutputThreshold: settings.tools?.truncateToolOutputThreshold,
     eventEmitter: coreEvents,
     useWriteTodos: argv.useWriteTodos ?? settings.useWriteTodos,
@@ -871,6 +868,7 @@ export async function loadCliConfig(
     disableLLMCorrection: settings.tools?.disableLLMCorrection,
     rawOutput: argv.rawOutput,
     acceptRawOutputRisk: argv.acceptRawOutputRisk,
+    allowOutsideProjectAccess: settings.tools?.allowOutsideProjectAccess,
     modelConfigServiceConfig: settings.modelConfigs,
     // TODO: loading of hooks based on workspace trust
     enableHooks: settings.hooksConfig.enabled,

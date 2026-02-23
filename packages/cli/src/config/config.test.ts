@@ -773,7 +773,7 @@ describe('loadCliConfig', () => {
     expect(config.getCustomIgnoreFilePaths()).toEqual(
       DEFAULT_FILE_FILTERING_OPTIONS.customIgnoreFilePaths,
     );
-    expect(config.getApprovalMode()).toBe(ApprovalMode.DEFAULT);
+    expect(config.getApprovalMode()).toBe(ApprovalMode.YOLO);
   });
 
   it('should be non-interactive when isCommand is set', async () => {
@@ -1074,7 +1074,11 @@ describe('mergeExcludeTools', () => {
 
   it('should return default excludes when no excludeTools are specified and it is not interactive', async () => {
     process.stdin.isTTY = false;
-    const settings = createTestMergedSettings();
+    const settings = createTestMergedSettings({
+      general: {
+        defaultApprovalMode: 'default',
+      },
+    });
     process.argv = ['node', 'script.js', '-p', 'test'];
     const argv = await parseArguments(createTestMergedSettings());
     const config = await loadCliConfig(settings, 'test-session', argv);
@@ -1157,7 +1161,11 @@ describe('Approval mode tool exclusion logic', () => {
   it('should exclude all interactive tools in non-interactive mode with default approval mode', async () => {
     process.argv = ['node', 'script.js', '-p', 'test'];
     const argv = await parseArguments(createTestMergedSettings());
-    const settings = createTestMergedSettings();
+    const settings = createTestMergedSettings({
+      general: {
+        defaultApprovalMode: 'default',
+      },
+    });
     const config = await loadCliConfig(settings, 'test-session', argv);
 
     const excludedTools = config.getExcludeTools();
@@ -2123,11 +2131,12 @@ describe('loadCliConfig tool exclusions', () => {
     process.stdin.isTTY = false;
     process.argv = ['node', 'script.js', '-p', 'test'];
     const argv = await parseArguments(createTestMergedSettings());
-    const config = await loadCliConfig(
-      createTestMergedSettings(),
-      'test-session',
-      argv,
-    );
+    const settings = createTestMergedSettings({
+      general: {
+        defaultApprovalMode: 'default',
+      },
+    });
+    const config = await loadCliConfig(settings, 'test-session', argv);
     expect(config.getExcludeTools()).toContain('run_shell_command');
     expect(config.getExcludeTools()).toContain('replace');
     expect(config.getExcludeTools()).toContain('write_file');
@@ -2172,11 +2181,12 @@ describe('loadCliConfig tool exclusions', () => {
     process.stdin.isTTY = false;
     process.argv = ['node', 'script.js', '-p', 'test'];
     const argv = await parseArguments(createTestMergedSettings());
-    const config = await loadCliConfig(
-      createTestMergedSettings(),
-      'test-session',
-      argv,
-    );
+    const settings = createTestMergedSettings({
+      general: {
+        defaultApprovalMode: 'default',
+      },
+    });
+    const config = await loadCliConfig(settings, 'test-session', argv);
     expect(config.getExcludeTools()).toContain(WEB_FETCH_TOOL_NAME);
   });
 
@@ -2464,7 +2474,7 @@ describe('loadCliConfig approval mode', () => {
     vi.restoreAllMocks();
   });
 
-  it('should default to DEFAULT approval mode when no flags are set', async () => {
+  it('should default to YOLO approval mode when no flags are set', async () => {
     process.argv = ['node', 'script.js'];
     const argv = await parseArguments(createTestMergedSettings());
     const config = await loadCliConfig(
@@ -2472,7 +2482,7 @@ describe('loadCliConfig approval mode', () => {
       'test-session',
       argv,
     );
-    expect(config.getApprovalMode()).toBe(ServerConfig.ApprovalMode.DEFAULT);
+    expect(config.getApprovalMode()).toBe(ServerConfig.ApprovalMode.YOLO);
   });
 
   it('should set YOLO approval mode when --yolo flag is used', async () => {
@@ -2568,17 +2578,16 @@ describe('loadCliConfig approval mode', () => {
     expect(config.getApprovalMode()).toBe(ServerConfig.ApprovalMode.PLAN);
   });
 
-  it('should ignore "yolo" in settings.tools.approvalMode and fall back to DEFAULT', async () => {
+  it('should use "yolo" from settings.tools.approvalMode', async () => {
     process.argv = ['node', 'script.js'];
     const settings = createTestMergedSettings({
-      tools: {
-        // @ts-expect-error: testing invalid value
-        approvalMode: 'yolo',
+      general: {
+        defaultApprovalMode: 'yolo',
       },
     });
     const argv = await parseArguments(settings);
     const config = await loadCliConfig(settings, 'test-session', argv);
-    expect(config.getApprovalMode()).toBe(ServerConfig.ApprovalMode.DEFAULT);
+    expect(config.getApprovalMode()).toBe(ServerConfig.ApprovalMode.YOLO);
   });
 
   it('should throw error when --approval-mode=plan is used but experimental.plan is disabled', async () => {
@@ -3225,6 +3234,9 @@ describe('Policy Engine Integration in loadCliConfig', () => {
     process.argv = ['node', 'script.js', '-p', 'test'];
     const settings = createTestMergedSettings({
       tools: { exclude: ['settings-exclude'] },
+      general: {
+        defaultApprovalMode: 'default',
+      },
     });
     const argv = await parseArguments(createTestMergedSettings());
 
@@ -3347,15 +3359,16 @@ describe('loadCliConfig secureModeEnabled', () => {
   });
 
   it('should set disableYoloMode to true when secureModeEnabled is true', async () => {
-    process.argv = ['node', 'script.js'];
+    process.argv = ['node', 'script.js', '--yolo'];
     const argv = await parseArguments(createTestMergedSettings());
     const settings = createTestMergedSettings({
       admin: {
         secureModeEnabled: true,
       },
     });
-    const config = await loadCliConfig(settings, 'test-session', argv);
-    expect(config.isYoloModeDisabled()).toBe(true);
+    await expect(loadCliConfig(settings, 'test-session', argv)).rejects.toThrow(
+      'YOLO mode is disabled by your administrator',
+    );
   });
 });
 

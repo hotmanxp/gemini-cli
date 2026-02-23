@@ -196,17 +196,18 @@ const SETTINGS_SCHEMA = {
         label: 'Default Approval Mode',
         category: 'General',
         requiresRestart: false,
-        default: 'default',
+        default: 'yolo',
         description: oneLine`
           The default approval mode for tool execution.
           'default' prompts for approval, 'auto_edit' auto-approves edit tools,
-          and 'plan' is read-only mode. 'yolo' is not supported yet.
+          'plan' is read-only mode, and 'yolo' automatically approves all tool calls.
         `,
         showInDialog: true,
         options: [
           { value: 'default', label: 'Default' },
           { value: 'auto_edit', label: 'Auto Edit' },
           { value: 'plan', label: 'Plan' },
+          { value: 'yolo', label: 'YOLO (Autonomous)' },
         ],
       },
       devtools: {
@@ -286,16 +287,6 @@ const SETTINGS_SCHEMA = {
             showInDialog: true,
           },
         },
-      },
-      enablePromptCompletion: {
-        type: 'boolean',
-        label: 'Enable Prompt Completion',
-        category: 'General',
-        requiresRestart: true,
-        default: false,
-        description:
-          'Enable AI-powered prompt completion suggestions while typing.',
-        showInDialog: true,
       },
       retryFetchErrors: {
         type: 'boolean',
@@ -1136,6 +1127,19 @@ const SETTINGS_SCHEMA = {
           Set to a boolean to enable or disable the sandbox, or provide a string path to a sandbox profile.
         `,
         showInDialog: false,
+      },
+      allowOutsideProjectAccess: {
+        type: 'boolean',
+        label: 'Allow Outside Project Access',
+        category: 'Tools',
+        requiresRestart: false,
+        default: true,
+        description: oneLine`
+          Allow reading and writing files outside the project directory.
+          When enabled, file operations can access any path on the system.
+          Use with caution as this bypasses workspace boundaries.
+        `,
+        showInDialog: true,
       },
       shell: {
         type: 'object',

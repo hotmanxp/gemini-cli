@@ -25,18 +25,16 @@ import type {
   LspSymbolInformation,
   LspTextEdit,
   LspWorkspaceEdit,
+  LspConnectionInterface,
+  LspServerHandle,
+  LspServerStatus,
+  NativeLspServiceOptions,
 } from './types.js';
 import type { EventEmitter } from 'node:events';
 import { LspConfigLoader } from './LspConfigLoader.js';
 import { LspLanguageDetector } from './LspLanguageDetector.js';
 import { LspResponseNormalizer } from './LspResponseNormalizer.js';
 import { LspServerManager } from './LspServerManager.js';
-import type {
-  LspConnectionInterface,
-  LspServerHandle,
-  LspServerStatus,
-  NativeLspServiceOptions,
-} from './types.js';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as fs from 'node:fs';
@@ -176,6 +174,191 @@ export class NativeLspService {
   }
 
   /**
+   * Open a file in the LSP server to ensure it's tracked for language features.
+   * This is necessary for language servers that require files to be opened
+   * before they can provide definitions, references, etc.
+   *
+   * @param handle - The LSP server handle
+   * @param uri - The file URI to open
+   */
+  private async openFileInServer(
+    handle: LspServerHandle & { connection: LspConnectionInterface },
+    uri: string,
+  ): Promise<void> {
+    if (!handle.connection || !uri) {
+      return;
+    }
+
+    try {
+      const filePath = fileURLToPath(uri);
+      // Check if file exists and is readable
+      if (!fs.existsSync(filePath)) {
+        return;
+      }
+
+      // Determine language ID based on file extension and server type
+      const languageId = this.getLanguageIdForFile(uri, handle);
+      if (!languageId) {
+        return;
+      }
+
+      const text = await fs.promises.readFile(filePath, 'utf-8');
+
+      // Send didOpen notification to the LSP server
+      handle.connection.send({
+        jsonrpc: '2.0',
+        method: 'textDocument/didOpen',
+        params: {
+          textDocument: {
+            uri,
+            languageId,
+            version: 1,
+            text,
+          },
+        },
+      });
+    } catch (error) {
+      debugLogger.warn(`Failed to open file in LSP server: ${uri}`, error);
+    }
+  }
+
+  /**
+   * Determine the language ID for a file based on its extension and LSP server type.
+   *
+   * @param uri - The file URI
+   * @param handle - The LSP server handle
+   * @returns The language ID or null if not supported
+   */
+  private getLanguageIdForFile(
+    uri: string,
+    handle: LspServerHandle,
+  ): string | null {
+    const ext = path.extname(uri).toLowerCase();
+
+    // TypeScript/JavaScript server
+    if (this.serverManager.isTypescriptServer(handle)) {
+      if (['.ts', '.mts', '.cts'].includes(ext)) {
+        return 'typescript';
+      }
+      if (['.tsx'].includes(ext)) {
+        return 'typescriptreact';
+      }
+      if (['.js', '.mjs', '.cjs'].includes(ext)) {
+        return 'javascript';
+      }
+      if (['.jsx'].includes(ext)) {
+        return 'javascriptreact';
+      }
+      return null;
+    }
+
+    // Python server
+    if (this.serverManager.isPythonServer(handle)) {
+      if (['.py', '.pyi', '.pyw'].includes(ext)) {
+        return 'python';
+      }
+      return null;
+    }
+
+    // Java server (JDTLS)
+    if (this.isJavaServer(handle)) {
+      if (['.java'].includes(ext)) {
+        return 'java';
+      }
+      return null;
+    }
+
+    // Go server (gopls)
+    if (this.isGoServer(handle)) {
+      if (['.go'].includes(ext)) {
+        return 'go';
+      }
+      return null;
+    }
+
+    // Rust server (rust-analyzer)
+    if (this.isRustServer(handle)) {
+      if (['.rs'].includes(ext)) {
+        return 'rust';
+      }
+      return null;
+    }
+
+    // For other servers, try to infer from extension
+    const languageMap: Record<string, string> = {
+      '.ts': 'typescript',
+      '.tsx': 'typescriptreact',
+      '.js': 'javascript',
+      '.jsx': 'javascriptreact',
+      '.py': 'python',
+      '.pyi': 'python',
+      '.pyw': 'python',
+      '.java': 'java',
+      '.go': 'go',
+      '.rs': 'rust',
+      '.c': 'c',
+      '.cpp': 'cpp',
+      '.h': 'c',
+      '.hpp': 'cpp',
+      '.cs': 'csharp',
+      '.rb': 'ruby',
+      '.php': 'php',
+      '.html': 'html',
+      '.css': 'css',
+      '.scss': 'scss',
+      '.less': 'less',
+      '.json': 'json',
+      '.xml': 'xml',
+      '.yaml': 'yaml',
+      '.yml': 'yaml',
+      '.md': 'markdown',
+      '.sh': 'shellscript',
+      '.bash': 'shellscript',
+    };
+
+    return languageMap[ext] || null;
+  }
+
+  /**
+   * Check if the given handle is a Java language server (JDTLS).
+   */
+  private isJavaServer(handle: LspServerHandle): boolean {
+    const command = handle.config.command ?? '';
+    return (
+      handle.config.name.includes('java') ||
+      handle.config.name.includes('jdtls') ||
+      command.includes('jdtls') ||
+      (command.includes('java') &&
+        command.includes('language') &&
+        command.includes('server'))
+    );
+  }
+
+  /**
+   * Check if the given handle is a Go language server (gopls).
+   */
+  private isGoServer(handle: LspServerHandle): boolean {
+    const command = handle.config.command ?? '';
+    return (
+      handle.config.name.includes('go') ||
+      handle.config.name.includes('gopls') ||
+      command.includes('gopls')
+    );
+  }
+
+  /**
+   * Check if the given handle is a Rust language server (rust-analyzer).
+   */
+  private isRustServer(handle: LspServerHandle): boolean {
+    const command = handle.config.command ?? '';
+    return (
+      handle.config.name.includes('rust') ||
+      handle.config.name.includes('rust-analyzer') ||
+      command.includes('rust-analyzer')
+    );
+  }
+
+  /**
    * Workspace symbol search across all ready LSP servers.
    */
   async workspaceSymbols(
@@ -242,6 +425,8 @@ export class NativeLspService {
 
     for (const [name, handle] of handles) {
       try {
+        // Ensure the file is opened in the LSP server before requesting definitions
+        await this.openFileInServer(handle, location.uri);
         await this.serverManager.warmupTypescriptServer(handle);
         const response = await handle.connection.request(
           'textDocument/definition',
@@ -292,6 +477,8 @@ export class NativeLspService {
 
     for (const [name, handle] of handles) {
       try {
+        // Ensure the file is opened in the LSP server before requesting references
+        await this.openFileInServer(handle, location.uri);
         await this.serverManager.warmupTypescriptServer(handle);
         const response = await handle.connection.request(
           'textDocument/references',
@@ -431,6 +618,8 @@ export class NativeLspService {
 
     for (const [name, handle] of handles) {
       try {
+        // Ensure the file is opened in the LSP server before requesting implementations
+        await this.openFileInServer(handle, location.uri);
         await this.serverManager.warmupTypescriptServer(handle);
         const response = await handle.connection.request(
           'textDocument/implementation',
@@ -888,5 +1077,15 @@ export class NativeLspService {
           ? ((response as Record<string, unknown>)['message'] as string)
           : '';
     return message.includes('No Project');
+  }
+
+  /**
+   * Warm up LSP servers by opening representative files.
+   * This triggers language server initialization and project analysis.
+   *
+   * @param serverName - Optional server name to warm up. If not provided, warms up all servers.
+   */
+  async warmup(serverName?: string): Promise<void> {
+    await this.serverManager.warmupServer(serverName);
   }
 }

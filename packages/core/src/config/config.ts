@@ -468,7 +468,6 @@ export interface ConfigParameters {
   skipNextSpeakerCheck?: boolean;
   shellExecutionConfig?: ShellExecutionConfig;
   extensionManagement?: boolean;
-  enablePromptCompletion?: boolean;
   truncateToolOutputThreshold?: number;
   eventEmitter?: EventEmitter;
   useWriteTodos?: boolean;
@@ -513,6 +512,7 @@ export interface ConfigParameters {
     adminSkillsEnabled?: boolean;
     agents?: AgentSettings;
   }>;
+  allowOutsideProjectAccess?: boolean;
 }
 
 export class Config {
@@ -645,7 +645,6 @@ export class Config {
   private readonly useBackgroundColor: boolean;
   private shellExecutionConfig: ShellExecutionConfig;
   private readonly extensionManagement: boolean = true;
-  private readonly enablePromptCompletion: boolean = false;
   private readonly truncateToolOutputThreshold: number;
   private compressionTruncationCounter = 0;
   private initialized = false;
@@ -701,6 +700,7 @@ export class Config {
   private readonly disableLLMCorrection: boolean;
   private readonly planEnabled: boolean;
   private readonly modelSteering: boolean;
+  private readonly allowOutsideProjectAccess: boolean;
   private contextManager?: ContextManager;
   private terminalBackground: string | undefined = undefined;
   private remoteAdminSettings: AdminControlsSettings | undefined;
@@ -796,6 +796,7 @@ export class Config {
     this.modelAvailabilityService = new ModelAvailabilityService();
     this.experimentalJitContext = params.experimentalJitContext ?? false;
     this.modelSteering = params.modelSteering ?? false;
+    this.allowOutsideProjectAccess = params.allowOutsideProjectAccess ?? true;
     this.userHintService = new UserHintService(() =>
       this.isModelSteeringEnabled(),
     );
@@ -848,9 +849,7 @@ export class Config {
       params.truncateToolOutputThreshold ??
       DEFAULT_TRUNCATE_TOOL_OUTPUT_THRESHOLD;
     // // TODO(joshualitt): Re-evaluate the todo tool for 3 family.
-    this.useWriteTodos = isPreviewModel(this.model)
-      ? false
-      : (params.useWriteTodos ?? true);
+    this.useWriteTodos = params.useWriteTodos ?? true;
     this.enableHooksUI = params.enableHooksUI ?? true;
     this.enableHooks = params.enableHooks ?? true;
     this.disabledHooks = params.disabledHooks ?? [];
@@ -867,7 +866,6 @@ export class Config {
 
     this.fakeResponses = params.fakeResponses;
     this.recordResponses = params.recordResponses;
-    this.enablePromptCompletion = params.enablePromptCompletion ?? false;
     this.fileExclusions = new FileExclusions(this);
     this.eventEmitter = params.eventEmitter;
     this.policyEngine = new PolicyEngine({
@@ -1240,6 +1238,10 @@ export class Config {
     return this.disableLoopDetection ?? false;
   }
 
+  getAllowOutsideProjectAccess(): boolean {
+    return this.allowOutsideProjectAccess;
+  }
+
   setModel(newModel: string, isTemporary: boolean = true): void {
     if (this.model !== newModel || this._activeModel !== newModel) {
       this.model = newModel;
@@ -1506,7 +1508,8 @@ export class Config {
       }
 
       const hasAccess =
-        quota.buckets?.some((b) => b.modelId === PREVIEW_GEMINI_MODEL) ?? false;
+        quota.buckets?.some((b) => b.modelId && isPreviewModel(b.modelId)) ??
+        false;
       this.setHasAccessToPreviewModel(hasAccess);
       return quota;
     } catch (e) {
@@ -2165,6 +2168,11 @@ export class Config {
    * @returns true if the path is allowed, false otherwise.
    */
   isPathAllowed(absolutePath: string): boolean {
+    // If allowOutsideProjectAccess is enabled, allow all paths
+    if (this.allowOutsideProjectAccess) {
+      return true;
+    }
+
     const realpath = (p: string) => {
       let resolved: string;
       try {
@@ -2441,10 +2449,6 @@ export class Config {
   }
   getScreenReader(): boolean {
     return this.accessibility.screenReader ?? false;
-  }
-
-  getEnablePromptCompletion(): boolean {
-    return this.enablePromptCompletion;
   }
 
   getTruncateToolOutputThreshold(): number {

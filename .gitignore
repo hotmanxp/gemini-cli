@@ -58,6 +58,8 @@ gha-creds-*.json
 patch_output.log
 gemini-debug.log
 
+.agent_working_dir/current_task.json
+
 .genkit
 .gemini-clipboard/
 .eslintcache

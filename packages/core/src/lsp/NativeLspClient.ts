@@ -256,4 +256,14 @@ export class NativeLspClient implements LspClient {
   ): Promise<boolean> {
     return this.service.applyWorkspaceEdit(edit, serverName);
   }
+
+  /**
+   * Warm up LSP servers by opening representative files.
+   *
+   * @param serverName - Optional server name to warm up. If not provided, warms up all servers.
+   * @returns Promise resolving when warmup is complete
+   */
+  warmup(serverName?: string): Promise<void> {
+    return this.service.warmup(serverName);
+  }
 }
