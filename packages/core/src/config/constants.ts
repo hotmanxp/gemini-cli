@@ -10,6 +10,7 @@ export interface FileFilteringOptions {
   maxFileCount?: number;
   searchTimeout?: number;
   customIgnoreFilePaths: string[];
+  allowOperationsOnIgnoredFiles?: boolean;
 }
 
 // For memory files

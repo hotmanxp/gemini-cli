@@ -598,6 +598,22 @@ describe('Server Config (config.ts)', () => {
     expect(config.getFileFilteringRespectGitIgnore()).toBe(false);
   });
 
+  it('should set allowOperationsOnIgnoredFiles to false by default', () => {
+    const config = new Config(baseParams);
+    expect(config.getFileFilteringAllowOperationsOnIgnoredFiles()).toBe(false);
+  });
+
+  it('should set allowOperationsOnIgnoredFiles when provided', () => {
+    const paramsWithFileFiltering: ConfigParameters = {
+      ...baseParams,
+      fileFiltering: {
+        allowOperationsOnIgnoredFiles: true,
+      },
+    };
+    const config = new Config(paramsWithFileFiltering);
+    expect(config.getFileFilteringAllowOperationsOnIgnoredFiles()).toBe(true);
+  });
+
   it('should set customIgnoreFilePaths from params', () => {
     const params: ConfigParameters = {
       ...baseParams,

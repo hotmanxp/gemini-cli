@@ -1101,6 +1101,18 @@ const SETTINGS_SCHEMA = {
             items: { type: 'string' },
             mergeStrategy: MergeStrategy.UNION,
           },
+          allowOperationsOnIgnoredFiles: {
+            type: 'boolean',
+            label: 'Allow Operations On Ignored Files',
+            category: 'Context',
+            requiresRestart: false,
+            default: false,
+            description: oneLine`
+              Allow file operations (read, write, edit) on files that are ignored by .gitignore or .geminiignore.
+              When enabled, the model can read, write, and edit files that would normally be excluded by ignore patterns.
+            `,
+            showInDialog: true,
+          },
         },
       },
     },

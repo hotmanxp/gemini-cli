@@ -17,6 +17,7 @@ export interface FilterFilesOptions {
   respectGitIgnore?: boolean;
   respectGeminiIgnore?: boolean;
   customIgnoreFilePaths?: string[];
+  allowOperationsOnIgnoredFiles?: boolean;
 }
 
 export interface FilterReport {

@@ -224,14 +224,17 @@ export class ReadFileTool extends BaseDeclarativeTool<
       return 'start_line cannot be greater than end_line';
     }
 
-    const fileFilteringOptions = this.config.getFileFilteringOptions();
-    if (
-      this.fileDiscoveryService.shouldIgnoreFile(
-        resolvedPath,
-        fileFilteringOptions,
-      )
-    ) {
-      return `File path '${resolvedPath}' is ignored by configured ignore patterns.`;
+    // Check if file is ignored, unless allowOperationsOnIgnoredFiles is enabled
+    if (!this.config.getFileFilteringAllowOperationsOnIgnoredFiles()) {
+      const fileFilteringOptions = this.config.getFileFilteringOptions();
+      if (
+        this.fileDiscoveryService.shouldIgnoreFile(
+          resolvedPath,
+          fileFilteringOptions,
+        )
+      ) {
+        return `File path '${resolvedPath}' is ignored by configured ignore patterns.`;
+      }
     }
 
     return null;

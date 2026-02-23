@@ -429,6 +429,7 @@ export interface ConfigParameters {
     maxFileCount?: number;
     searchTimeout?: number;
     customIgnoreFilePaths?: string[];
+    allowOperationsOnIgnoredFiles?: boolean;
   };
   checkpointing?: boolean;
   proxy?: string;
@@ -572,6 +573,7 @@ export class Config {
     maxFileCount: number;
     searchTimeout: number;
     customIgnoreFilePaths: string[];
+    allowOperationsOnIgnoredFiles: boolean;
   };
   private fileDiscoveryService: FileDiscoveryService | null = null;
   private gitService: GitService | undefined = undefined;
@@ -776,6 +778,8 @@ export class Config {
         DEFAULT_FILE_FILTERING_OPTIONS.searchTimeout ??
         5000,
       customIgnoreFilePaths: params.fileFiltering?.customIgnoreFilePaths ?? [],
+      allowOperationsOnIgnoredFiles:
+        params.fileFiltering?.allowOperationsOnIgnoredFiles ?? false,
     };
     this.checkpointing = params.checkpointing ?? false;
     this.proxy = params.proxy;
@@ -1982,6 +1986,10 @@ export class Config {
 
   getFileFilteringRespectGeminiIgnore(): boolean {
     return this.fileFiltering.respectGeminiIgnore;
+  }
+
+  getFileFilteringAllowOperationsOnIgnoredFiles(): boolean {
+    return this.fileFiltering.allowOperationsOnIgnoredFiles;
   }
 
   getCustomIgnoreFilePaths(): string[] {

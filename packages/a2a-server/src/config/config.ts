@@ -98,6 +98,8 @@ export async function loadConfig(
           ? process.env['CUSTOM_IGNORE_FILE_PATHS'].split(path.delimiter)
           : []),
       ],
+      allowOperationsOnIgnoredFiles:
+        settings.fileFiltering?.allowOperationsOnIgnoredFiles,
     },
     ideMode: false,
     folderTrust,
@@ -113,6 +115,8 @@ export async function loadConfig(
     respectGitIgnore: configParams?.fileFiltering?.respectGitIgnore,
     respectGeminiIgnore: configParams?.fileFiltering?.respectGeminiIgnore,
     customIgnoreFilePaths: configParams?.fileFiltering?.customIgnoreFilePaths,
+    allowOperationsOnIgnoredFiles:
+      configParams?.fileFiltering?.allowOperationsOnIgnoredFiles,
   });
   const { memoryContent, fileCount, filePaths } =
     await loadServerHierarchicalMemory(

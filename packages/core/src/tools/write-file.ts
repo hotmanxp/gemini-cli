@@ -48,6 +48,7 @@ import { debugLogger } from '../utils/debugLogger.js';
 import { WRITE_FILE_DEFINITION } from './definitions/coreTools.js';
 import { resolveToolDeclaration } from './definitions/resolver.js';
 import { detectOmissionPlaceholders } from './omissionPlaceholderDetector.js';
+import { FileDiscoveryService } from '../services/fileDiscoveryService.js';
 
 /**
  * Parameters for the WriteFile tool
@@ -485,6 +486,22 @@ export class WriteFileTool
       return `Error accessing path properties for validation: ${resolvedPath}. Reason: ${
         statError instanceof Error ? statError.message : String(statError)
       }`;
+    }
+
+    // Check if file is ignored, unless allowOperationsOnIgnoredFiles is enabled
+    if (!this.config.getFileFilteringAllowOperationsOnIgnoredFiles()) {
+      const fileDiscoveryService = new FileDiscoveryService(
+        this.config.getTargetDir(),
+        this.config.getFileFilteringOptions(),
+      );
+      if (
+        fileDiscoveryService.shouldIgnoreFile(
+          resolvedPath,
+          this.config.getFileFilteringOptions(),
+        )
+      ) {
+        return `File path '${resolvedPath}' is ignored by configured ignore patterns.`;
+      }
     }
 
     const omissionPlaceholders = detectOmissionPlaceholders(params.content);

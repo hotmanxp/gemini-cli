@@ -55,6 +55,7 @@ import levenshtein from 'fast-levenshtein';
 import { EDIT_DEFINITION } from './definitions/coreTools.js';
 import { resolveToolDeclaration } from './definitions/resolver.js';
 import { detectOmissionPlaceholders } from './omissionPlaceholderDetector.js';
+import { FileDiscoveryService } from '../services/fileDiscoveryService.js';
 
 const ENABLE_FUZZY_MATCH_RECOVERY = true;
 const FUZZY_MATCH_THRESHOLD = 0.1; // Allow up to 10% weighted difference
@@ -998,7 +999,28 @@ export class EditTool
       }
     }
 
-    return this.config.validatePathAccess(params.file_path);
+    const pathAccessError = this.config.validatePathAccess(params.file_path);
+    if (pathAccessError) {
+      return pathAccessError;
+    }
+
+    // Check if file is ignored, unless allowOperationsOnIgnoredFiles is enabled
+    if (!this.config.getFileFilteringAllowOperationsOnIgnoredFiles()) {
+      const fileDiscoveryService = new FileDiscoveryService(
+        this.config.getTargetDir(),
+        this.config.getFileFilteringOptions(),
+      );
+      if (
+        fileDiscoveryService.shouldIgnoreFile(
+          params.file_path,
+          this.config.getFileFilteringOptions(),
+        )
+      ) {
+        return `File path '${params.file_path}' is ignored by configured ignore patterns.`;
+      }
+    }
+
+    return null;
   }
 
   protected createInvocation(

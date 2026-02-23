@@ -43,7 +43,9 @@ describe('ReadFileTool', () => {
       getFileFilteringOptions: () => ({
         respectGitIgnore: true,
         respectGeminiIgnore: true,
+        allowOperationsOnIgnoredFiles: false,
       }),
+      getFileFilteringAllowOperationsOnIgnoredFiles: () => false,
       storage: {
         getProjectTempDir: () => path.join(tempRootDir, '.temp'),
       },
@@ -457,7 +459,9 @@ describe('ReadFileTool', () => {
           getFileFilteringOptions: () => ({
             respectGitIgnore: true,
             respectGeminiIgnore: true,
+            allowOperationsOnIgnoredFiles: false,
           }),
+          getFileFilteringAllowOperationsOnIgnoredFiles: () => false,
           storage: {
             getProjectTempDir: () => path.join(tempRootDir, '.temp'),
           },
@@ -530,7 +534,9 @@ describe('ReadFileTool', () => {
           getFileFilteringOptions: () => ({
             respectGitIgnore: true,
             respectGeminiIgnore: false,
+            allowOperationsOnIgnoredFiles: false,
           }),
+          getFileFilteringAllowOperationsOnIgnoredFiles: () => false,
           storage: {
             getProjectTempDir: () => path.join(tempRootDir, '.temp'),
           },
@@ -566,6 +572,59 @@ describe('ReadFileTool', () => {
           file_path: ignoredFilePath,
         };
         const invocation = toolNoIgnore.build(params);
+        expect(typeof invocation).not.toBe('string');
+      });
+
+      it('should allow reading ignored files if allowOperationsOnIgnoredFiles is true', async () => {
+        const ignoredFilePath = path.join(tempRootDir, 'foo.bar');
+        await fsp.writeFile(ignoredFilePath, 'content', 'utf-8');
+
+        const configAllowIgnored = {
+          getFileService: () => new FileDiscoveryService(tempRootDir),
+          getFileSystemService: () => new StandardFileSystemService(),
+          getTargetDir: () => tempRootDir,
+          getWorkspaceContext: () => new WorkspaceContext(tempRootDir),
+          getFileFilteringOptions: () => ({
+            respectGitIgnore: true,
+            respectGeminiIgnore: true,
+            allowOperationsOnIgnoredFiles: true,
+          }),
+          getFileFilteringAllowOperationsOnIgnoredFiles: () => true,
+          storage: {
+            getProjectTempDir: () => path.join(tempRootDir, '.temp'),
+          },
+          isInteractive: () => false,
+          isPathAllowed(this: Config, absolutePath: string): boolean {
+            const workspaceContext = this.getWorkspaceContext();
+            if (workspaceContext.isPathWithinWorkspace(absolutePath)) {
+              return true;
+            }
+
+            const projectTempDir = this.storage.getProjectTempDir();
+            return isSubpath(path.resolve(projectTempDir), absolutePath);
+          },
+          validatePathAccess(
+            this: Config,
+            absolutePath: string,
+          ): string | null {
+            if (this.isPathAllowed(absolutePath)) {
+              return null;
+            }
+
+            const workspaceDirs = this.getWorkspaceContext().getDirectories();
+            const projectTempDir = this.storage.getProjectTempDir();
+            return `Path not in workspace: Attempted path "${absolutePath}" resolves outside the allowed workspace directories: ${workspaceDirs.join(', ')} or the project temp directory: ${projectTempDir}`;
+          },
+        } as unknown as Config;
+
+        const toolAllowIgnored = new ReadFileTool(
+          configAllowIgnored,
+          createMockMessageBus(),
+        );
+        const params: ReadFileToolParams = {
+          file_path: ignoredFilePath,
+        };
+        const invocation = toolAllowIgnored.build(params);
         expect(typeof invocation).not.toBe('string');
       });
     });

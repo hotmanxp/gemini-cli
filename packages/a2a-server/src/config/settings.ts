@@ -38,6 +38,7 @@ export interface Settings {
     respectGeminiIgnore?: boolean;
     enableRecursiveFileSearch?: boolean;
     customIgnoreFilePaths?: string[];
+    allowOperationsOnIgnoredFiles?: boolean;
   };
 }
 
