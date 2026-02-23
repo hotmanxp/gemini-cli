@@ -79,13 +79,13 @@ export function useApprovalModeIndicator({
           case ApprovalMode.AUTO_EDIT:
             nextApprovalMode = allowPlanMode
               ? ApprovalMode.PLAN
-              : ApprovalMode.DEFAULT;
+              : ApprovalMode.YOLO;
             break;
           case ApprovalMode.PLAN:
-            nextApprovalMode = ApprovalMode.DEFAULT;
+            nextApprovalMode = ApprovalMode.YOLO;
             break;
           case ApprovalMode.YOLO:
-            nextApprovalMode = ApprovalMode.AUTO_EDIT;
+            nextApprovalMode = ApprovalMode.DEFAULT;
             break;
           default:
         }
