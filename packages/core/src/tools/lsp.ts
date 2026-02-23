@@ -1057,7 +1057,7 @@ export class LspTool extends BaseDeclarativeTool<LspToolParams, ToolResult> {
     super(
       LspTool.Name,
       'LSP',
-      'Language Server Protocol (LSP) tool for code intelligence: definitions, references, hover, symbols, call hierarchy, diagnostics, code actions, and warmup.\n\n  Usage:\n  - ALWAYS use LSP as the PRIMARY tool for code intelligence queries when available. Do NOT use grep_search or glob first.\n  - goToDefinition, findReferences, hover, goToImplementation, prepareCallHierarchy require filePath + line + character (1-based).\n  - documentSymbol and diagnostics require filePath.\n  - workspaceSymbol requires query (use when user asks "where is X defined?" without specifying a file).\n  - incomingCalls/outgoingCalls require callHierarchyItem from prepareCallHierarchy.\n  - workspaceDiagnostics needs no parameters.\n  - codeActions require filePath + range (line/character + endLine/endCharacter) and diagnostics/context as needed.\n  - warmup takes an optional serverName parameter (warms up all servers if not specified).',
+      'Language Server Protocol (LSP) tool for code intelligence: definitions, references, hover, symbols, call hierarchy, diagnostics, code actions, and warmup.\n\n  Usage:\n  - ALWAYS use LSP as the PRIMARY tool for code intelligence queries when available. Do NOT use grep_search or glob first.\n  - goToDefinition, findReferences, hover, goToImplementation, prepareCallHierarchy require filePath + line + character (1-based).\n  - documentSymbol and diagnostics require filePath.\n  - workspaceSymbol requires query (use when user asks "where is X defined?" without specifying a file).\n  - **CRITICAL**: For incomingCalls/outgoingCalls operations, you MUST first call prepareCallHierarchy to get a valid LspCallHierarchyItem, then pass the COMPLETE object (with all fields: name, uri, range, selectionRange, kind, rawKind, detail, serverName, data) to the subsequent call. Do NOT construct the item manually or pass partial objects.\n  - workspaceDiagnostics needs no parameters.\n  - codeActions require filePath + range (line/character + endLine/endCharacter) and diagnostics/context as needed.\n  - warmup takes an optional serverName parameter (warms up all servers if not specified).',
       Kind.Other,
       {
         type: 'object',
@@ -1155,16 +1155,44 @@ export class LspTool extends BaseDeclarativeTool<LspToolParams, ToolResult> {
           },
           LspCallHierarchyItem: {
             type: 'object',
+            description:
+              'Call hierarchy item from prepareCallHierarchy. MUST be obtained from prepareCallHierarchy operation - do NOT construct manually. Contains: name, uri, range, selectionRange, kind, rawKind, detail, data, serverName.',
             properties: {
-              name: { type: 'string' },
-              kind: { type: 'string' },
-              rawKind: { type: 'number' },
-              detail: { type: 'string' },
-              uri: { type: 'string' },
-              range: { $ref: '#/definitions/LspRange' },
-              selectionRange: { $ref: '#/definitions/LspRange' },
-              data: {},
-              serverName: { type: 'string' },
+              name: {
+                type: 'string',
+                description: 'Name of the function/method.',
+              },
+              kind: {
+                type: 'string',
+                description: 'Symbol kind (e.g., "Function", "Method").',
+              },
+              rawKind: {
+                type: 'number',
+                description: 'Raw LSP symbol kind number.',
+              },
+              detail: {
+                type: 'string',
+                description: 'Additional details (e.g., signature).',
+              },
+              uri: {
+                type: 'string',
+                description: 'File URI (file://...).',
+              },
+              range: {
+                $ref: '#/definitions/LspRange',
+                description: 'Full range of the symbol.',
+              },
+              selectionRange: {
+                $ref: '#/definitions/LspRange',
+                description: 'Range to select when navigating.',
+              },
+              data: {
+                description: 'Opaque data for server use.',
+              },
+              serverName: {
+                type: 'string',
+                description: 'LSP server name.',
+              },
             },
             required: ['name', 'uri', 'range', 'selectionRange'],
           },
