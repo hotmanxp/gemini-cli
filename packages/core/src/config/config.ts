@@ -468,7 +468,6 @@ export interface ConfigParameters {
   skipNextSpeakerCheck?: boolean;
   shellExecutionConfig?: ShellExecutionConfig;
   extensionManagement?: boolean;
-  enablePromptCompletion?: boolean;
   truncateToolOutputThreshold?: number;
   eventEmitter?: EventEmitter;
   useWriteTodos?: boolean;
@@ -646,7 +645,6 @@ export class Config {
   private readonly useBackgroundColor: boolean;
   private shellExecutionConfig: ShellExecutionConfig;
   private readonly extensionManagement: boolean = true;
-  private readonly enablePromptCompletion: boolean = false;
   private readonly truncateToolOutputThreshold: number;
   private compressionTruncationCounter = 0;
   private initialized = false;
@@ -868,7 +866,6 @@ export class Config {
 
     this.fakeResponses = params.fakeResponses;
     this.recordResponses = params.recordResponses;
-    this.enablePromptCompletion = params.enablePromptCompletion ?? false;
     this.fileExclusions = new FileExclusions(this);
     this.eventEmitter = params.eventEmitter;
     this.policyEngine = new PolicyEngine({
@@ -1511,7 +1508,8 @@ export class Config {
       }
 
       const hasAccess =
-        quota.buckets?.some((b) => b.modelId === PREVIEW_GEMINI_MODEL) ?? false;
+        quota.buckets?.some((b) => b.modelId && isPreviewModel(b.modelId)) ??
+        false;
       this.setHasAccessToPreviewModel(hasAccess);
       return quota;
     } catch (e) {
@@ -2451,10 +2449,6 @@ export class Config {
   }
   getScreenReader(): boolean {
     return this.accessibility.screenReader ?? false;
-  }
-
-  getEnablePromptCompletion(): boolean {
-    return this.enablePromptCompletion;
   }
 
   getTruncateToolOutputThreshold(): number {
