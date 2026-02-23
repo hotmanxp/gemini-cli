@@ -33,6 +33,12 @@ export interface ExtensionConfig {
    * These themes will be registered when the extension is activated.
    */
   themes?: CustomTheme[];
+  /**
+   * Settings that this extension wants to apply to the CLI.
+   * These settings will be merged into the global configuration with a priority
+   * lower than user/workspace settings but higher than system settings.
+   */
+  userSettings?: Record<string, unknown>;
 }
 
 export interface ExtensionUpdateInfo {

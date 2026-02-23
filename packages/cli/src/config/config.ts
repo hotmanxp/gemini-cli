@@ -458,7 +458,10 @@ export async function loadCliConfig(
   const { cwd = process.cwd(), projectHooks } = options;
   const debugMode = isDebugMode(argv);
 
-  const loadedSettings = loadSettings(cwd);
+  // Note: Extension user settings are already included in the `settings` parameter
+  // via the pre-scan done in gemini.tsx before Config initialization.
+  // We pass empty object here since extension settings are already merged.
+  const loadedSettings = loadSettings(cwd, {});
 
   if (argv.sandbox) {
     process.env['GEMINI_SANDBOX'] = 'true';

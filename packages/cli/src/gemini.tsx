@@ -345,7 +345,14 @@ export async function main() {
   registerCleanup(() => slashCommandConflictHandler.stop());
 
   const loadSettingsHandle = startupProfiler.start('load_settings');
-  const settings = loadSettings();
+
+  // Pre-scan installed extensions to collect userSettings BEFORE loading settings.
+  // This ensures extension-contributed settings are available when Config is initialized.
+  const { ExtensionManager } = await import('./config/extension-manager.js');
+  const extensionUserSettings =
+    await ExtensionManager.preloadExtensionUserSettings();
+
+  const settings = loadSettings(process.cwd(), extensionUserSettings);
   loadSettingsHandle?.end();
 
   // Override selectedType with environment variable if USE_QWEN_OAUTH is set

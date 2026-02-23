@@ -9,7 +9,7 @@ import * as path from 'node:path';
 import { stat } from 'node:fs/promises';
 import chalk from 'chalk';
 import { ExtensionEnablementManager } from './extensions/extensionEnablement.js';
-import { type MergedSettings, SettingScope } from './settings.js';
+import type { Settings , type MergedSettings, SettingScope  } from './settings.js';
 import { createHash, randomUUID } from 'node:crypto';
 import { loadInstallMetadata, type ExtensionConfig } from './extension.js';
 import {
@@ -509,6 +509,60 @@ Would you like to attempt to install via "git clone" instead?`,
     if (extension.themes) {
       themeManager.unregisterExtensionThemes(extension.name, extension.themes);
     }
+  }
+
+  /**
+   * Pre-scans all installed extensions to collect their userSettings.
+   * This should be called BEFORE loading extensions to ensure settings
+   * are available when Config is initialized.
+   *
+   * @returns Merged userSettings from all extensions
+   */
+  static async preloadExtensionUserSettings(): Promise<Settings> {
+    const extensionUserSettings: Settings = {};
+    const extensionsDir = ExtensionStorage.getUserExtensionsDir();
+
+    if (!fs.existsSync(extensionsDir)) {
+      return extensionUserSettings;
+    }
+
+    for (const subdir of fs.readdirSync(extensionsDir)) {
+      const extensionDir = path.join(extensionsDir, subdir);
+      if (!fs.statSync(extensionDir).isDirectory()) {
+        continue;
+      }
+
+      try {
+        const configFilePath = path.join(
+          extensionDir,
+          EXTENSIONS_CONFIG_FILENAME,
+        );
+        if (!fs.existsSync(configFilePath)) {
+          continue;
+        }
+
+        const configContent = fs.readFileSync(configFilePath, 'utf-8');
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+        const rawConfig = JSON.parse(configContent) as ExtensionConfig;
+
+        if (!rawConfig.name || !rawConfig.version) {
+          continue;
+        }
+
+        if (rawConfig.userSettings) {
+          // Merge settings from all extensions
+          // Later extensions will override earlier ones for the same keys
+          Object.assign(extensionUserSettings, rawConfig.userSettings);
+        }
+      } catch (error) {
+        // Ignore errors during preload, they will be caught during actual load
+        debugLogger.warn(
+          `Failed to preload settings from extension ${extensionDir}: ${getErrorMessage(error)}`,
+        );
+      }
+    }
+
+    return extensionUserSettings;
   }
 
   /**

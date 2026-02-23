@@ -251,25 +251,28 @@ export function mergeSettings(
   user: Settings,
   workspace: Settings,
   isTrusted: boolean,
+  extensionUserSettings?: Settings,
 ): MergedSettings {
   const safeWorkspace = isTrusted ? workspace : ({} as Settings);
   const schemaDefaults = getDefaultsFromSchema();
 
   // Settings are merged with the following precedence (last one wins for
   // single values):
-  // 1. Schema Defaults (Built-in)
+  // 1. Schema Defaults (Built-in) - lowest priority
   // 2. System Defaults
-  // 3. User Settings
-  // 4. Workspace Settings
-  // 5. System Settings (as overrides)
+  // 3. System Settings
+  // 4. Extension Settings (from plugins' userSettings field)
+  // 5. User Settings (~/.gemini/settings.json)
+  // 6. Project/Workspace Settings (.gemini/settings.json) - highest priority
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
   return customDeepMerge(
     getMergeStrategyForPath,
     schemaDefaults,
     systemDefaults,
+    system,
+    extensionUserSettings ?? {},
     user,
     safeWorkspace,
-    system,
   ) as MergedSettings;
 }
 
@@ -313,6 +316,7 @@ export class LoadedSettings {
     workspace: SettingsFile,
     isTrusted: boolean,
     errors: SettingsError[] = [],
+    extensionUserSettings: Settings = {},
   ) {
     this.system = system;
     this.systemDefaults = systemDefaults;
@@ -323,6 +327,7 @@ export class LoadedSettings {
       ? workspace
       : this.createEmptyWorkspace(workspace);
     this.errors = errors;
+    this._extensionUserSettings = extensionUserSettings;
     this._merged = this.computeMergedSettings();
     this._snapshot = this.computeSnapshot();
   }
@@ -335,6 +340,7 @@ export class LoadedSettings {
   readonly errors: SettingsError[];
 
   private _workspaceFile: SettingsFile;
+  private _extensionUserSettings: Settings;
   private _merged: MergedSettings;
   private _snapshot: LoadedSettingsSnapshot;
   private _remoteAdminSettings: Partial<Settings> | undefined;
@@ -370,6 +376,7 @@ export class LoadedSettings {
       this.user.settings,
       this.workspace.settings,
       this.isTrusted,
+      this._extensionUserSettings,
     );
 
     // Remote admin settings always take precedence and file-based admin settings
@@ -628,6 +635,7 @@ export function loadEnvironment(
  */
 export function loadSettings(
   workspaceDir: string = process.cwd(),
+  extensionUserSettings: Settings = {},
 ): LoadedSettings {
   let systemSettings: Settings = {};
   let systemDefaultSettings: Settings = {};
@@ -760,6 +768,7 @@ export function loadSettings(
     userSettings,
     workspaceSettings,
     isTrusted,
+    {}, // No extension settings available yet during initial load
   );
 
   // loadEnvironment depends on settings so we have to create a temp version of
@@ -808,6 +817,7 @@ export function loadSettings(
     },
     isTrusted,
     settingsErrors,
+    extensionUserSettings,
   );
 
   // Automatically migrate deprecated settings when loading.

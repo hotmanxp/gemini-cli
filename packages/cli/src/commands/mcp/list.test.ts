@@ -64,7 +64,6 @@ const mockedGetUserExtensionsDir =
 const mockedLoadSettings = loadSettings as Mock;
 const mockedCreateTransport = createTransport as Mock;
 const MockedClient = Client as Mock;
-const MockedExtensionManager = ExtensionManager as Mock;
 
 interface MockClient {
   connect: Mock;
@@ -100,7 +99,9 @@ describe('mcp list command', () => {
     };
 
     MockedClient.mockImplementation(() => mockClient);
-    MockedExtensionManager.mockImplementation(() => mockExtensionManager);
+    vi.mocked(ExtensionManager).mockImplementation(
+      () => mockExtensionManager as unknown as ExtensionManager,
+    );
     mockedCreateTransport.mockResolvedValue(mockTransport);
     mockExtensionManager.loadExtensions.mockReturnValue([]);
     mockedGetUserExtensionsDir.mockReturnValue('/mocked/extensions/dir');

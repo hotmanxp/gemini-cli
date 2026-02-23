@@ -219,7 +219,7 @@ describe('Settings Loading and Merging', () => {
       },
     );
 
-    it('should merge system, user and workspace settings, with system taking precedence over workspace, and workspace over user', () => {
+    it('should merge system, user and workspace settings, with workspace taking precedence over user, user over extension, and extension over system', () => {
       (mockFsExistsSync as Mock).mockImplementation(
         (p: fs.PathLike) =>
           p === getSystemSettingsPath() ||
@@ -279,20 +279,21 @@ describe('Settings Loading and Merging', () => {
       expect(settings.system.settings).toEqual(systemSettingsContent);
       expect(settings.user.settings).toEqual(userSettingsContent);
       expect(settings.workspace.settings).toEqual(workspaceSettingsContent);
+      // New priority: workspace > user > extension > system
       expect(settings.merged).toMatchObject({
         ui: {
-          theme: 'system-theme',
+          theme: 'dark', // user wins over system
         },
         tools: {
-          sandbox: false,
+          sandbox: false, // workspace wins
           core: ['tool1'],
         },
-        telemetry: { enabled: false },
+        telemetry: { enabled: false }, // system value (no override)
         context: {
-          fileName: 'WORKSPACE_CONTEXT.md',
+          fileName: 'WORKSPACE_CONTEXT.md', // workspace wins
         },
         mcp: {
-          allowed: ['server1', 'server2'],
+          allowed: ['server1', 'server2', 'server3'], // workspace wins
         },
       });
     });
@@ -382,22 +383,23 @@ describe('Settings Loading and Merging', () => {
       expect(settings.system.settings).toEqual(systemSettingsContent);
       expect(settings.user.settings).toEqual(userSettingsContent);
       expect(settings.workspace.settings).toEqual(workspaceSettingsContent);
+      // New priority: workspace > user > extension > system > systemDefaults
       expect(settings.merged).toEqual({
         context: {
           discoveryMaxDirs: 200,
           includeDirectories: [
             '/system/defaults/dir',
+            '/system/dir',
             '/user/dir1',
             '/user/dir2',
             '/workspace/dir',
-            '/system/dir',
           ],
           fileName: 'WORKSPACE_CONTEXT.md',
         },
         mcpServers: {},
-        ui: { theme: 'system-theme' },
-        tools: { sandbox: false },
-        telemetry: false,
+        ui: { theme: 'user-theme' }, // user wins over system
+        tools: { sandbox: false }, // workspace wins
+        telemetry: false, // system wins (no user/workspace override)
       });
     });
 
@@ -477,7 +479,7 @@ describe('Settings Loading and Merging', () => {
       expect(settings.merged.security?.folderTrust?.enabled).toBe(true); // System setting should be used
     });
 
-    it('should not allow user or workspace to override system disableYoloMode', () => {
+    it('should allow workspace to override system disableYoloMode', () => {
       (mockFsExistsSync as Mock).mockReturnValue(true);
       const userSettingsContent = {
         security: {
@@ -486,12 +488,12 @@ describe('Settings Loading and Merging', () => {
       };
       const workspaceSettingsContent = {
         security: {
-          disableYoloMode: false, // This should be ignored
+          disableYoloMode: true, // This should be used (workspace wins)
         },
       };
       const systemSettingsContent = {
         security: {
-          disableYoloMode: true,
+          disableYoloMode: false,
         },
       };
 
@@ -508,7 +510,7 @@ describe('Settings Loading and Merging', () => {
       );
 
       const settings = loadSettings(MOCK_WORKSPACE_DIR);
-      expect(settings.merged.security?.disableYoloMode).toBe(true); // System setting should be used
+      expect(settings.merged.security?.disableYoloMode).toBe(true); // Workspace setting should be used
     });
 
     it.each([
@@ -817,7 +819,7 @@ describe('Settings Loading and Merging', () => {
       expect(settings.merged.mcpServers).toEqual({});
     });
 
-    it('should merge MCP servers from system, user, and workspace with system taking precedence', () => {
+    it('should merge MCP servers from system, user, and workspace with workspace taking precedence', () => {
       (mockFsExistsSync as Mock).mockReturnValue(true);
       const systemSettingsContent = {
         mcpServers: {
@@ -867,6 +869,7 @@ describe('Settings Loading and Merging', () => {
 
       const settings = loadSettings(MOCK_WORKSPACE_DIR);
 
+      // New priority: workspace > user > extension > system
       expect(settings.merged.mcpServers).toEqual({
         'user-server': {
           command: 'user-command',
@@ -878,13 +881,13 @@ describe('Settings Loading and Merging', () => {
           command: 'system-only-command',
         },
         'shared-server': {
-          command: 'system-command',
-          args: ['--system-arg'],
+          command: 'workspace-command', // workspace wins
+          args: ['--workspace-arg'],
         },
       });
     });
 
-    it('should merge mcp allowed/excluded lists with system taking precedence over workspace', () => {
+    it('should merge mcp allowed/excluded lists with workspace taking precedence', () => {
       (mockFsExistsSync as Mock).mockReturnValue(true);
       const systemSettingsContent = {
         mcp: {
@@ -918,8 +921,9 @@ describe('Settings Loading and Merging', () => {
 
       const settings = loadSettings(MOCK_WORKSPACE_DIR);
 
+      // New priority: workspace > user > extension > system
       expect(settings.merged.mcp).toEqual({
-        allowed: ['system-allowed'],
+        allowed: ['workspace-allowed'],
         excluded: ['workspace-excluded'],
       });
     });
@@ -1026,12 +1030,14 @@ describe('Settings Loading and Merging', () => {
 
       const settings = loadSettings(MOCK_WORKSPACE_DIR);
 
+      // With extensionUserSettings (empty) in position 4, the order is:
+      // systemDefaults < system < extension < user < workspace
       expect(settings.merged.context?.includeDirectories).toEqual([
         '/system/defaults/dir',
+        '/system/dir',
         '/user/dir1',
         '/user/dir2',
         '/workspace/dir',
-        '/system/dir',
       ]);
     });
 
