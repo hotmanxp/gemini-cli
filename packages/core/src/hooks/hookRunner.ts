@@ -262,17 +262,11 @@ export class HookRunner {
       let timedOut = false;
 
       const shellConfig = getShellConfiguration();
-      let command = this.expandCommand(
+      const command = this.expandCommand(
         hookConfig.command,
         input,
         shellConfig.shell,
       );
-
-      // Node.js v24+ has a feature that tries to execute stdin as TypeScript.
-      // Add --no-type-check flag to prevent this when running node commands.
-      if (/^node(\s|$)/.test(command)) {
-        command = command.replace(/^node/, 'node --no-type-check');
-      }
 
       // Set up environment variables
       const env = {
