@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2025 Google LLC
+ * Copyright 2026 Google LLC
  * SPDX-License-Identifier: Apache-2.0
  */
 
@@ -17,15 +17,17 @@ import { SettingScope } from '../../config/settings.js';
 import {
   AuthType,
   clearCachedCredentialFile,
+  debugLogger,
   type Config,
 } from '@google/gemini-cli-core';
 import { useKeypress } from '../hooks/useKeypress.js';
 import { AuthState } from '../types.js';
 import { runExitCleanup } from '../../utils/cleanup.js';
-import { validateAuthMethodWithSettings } from './useAuth.js';
 import { RELAUNCH_EXIT_CODE } from '../../utils/processUtils.js';
+import { validateAuthMethodWithSettings } from './useAuth.js';
+import { ModelSelectorDialog } from './ModelSelectorDialog.js';
 
-interface AuthDialogProps {
+interface UseAuthDialogProps {
   config: Config;
   settings: LoadedSettings;
   setAuthState: (state: AuthState) => void;
@@ -34,15 +36,24 @@ interface AuthDialogProps {
   setAuthContext: (context: { requiresRestart?: boolean }) => void;
 }
 
-export function AuthDialog({
+export function UseAuthDialog({
   config,
   settings,
   setAuthState,
   authError,
   onAuthError,
   setAuthContext,
-}: AuthDialogProps): React.JSX.Element {
+}: UseAuthDialogProps): React.JSX.Element {
   const [exiting, setExiting] = useState(false);
+  
+  // Initialize showModelSelector based on selectedType on startup
+  // If CONFIG_LOGIN is already selected, show model selector immediately
+  const [showModelSelector, setShowModelSelector] = useState(
+    settings.merged.security.auth.selectedType === AuthType.CONFIG_LOGIN
+  );
+  
+  debugLogger.log('[UseAuthDialog] initial showModelSelector:', showModelSelector);
+  
   let items = [
     {
       label: 'Login with Google',
@@ -126,6 +137,7 @@ export function AuthDialog({
 
   const onSelect = useCallback(
     async (authType: AuthType | undefined, scope: LoadableSettingScope) => {
+      debugLogger.log('[UseAuthDialog.onSelect] called with authType:', authType);
       if (exiting) {
         return;
       }
@@ -138,6 +150,7 @@ export function AuthDialog({
         await clearCachedCredentialFile();
 
         settings.setValue(scope, 'security.auth.selectedType', authType);
+        debugLogger.log('[UseAuthDialog.onSelect] settings setValue completed');
         if (
           authType === AuthType.LOGIN_WITH_GOOGLE &&
           config.isBrowserLaunchSuppressed()
@@ -161,21 +174,30 @@ export function AuthDialog({
         }
         
         if (authType === AuthType.CONFIG_LOGIN) {
-          // CONFIG_LOGIN is handled by the ModelSelectorDialog component
-          setAuthState(AuthState.Unauthenticated);
+          // Open model selector dialog for Config Login
+          // Don't call refreshAuth yet - wait for user to select model
+          debugLogger.log('[UseAuthDialog.onSelect] CONFIG_LOGIN - opening model selector');
+          settings.setValue(scope, 'security.auth.selectedType', authType);
+          setShowModelSelector(true);
           return;
         }
       }
+      debugLogger.log('[UseAuthDialog.onSelect] Setting Unauthenticated');
       setAuthState(AuthState.Unauthenticated);
     },
     [settings, config, setAuthState, exiting, setAuthContext],
   );
 
   const handleAuthSelect = (authMethod: AuthType) => {
+    debugLogger.log('[UseAuthDialog.handleAuthSelect] START - authMethod:', authMethod);
     const error = validateAuthMethodWithSettings(authMethod, settings);
+    debugLogger.log('[UseAuthDialog.handleAuthSelect] validation error:', error);
     if (error) {
+      debugLogger.log('[UseAuthDialog.handleAuthSelect] returning with error');
       onAuthError(error);
     } else {
+      // For CONFIG_LOGIN, still call onSelect to save selectedType and show model selector
+      debugLogger.log('[UseAuthDialog.handleAuthSelect] Calling onSelect with:', authMethod);
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
       onSelect(authMethod, SettingScope.User);
     }
@@ -184,6 +206,10 @@ export function AuthDialog({
   useKeypress(
     (key) => {
       if (key.name === 'escape') {
+        if (showModelSelector) {
+          setShowModelSelector(false);
+          return true;
+        }
         // Prevent exit if there is an error message.
         // This means they user is not authenticated yet.
         if (authError) {
@@ -204,6 +230,20 @@ export function AuthDialog({
     },
     { isActive: true },
   );
+
+  // Show model selector if Config Login was selected
+  debugLogger.log('[UseAuthDialog] showModelSelector:', showModelSelector, 'rendering');
+  if (showModelSelector) {
+    debugLogger.log('[UseAuthDialog] Rendering ModelSelectorDialog');
+    return (
+      <ModelSelectorDialog
+        config={config}
+        settings={settings}
+        setAuthState={setAuthState}
+        onAuthError={onAuthError}
+      />
+    );
+  }
 
   if (exiting) {
     return (

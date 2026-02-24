@@ -31,6 +31,10 @@ export function validateAuthMethodWithSettings(
   if (authType === AuthType.USE_GEMINI) {
     return null;
   }
+  // CONFIG_LOGIN doesn't require validation - model selection handles authentication
+  if (authType === AuthType.CONFIG_LOGIN) {
+    return null;
+  }
   return validateAuthMethod(authType);
 }
 
