@@ -173,7 +173,7 @@ class JsonRpcConnection {
       this.buffer = this.buffer.slice(messageEnd);
 
       try {
-        const message = JSON.parse(body);
+        const message = JSON.parse(body) as JsonRpcMessage;
         this.routeMessage(message);
       } catch {
         // ignore malformed messages
@@ -258,10 +258,10 @@ export class LspConnectionFactory {
     return new Promise((resolve, reject) => {
       const spawnOptions: cp.SpawnOptions = {
         stdio: 'pipe',
-        shell: true,  // 使用 shell 启动，确保能从 PATH 找到命令
+        shell: true, // 使用 shell 启动，确保能从 PATH 找到命令
         ...options,
       };
-      
+
       debugLogger.log(`Spawning LSP server: ${command} ${args.join(' ')}`);
       const processInstance = cp.spawn(command, args, spawnOptions);
 

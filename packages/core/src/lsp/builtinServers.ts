@@ -571,9 +571,7 @@ export function getExtensionsForLanguage(language: string): string[] {
  * Get language for a file extension.
  */
 export function getLanguageForExtension(extension: string): string | null {
-  const normalized = extension.startsWith('.')
-    ? extension.slice(1)
-    : extension;
+  const normalized = extension.startsWith('.') ? extension.slice(1) : extension;
   return EXT_TO_LANG[normalized.toLowerCase()] || null;
 }
 
@@ -595,6 +593,8 @@ export function getBuiltinServerConfig(
     name: language,
     languages,
     ...server,
+    rootUri: '',
+    workspaceFolder: '',
   } as LspServerConfig;
 }
 

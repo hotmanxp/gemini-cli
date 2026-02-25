@@ -7,7 +7,7 @@
 import http from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
-import { WebSocketServer, type WebSocket } from 'ws';
+import { WebSocketServer, WebSocket } from 'ws';
 import type {
   NetworkLog,
   ConsoleLogPayload,
@@ -398,7 +398,7 @@ export class DevTools extends EventEmitter {
             if (session.ws.readyState === WebSocket.OPEN) {
               session.ws.send(JSON.stringify({ type: 'ping', timestamp: now }));
             }
-          } catch (error) {
+          } catch {
             // Mark for removal if send fails
             sessionsToRemove.push(sessionId);
           }

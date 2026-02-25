@@ -101,7 +101,9 @@ export class LspServerManager {
    * @deprecated Use startServer for on-demand loading
    */
   async startAll(): Promise<void> {
-    debugLogger.warn('startAll() is deprecated - use startServer(language) for lazy loading');
+    debugLogger.warn(
+      'startAll() is deprecated - use startServer(language) for lazy loading',
+    );
     for (const [name, handle] of Array.from(this.serverHandles)) {
       await this.doStartServer(name, handle);
     }
@@ -117,16 +119,20 @@ export class LspServerManager {
       debugLogger.warn(`LSP server ${name} not configured`);
       return;
     }
-    
+
     const now = Date.now();
-    
+
     // Check if already initializing
     if (serverHandle.isInitializing && serverHandle.initPromise) {
       // Check for timeout
-      if (serverHandle.initializingSince && 
-          now - serverHandle.initializingSince > DEFAULT_LSP_INIT_TIMEOUT_MS) {
+      if (
+        serverHandle.initializingSince &&
+        now - serverHandle.initializingSince > DEFAULT_LSP_INIT_TIMEOUT_MS
+      ) {
         // Initialization timeout - cleanup and retry
-        debugLogger.warn(`LSP server ${name} initialization timeout, restarting...`);
+        debugLogger.warn(
+          `LSP server ${name} initialization timeout, restarting...`,
+        );
         await this.cleanupFailedInitialization(serverHandle);
       } else {
         // Wait for existing initialization
@@ -135,21 +141,23 @@ export class LspServerManager {
           serverHandle.refCount++;
           serverHandle.lastUsedAt = Date.now();
           return;
-        } catch (error) {
+        } catch (_error) {
           // Initialization failed - cleanup and retry
-          debugLogger.warn(`LSP server ${name} initialization failed, retrying...`);
+          debugLogger.warn(
+            `LSP server ${name} initialization failed, retrying...`,
+          );
           await this.cleanupFailedInitialization(serverHandle);
         }
       }
     }
-    
+
     // Check if server is already running
     if (serverHandle.status === 'READY' && serverHandle.connection) {
       serverHandle.refCount++;
       serverHandle.lastUsedAt = now;
       return;
     }
-    
+
     // Start new initialization with lock
     await this.initializeServerWithLock(name, serverHandle);
   }
@@ -162,16 +170,16 @@ export class LspServerManager {
     handle: LspServerHandle,
   ): Promise<void> {
     const now = Date.now();
-    
+
     // Set initialization lock
     handle.isInitializing = true;
     handle.initializingSince = now;
     handle.refCount = 1;
     handle.lastUsedAt = now;
-    
+
     const initPromise = this.doStartServer(name, handle);
     handle.initPromise = initPromise;
-    
+
     try {
       await initPromise;
       // Initialization successful - clear lock
@@ -192,13 +200,15 @@ export class LspServerManager {
   /**
    * Cleanup failed initialization state.
    */
-  private async cleanupFailedInitialization(handle: LspServerHandle): Promise<void> {
+  private async cleanupFailedInitialization(
+    handle: LspServerHandle,
+  ): Promise<void> {
     handle.isInitializing = false;
     handle.initPromise = undefined;
     handle.initializingSince = undefined;
     handle.refCount = 0;
     handle.lastUsedAt = Date.now();
-    
+
     // Stop any existing connection
     if (handle.connection || handle.process) {
       try {
@@ -226,7 +236,7 @@ export class LspServerManager {
       debugLogger.warn(`LSP server ${name} not found for release`);
       return;
     }
-    
+
     if (handle.refCount > 0) {
       handle.refCount--;
       handle.lastUsedAt = Date.now();
@@ -247,14 +257,14 @@ export class LspServerManager {
    */
   private cleanupIdleServers(): void {
     const now = Date.now();
-    
+
     for (const [name, handle] of this.serverHandles) {
       // Skip servers that are initializing
       if (handle.isInitializing) continue;
-      
+
       // Skip servers that are still in use
       if (handle.refCount > 0) continue;
-      
+
       // Check if idle timeout exceeded
       if (now - handle.lastUsedAt > DEFAULT_LSP_IDLE_TIMEOUT_MS) {
         void this.stopServer(name, handle);
@@ -387,11 +397,13 @@ export class LspServerManager {
       const potentialPythonPath = isWindows
         ? path.join(venvPath, 'Scripts', 'python.exe')
         : path.join(venvPath, 'bin', 'python');
-      
+
       if (await this.checkFileExists(potentialPythonPath)) {
         // Update initialization options with detected pythonPath
         if (handle.config.initializationOptions) {
-          (handle.config.initializationOptions as Record<string, unknown>)['pythonPath'] = potentialPythonPath;
+          (handle.config.initializationOptions as Record<string, unknown>)[
+            'pythonPath'
+          ] = potentialPythonPath;
         }
         break;
       }
@@ -471,7 +483,7 @@ export class LspServerManager {
     if (serverName) {
       // First ensure server is started
       await this.startServerByName(serverName);
-      
+
       const handle = this.serverHandles.get(serverName);
       if (handle) {
         await this.warmupServerHandle(handle);
@@ -570,14 +582,10 @@ export class LspServerManager {
     // Check if command exists
     if (handle.config.command) {
       const commandCwd = handle.config.workspaceFolder ?? this.workspaceRoot;
-      
+
       // Try to check if command exists
-      const commandExists = await this.commandExists(
-        handle.config.command,
-        handle.config.env,
-        commandCwd,
-      );
-      
+      const commandExists = await this.commandExists(handle.config.command);
+
       // If command not found, try auto-install (only for npm-based servers)
       if (!commandExists) {
         const autoInstallServers = [
@@ -601,47 +609,50 @@ export class LspServerManager {
           'oxlint',
           'biome',
         ];
-        
+
         const shouldTryInstall = autoInstallServers.some(
-          server => handle.config.command && (handle.config.command.includes(server) || server.includes(handle.config.command))
+          (server) =>
+            handle.config.command &&
+            (handle.config.command.includes(server) ||
+              server.includes(handle.config.command)),
         );
-        
+
         if (shouldTryInstall) {
           debugLogger.log(
-            `LSP server ${name} command '${handle.config.command}' not found, attempting auto-install...`
+            `LSP server ${name} command '${handle.config.command}' not found, attempting auto-install...`,
           );
-          
+
           const installResult = await tryAutoInstallLspServer(
             name,
-            handle.config.command
+            handle.config.command,
           );
-          
+
           if (installResult.installed) {
             debugLogger.log(`Successfully auto-installed LSP server ${name}`);
             // Re-check command after install
             const commandNowExists = await this.commandExists(
               handle.config.command,
-              handle.config.env,
-              commandCwd,
             );
             if (commandNowExists) {
               // Continue with server startup
             } else {
-              debugLogger.warn(`LSP server ${name} installed but command still not found`);
+              debugLogger.warn(
+                `LSP server ${name} installed but command still not found`,
+              );
               handle.status = 'FAILED';
               return;
             }
           } else {
             const hint = getInstallationHint(name);
             debugLogger.warn(
-              `Failed to auto-install LSP server ${name}. ${installResult.error ?? ''}\nPlease install manually: ${hint}`
+              `Failed to auto-install LSP server ${name}. ${installResult.error ?? ''}\nPlease install manually: ${hint}`,
             );
             handle.status = 'FAILED';
             return;
           }
         } else {
           debugLogger.warn(
-            `LSP server ${name} command not found: ${handle.config.command}. ${getInstallationHint(name)}`
+            `LSP server ${name} command not found: ${handle.config.command}. ${getInstallationHint(name)}`,
           );
           handle.status = 'FAILED';
           return;
@@ -1014,18 +1025,14 @@ export class LspServerManager {
   /**
    * Check if command exists
    */
-  private async commandExists(
-    command: string,
-    env?: Record<string, string>,
-    cwd?: string,
-  ): Promise<boolean> {
+  private async commandExists(command: string): Promise<boolean> {
     // First check if command is in PATH
     const inPath = await this.checkCommandInPath(command);
     if (inPath) {
       debugLogger.log(`Command ${command} found in PATH`);
       return true;
     }
-    
+
     // Also check in global bin directory
     const globalBinCommand = path.join(
       getEnvVar('HOME') ?? getEnvVar('USERPROFILE') ?? '',
@@ -1036,10 +1043,12 @@ export class LspServerManager {
     );
     const globalBinCommandExists = await this.checkFileExists(globalBinCommand);
     if (globalBinCommandExists) {
-      debugLogger.log(`Command ${command} found in global bin: ${globalBinCommand}`);
+      debugLogger.log(
+        `Command ${command} found in global bin: ${globalBinCommand}`,
+      );
       return true;
     }
-    
+
     debugLogger.warn(`Command ${command} not found in PATH or global bin`);
     return false;
   }
@@ -1048,10 +1057,10 @@ export class LspServerManager {
     const pathEnv = getEnvVar('PATH') ?? '';
     const pathSeparator = process.platform === 'win32' ? ';' : ':';
     const paths = pathEnv.split(pathSeparator);
-    
+
     const isWindows = process.platform === 'win32';
     const extensions = isWindows ? ['', '.exe', '.cmd', '.bat'] : [''];
-    
+
     for (const p of paths) {
       for (const ext of extensions) {
         const fullPath = path.join(p, command + ext);
@@ -1060,7 +1069,7 @@ export class LspServerManager {
         }
       }
     }
-    
+
     return false;
   }
 

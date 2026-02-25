@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-type-assertion */
+/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -93,10 +93,10 @@ export class LspConfigLoader {
     }
 
     try {
-      const data = JSON.parse(configContent);
+      const data = JSON.parse(configContent) as unknown;
       return this.parseConfigSource(data, configPath);
-    } catch (error) {
-      debugLogger.warn(`Failed to parse LSP config from ${configPath}:`, error);
+    } catch (_error) {
+      debugLogger.warn(`Failed to parse LSP config from ${configPath}:`);
       return [];
     }
   }
@@ -104,19 +104,25 @@ export class LspConfigLoader {
   /**
    * Load LSP configurations declared by extensions (Claude plugins).
    */
-  async loadExtensionConfigs(_extensions: any[]): Promise<LspServerConfig[]> {
-    const configs: any[] = [];
+  async loadExtensionConfigs(
+    _extensions: unknown[],
+  ): Promise<LspServerConfig[]> {
+    const configs: LspServerConfig[] = [];
 
     for (const extension of _extensions) {
-      const lspServers = extension.config?.lspServers;
+      const extRecord = extension as Record<string, unknown>;
+      const extConfig = extRecord['config'] as
+        | Record<string, unknown>
+        | undefined;
+      const lspServers = extConfig?.['lspServers'];
       if (!lspServers) {
         continue;
       }
 
-      const originBase = `extension ${extension.name}`;
+      const originBase = `extension ${String(extRecord['name'] ?? 'unknown')}`;
       if (typeof lspServers === 'string') {
         const configPath = this.resolveExtensionConfigPath(
-          extension.path,
+          String(extRecord['path'] ?? ''),
           lspServers,
         );
         if (!fs.existsSync(configPath)) {
@@ -129,23 +135,25 @@ export class LspConfigLoader {
         try {
           const configContent = fs.readFileSync(configPath, 'utf-8');
           const data = JSON.parse(configContent) as unknown;
-          const hydrated = this.hydrateExtensionLspConfig(data, extension.path);
+          const hydrated = this.hydrateExtensionLspConfig(
+            data,
+            String(extRecord['path'] ?? ''),
+          );
           configs.push(
             ...this.parseConfigSource(
               hydrated,
               `${originBase} (${configPath})`,
             ),
           );
-        } catch (error) {
+        } catch (_error) {
           debugLogger.warn(
             `Failed to load extension LSP config from ${configPath}:`,
-            error,
           );
         }
       } else if (this.isRecord(lspServers)) {
         const hydrated = this.hydrateExtensionLspConfig(
-          lspServers as unknown,
-          extension.path,
+          lspServers,
+          String(extRecord['path'] ?? ''),
         );
         configs.push(
           ...this.parseConfigSource(hydrated, `${originBase} (lspServers)`),
@@ -174,7 +182,7 @@ export class LspConfigLoader {
     // Merge configs, user configs take priority
     const mergedConfigs = [...presets];
 
-    const applyConfigs = (configs: any[]) => {
+    const applyConfigs = (configs: LspServerConfig[]) => {
       for (const config of configs) {
         // Find if there's a preset with the same name, if so replace it
         const existingIndex = mergedConfigs.findIndex(
@@ -194,7 +202,9 @@ export class LspConfigLoader {
     return mergedConfigs;
   }
 
-  collectExtensionToLanguageOverrides(configs: any[]): Record<string, string> {
+  collectExtensionToLanguageOverrides(
+    configs: LspServerConfig[],
+  ): Record<string, string> {
     const overrides: Record<string, string> = {};
     for (const config of configs) {
       if (!config.extensionToLanguage) {
@@ -253,7 +263,7 @@ export class LspConfigLoader {
       return [];
     }
 
-    const configs: any[] = [];
+    const configs: LspServerConfig[] = [];
 
     for (const [key, spec] of Object.entries(source)) {
       if (!this.isRecord(spec)) {

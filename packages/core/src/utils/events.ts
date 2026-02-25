@@ -273,13 +273,6 @@ export class CoreEventEmitter extends EventEmitter<CoreEvents> {
     this._lastBacklogPruneTime = now;
     const initialLength = this._eventBacklog.length;
 
-    // Keep only recent items (last 2 minutes worth)
-    const cutoffTime = now - 2 * 60 * 1000;
-    this._eventBacklog = this._eventBacklog.filter((item) => {
-      // Estimate timestamp from position (rough heuristic)
-      return true; // For now, keep all items but limit by count
-    });
-
     // Enforce max size
     if (this._eventBacklog.length > CoreEventEmitter.MAX_BACKLOG_SIZE) {
       this._eventBacklog = this._eventBacklog.slice(
@@ -312,7 +305,7 @@ export class CoreEventEmitter extends EventEmitter<CoreEvents> {
   private _checkListenerLeaks() {
     const eventNames = this.eventNames();
     for (const eventName of eventNames) {
-      const listenerCount = this.listenerCount(eventName as keyof CoreEvents);
+      const listenerCount = this.listenerCount(eventName);
       if (listenerCount > CoreEventEmitter.MAX_LISTENER_WARNING) {
         debugLogger.warn(
           `High listener count for ${String(eventName)}: ${listenerCount}. ` +
