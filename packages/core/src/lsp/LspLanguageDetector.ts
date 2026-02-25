@@ -16,32 +16,7 @@ import * as path from 'node:path';
 import { globSync } from 'glob';
 import type { FileDiscoveryService } from '../services/fileDiscoveryService.js';
 import type { WorkspaceContext } from '../utils/workspaceContext.js';
-
-/**
- * Extension to language ID mapping
- */
-const DEFAULT_EXTENSION_TO_LANGUAGE: Record<string, string> = {
-  js: 'javascript',
-  ts: 'typescript',
-  jsx: 'javascriptreact',
-  tsx: 'typescriptreact',
-  py: 'python',
-  go: 'go',
-  rs: 'rust',
-  java: 'java',
-  cpp: 'cpp',
-  c: 'c',
-  php: 'php',
-  rb: 'ruby',
-  cs: 'csharp',
-  vue: 'vue',
-  svelte: 'svelte',
-  html: 'html',
-  css: 'css',
-  json: 'json',
-  yaml: 'yaml',
-  yml: 'yaml',
-};
+import { EXT_TO_LANG } from './builtinServers.js';
 
 /**
  * Root marker file to language ID mapping
@@ -59,6 +34,13 @@ const MARKER_TO_LANGUAGE: Record<string, string> = {
   '*.sln': 'csharp',
   'mix.exs': 'elixir',
   'deno.json': 'deno',
+  '.eslintrc': 'javascript',
+  '.eslintrc.json': 'javascript',
+  '.eslintrc.js': 'javascript',
+  'biome.json': 'javascript',
+  '.oxlintrc.json': 'typescript',
+  Dockerfile: 'dockerfile',
+  'docker-compose.yml': 'dockerfile',
 };
 
 /**
@@ -76,6 +58,11 @@ const COMMON_MARKERS = [
   'Gemfile',
   'mix.exs',
   'deno.json',
+  '.eslintrc',
+  'biome.json',
+  '.oxlintrc.json',
+  'Dockerfile',
+  'docker-compose.yml',
 ];
 
 /**
@@ -140,12 +127,9 @@ export class LspLanguageDetector {
     // Count files per language
     const languageCounts = new Map<string, number>();
     for (const file of Array.from(files)) {
-      const ext = path.extname(file).slice(1).toLowerCase();
-      if (ext) {
-        const lang = this.mapExtensionToLanguage(ext, extensionMap);
-        if (lang) {
-          languageCounts.set(lang, (languageCounts.get(lang) || 0) + 1);
-        }
+      const lang = this.mapFileToLanguage(file, extensionMap);
+      if (lang) {
+        languageCounts.set(lang, (languageCounts.get(lang) || 0) + 1);
       }
     }
 
@@ -157,6 +141,114 @@ export class LspLanguageDetector {
         // Give higher weight to config files
         const currentCount = languageCounts.get(lang) || 0;
         languageCounts.set(lang, currentCount + 100);
+      }
+    }
+
+    // Detect Bash/Shell scripts
+    for (const root of searchRoots) {
+      try {
+        const shellFiles = globSync('**/*.sh', {
+          cwd: root,
+          ignore: DEFAULT_EXCLUDE_PATTERNS,
+          absolute: true,
+          nodir: true,
+        });
+        if (shellFiles.length > 0) {
+          const currentCount = languageCounts.get('bash') || 0;
+          languageCounts.set('bash', currentCount + shellFiles.length);
+        }
+      } catch {
+        // Ignore
+      }
+    }
+
+    // Detect Markdown files
+    for (const root of searchRoots) {
+      try {
+        const mdFiles = globSync('**/*.md', {
+          cwd: root,
+          ignore: DEFAULT_EXCLUDE_PATTERNS,
+          absolute: true,
+          nodir: true,
+        });
+        if (mdFiles.length > 0) {
+          const currentCount = languageCounts.get('markdown') || 0;
+          languageCounts.set('markdown', currentCount + mdFiles.length);
+        }
+      } catch {
+        // Ignore
+      }
+    }
+
+    // Detect Dockerfiles
+    for (const root of searchRoots) {
+      try {
+        const dockerfiles = globSync('**/Dockerfile*', {
+          cwd: root,
+          ignore: DEFAULT_EXCLUDE_PATTERNS,
+          absolute: true,
+          nodir: true,
+        });
+        if (dockerfiles.length > 0) {
+          const currentCount = languageCounts.get('dockerfile') || 0;
+          languageCounts.set('dockerfile', currentCount + dockerfiles.length);
+        }
+      } catch {
+        // Ignore
+      }
+    }
+
+    // Detect ESLint configs
+    for (const root of searchRoots) {
+      try {
+        const eslintConfigs = globSync('**/.eslintrc*', {
+          cwd: root,
+          ignore: DEFAULT_EXCLUDE_PATTERNS,
+          absolute: true,
+          nodir: true,
+        });
+        if (eslintConfigs.length > 0) {
+          const currentCount = languageCounts.get('eslint') || 0;
+          languageCounts.set('eslint', currentCount + eslintConfigs.length);
+        }
+      } catch {
+        // Ignore
+      }
+    }
+
+    // Detect Biome configs
+    for (const root of searchRoots) {
+      try {
+        const biomeConfigs = globSync('**/biome.json', {
+          cwd: root,
+          ignore: DEFAULT_EXCLUDE_PATTERNS,
+          absolute: true,
+          nodir: true,
+        });
+        if (biomeConfigs.length > 0) {
+          const currentCount = languageCounts.get('biome') || 0;
+          languageCounts.set('biome', currentCount + biomeConfigs.length);
+        }
+      } catch {
+        // Ignore
+      }
+    }
+
+    // Detect Oxlint configs
+    for (const root of searchRoots) {
+      try {
+        const oxlintConfigs = globSync('**/.oxlintrc.json', {
+          cwd: root,
+          ignore: DEFAULT_EXCLUDE_PATTERNS,
+          absolute: true,
+          nodir: true,
+        });
+        if (oxlintConfigs.length > 0) {
+          const currentCount = languageCounts.get('oxlint') || 0;
+          languageCounts.set('oxlint', currentCount + oxlintConfigs.length);
+        }
+      } catch {
+        // Ignore
       }
     }
 
@@ -189,7 +281,51 @@ export class LspLanguageDetector {
   }
 
   /**
-   * Map file extension to programming language ID
+   * Map file to language ID based on extension or filename
+   */
+  private mapFileToLanguage(
+    filePath: string,
+    extensionMap: Record<string, string>,
+  ): string | null {
+    const basename = path.basename(filePath);
+    const ext = path.extname(filePath).toLowerCase();
+
+    // Check for Dockerfile
+    if (basename === 'Dockerfile' || basename.startsWith('Dockerfile.')) {
+      return 'dockerfile';
+    }
+
+    // Check for ESLint config
+    if (basename.startsWith('.eslintrc')) {
+      return 'eslint';
+    }
+
+    // Check for Biome config
+    if (basename === 'biome.json') {
+      return 'biome';
+    }
+
+    // Check for Oxlint config
+    if (basename === '.oxlintrc.json') {
+      return 'oxlint';
+    }
+
+    // Check for Markdown
+    if (ext === '.md' || ext === '.markdown') {
+      return 'markdown';
+    }
+
+    // Check for Bash/Shell
+    if (ext === '.sh' || ext === '.bash') {
+      return 'bash';
+    }
+
+    // Check by extension
+    return this.mapExtensionToLanguage(ext.slice(1), extensionMap);
+  }
+
+  /**
+   * Map extension to language ID
    */
   private mapExtensionToLanguage(
     ext: string,
@@ -204,7 +340,7 @@ export class LspLanguageDetector {
   private getExtensionToLanguageMap(
     extensionOverrides: Record<string, string> = {},
   ): Record<string, string> {
-    const extToLang = { ...DEFAULT_EXTENSION_TO_LANGUAGE };
+    const extToLang = { ...EXT_TO_LANG };
 
     for (const [key, value] of Object.entries(extensionOverrides)) {
       const normalized = key.startsWith('.') ? key.slice(1) : key;

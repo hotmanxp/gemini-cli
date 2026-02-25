@@ -22,6 +22,12 @@ export const DEFAULT_LSP_WARMUP_DELAY_MS = 150;
 /** Default timeout for command existence check in milliseconds */
 export const DEFAULT_LSP_COMMAND_CHECK_TIMEOUT_MS = 2000;
 
+/** Default timeout for LSP server initialization in milliseconds */
+export const DEFAULT_LSP_INIT_TIMEOUT_MS = 60000;
+
+/** Default idle timeout for LSP servers in milliseconds (5 minutes) */
+export const DEFAULT_LSP_IDLE_TIMEOUT_MS = 5 * 60 * 1000;
+
 // ============================================================================
 // Retry Constants
 // ============================================================================

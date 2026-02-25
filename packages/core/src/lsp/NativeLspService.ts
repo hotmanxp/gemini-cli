@@ -39,6 +39,7 @@ import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as fs from 'node:fs';
 import { debugLogger } from '../utils/debugLogger.js';
+import { DEFAULT_LSP_WARMUP_DELAY_MS } from './constants.js';
 
 export class NativeLspService {
   private config: CoreConfig;
@@ -84,7 +85,7 @@ export class NativeLspService {
   }
 
   /**
-   * Discover and prepare LSP servers
+   * Discover and prepare LSP servers (lazy loading - don't start yet)
    */
   async discoverAndPrepare(): Promise<void> {
     const workspaceTrusted = this.config.isTrustedFolder();
@@ -117,7 +118,38 @@ export class NativeLspService {
       extensionConfigs,
       userConfigs,
     );
+    
+    // Only configure servers, don't start them yet (lazy loading)
     this.serverManager.setServerConfigs(serverConfigs);
+    
+    // Auto-warmup for TypeScript and Python projects
+    // These languages benefit from early initialization due to project-wide analysis
+    const shouldWarmupTypescript = detectedLanguages.includes('typescript') || 
+                                    detectedLanguages.includes('typescriptreact') ||
+                                    detectedLanguages.includes('javascript');
+    const shouldWarmupPython = detectedLanguages.includes('python');
+    
+    if (shouldWarmupTypescript) {
+      try {
+        await this.warmup('typescript');
+      } catch (error) {
+        debugLogger.warn('TypeScript warmup failed:', error);
+      }
+    }
+    
+    if (shouldWarmupPython) {
+      try {
+        // Use 'python' as the server name (which maps to pyright-langserver)
+        await this.warmup('python');
+      } catch (error) {
+        debugLogger.warn('Python warmup failed, trying pylsp...', error);
+        try {
+          await this.warmup('pylsp');
+        } catch (pylspError) {
+          debugLogger.warn('Both Python LSP servers failed:', pylspError);
+        }
+      }
+    }
   }
 
   private getActiveExtensions(): any[] {
@@ -130,10 +162,36 @@ export class NativeLspService {
   }
 
   /**
-   * Start all LSP servers
+   * Start all LSP servers (deprecated - use lazy loading instead)
+   * @deprecated Servers are now started on-demand when needed
    */
   async start(): Promise<void> {
-    await this.serverManager.startAll();
+    debugLogger.warn('LSP service start() called - lazy loading is now default');
+    // Don't start all servers automatically
+    // Servers will be started on-demand when tools request them
+  }
+
+  /**
+   * Start a specific LSP server on-demand
+   */
+  async startServer(language: string): Promise<void> {
+    await this.serverManager.startServerByName(language);
+  }
+
+  /**
+   * Ensure LSP server is running for a given language
+   * This is called lazily when tools need LSP functionality
+   */
+  async ensureServerRunning(language: string): Promise<void> {
+    await this.serverManager.startServerByName(language);
+  }
+
+  /**
+   * Release reference to LSP server.
+   * Called when LSP operation is complete.
+   */
+  async releaseServer(language: string): Promise<void> {
+    await this.serverManager.releaseServer(language);
   }
 
   /**
@@ -160,7 +218,8 @@ export class NativeLspService {
   private getReadyHandles(
     serverName?: string,
   ): Array<[string, LspServerHandle & { connection: LspConnectionInterface }]> {
-    return Array.from(this.serverManager.getHandles().entries()).filter(
+    const allHandles = Array.from(this.serverManager.getHandles().entries());
+    const result = allHandles.filter(
       (
         entry,
       ): entry is [
@@ -171,6 +230,26 @@ export class NativeLspService {
         entry[1].connection !== undefined &&
         (!serverName || entry[0] === serverName),
     );
+    return result;
+  }
+
+  /**
+   * Get a single server handle for a given URI and optional server name.
+   *
+   * @param uri - The file URI to find a server for
+   * @param serverName - Optional specific server name
+   * @returns The server handle or null if not found
+   */
+  private getServerHandle(
+    uri: string,
+    serverName?: string,
+  ): (LspServerHandle & { connection: LspConnectionInterface }) | null {
+    const handles = this.getReadyHandles(serverName);
+    if (handles.length === 0) {
+      return null;
+    }
+    // Return the first ready handle (or the one matching serverName if provided)
+    return handles[0][1];
   }
 
   /**
@@ -217,6 +296,9 @@ export class NativeLspService {
           },
         },
       });
+      
+      // Wait for the server to process the file
+      await new Promise(resolve => setTimeout(resolve, DEFAULT_LSP_WARMUP_DELAY_MS));
     } catch (error) {
       debugLogger.warn(`Failed to open file in LSP server: ${uri}`, error);
     }
@@ -427,7 +509,6 @@ export class NativeLspService {
       try {
         // Ensure the file is opened in the LSP server before requesting definitions
         await this.openFileInServer(handle, location.uri);
-        await this.serverManager.warmupTypescriptServer(handle);
         const response = await handle.connection.request(
           'textDocument/definition',
           {
@@ -479,7 +560,6 @@ export class NativeLspService {
       try {
         // Ensure the file is opened in the LSP server before requesting references
         await this.openFileInServer(handle, location.uri);
-        await this.serverManager.warmupTypescriptServer(handle);
         const response = await handle.connection.request(
           'textDocument/references',
           {
@@ -526,7 +606,8 @@ export class NativeLspService {
 
     for (const [name, handle] of handles) {
       try {
-        await this.serverManager.warmupTypescriptServer(handle);
+        // Ensure the file is opened before requesting hover
+        await this.openFileInServer(handle, location.uri);
         const response = await handle.connection.request('textDocument/hover', {
           textDocument: { uri: location.uri },
           position: location.range.start,
@@ -555,7 +636,13 @@ export class NativeLspService {
 
     for (const [name, handle] of handles) {
       try {
+        // Open file in LSP server before requesting symbols
+        await this.openFileInServer(handle, uri);
         await this.serverManager.warmupTypescriptServer(handle);
+
+        // Small delay to allow LSP server to process the file
+        await new Promise(resolve => setTimeout(resolve, 100));
+
         const response = await handle.connection.request(
           'textDocument/documentSymbol',
           {
@@ -563,6 +650,7 @@ export class NativeLspService {
           },
         );
         if (!Array.isArray(response)) {
+          debugLogger.warn(`LSP documentSymbol response is not an array: ${typeof response}`);
           continue;
         }
         const symbols: LspSymbolInformation[] = [];
@@ -586,6 +674,8 @@ export class NativeLspService {
             );
             if (normalized) {
               symbols.push(normalized);
+            } else {
+              debugLogger.warn(`Failed to normalize symbol: ${JSON.stringify(itemObj['name'])}`);
             }
           }
           if (symbols.length >= limit) {
@@ -605,7 +695,6 @@ export class NativeLspService {
 
     return [];
   }
-
   /**
    * Find implementations
    */
@@ -620,7 +709,6 @@ export class NativeLspService {
       try {
         // Ensure the file is opened in the LSP server before requesting implementations
         await this.openFileInServer(handle, location.uri);
-        await this.serverManager.warmupTypescriptServer(handle);
         const response = await handle.connection.request(
           'textDocument/implementation',
           {
@@ -807,7 +895,8 @@ export class NativeLspService {
   }
 
   /**
-   * Get diagnostics for a document
+   * Get diagnostics for a document with wait mechanism.
+   * Waits up to 3 seconds for diagnostics to be available.
    */
   async diagnostics(
     uri: string,
@@ -816,9 +905,11 @@ export class NativeLspService {
     const handles = this.getReadyHandles(serverName);
     const allDiagnostics: LspDiagnostic[] = [];
 
+    // Try to get diagnostics immediately
     for (const [name, handle] of handles) {
       try {
-        await this.serverManager.warmupTypescriptServer(handle);
+        // Ensure the file is opened before requesting diagnostics
+        await this.openFileInServer(handle, uri);
 
         // Request pull diagnostics if the server supports it
         const response = await handle.connection.request(
@@ -850,6 +941,54 @@ export class NativeLspService {
           `LSP textDocument/diagnostic failed for ${name}:`,
           error,
         );
+      }
+    }
+
+    // If we got diagnostics, return them
+    if (allDiagnostics.length > 0) {
+      return allDiagnostics;
+    }
+
+    // Wait for diagnostics with timeout (3s, 150ms polling)
+    const timeout = 3000;
+    const pollInterval = 150;
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < timeout) {
+      await new Promise(resolve => setTimeout(resolve, pollInterval));
+
+      for (const [name, handle] of handles) {
+        try {
+          const response = await handle.connection.request(
+            'textDocument/diagnostic',
+            {
+              textDocument: { uri },
+            },
+          );
+
+          if (response && typeof response === 'object') {
+            const responseObj = response as Record<string, unknown>;
+            const items = responseObj['items'];
+            if (Array.isArray(items) && items.length > 0) {
+              allDiagnostics.length = 0; // Clear previous empty results
+              for (const item of items) {
+                const normalized = this.normalizer.normalizeDiagnostic(
+                  item,
+                  name,
+                );
+                if (normalized) {
+                  allDiagnostics.push(normalized);
+                }
+              }
+            }
+          }
+        } catch {
+          // Ignore errors during polling
+        }
+      }
+
+      if (allDiagnostics.length > 0) {
+        break;
       }
     }
 
@@ -922,7 +1061,8 @@ export class NativeLspService {
 
     for (const [name, handle] of handles) {
       try {
-        await this.serverManager.warmupTypescriptServer(handle);
+        // Ensure the file is opened before requesting code actions
+        await this.openFileInServer(handle, uri);
 
         // Convert context diagnostics to LSP format
         const lspDiagnostics = context.diagnostics.map((d: LspDiagnostic) =>
@@ -1087,5 +1227,90 @@ export class NativeLspService {
    */
   async warmup(serverName?: string): Promise<void> {
     await this.serverManager.warmupServer(serverName);
+  }
+
+  /**
+   * Prepare rename operation at a location.
+   *
+   * @param location - The source location to prepare rename for
+   * @param serverName - Optional specific LSP server to query
+   * @returns Promise resolving to rename range and placeholder or null if not available
+   */
+  async prepareRename(
+    location: LspLocation,
+    serverName?: string,
+  ): Promise<{ range: LspRange; placeholder: string } | null> {
+    const handle = this.getServerHandle(location.uri, serverName);
+    if (!handle?.connection) {
+      return null;
+    }
+
+    try {
+      // Ensure the file is opened and server is ready
+      await this.openFileInServer(handle, location.uri);
+      
+      const position = location.range.start;
+      const response = await handle.connection.request('textDocument/prepareRename', {
+        textDocument: { uri: location.uri },
+        position,
+      });
+
+      if (!response || typeof response !== 'object') {
+        return null;
+      }
+
+      const result = response as { range?: LspRange; placeholder?: string } | null;
+      if (!result?.range || !result?.placeholder) {
+        return null;
+      }
+
+      return {
+        range: result.range,
+        placeholder: result.placeholder,
+      };
+    } catch (error) {
+      debugLogger.warn('Prepare rename failed:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Rename a symbol at a location to a new name.
+   *
+   * @param location - The source location to rename
+   * @param newName - The new name for the symbol
+   * @param serverName - Optional specific LSP server to query
+   * @returns Promise resolving to workspace edit or null if rename failed
+   */
+  async rename(
+    location: LspLocation,
+    newName: string,
+    serverName?: string,
+  ): Promise<LspWorkspaceEdit | null> {
+    const handle = this.getServerHandle(location.uri, serverName);
+    if (!handle?.connection) {
+      return null;
+    }
+
+    try {
+      // Ensure the file is opened and server is ready
+      await this.openFileInServer(handle, location.uri);
+      
+      const position = location.range.start;
+      const response = await handle.connection.request('textDocument/rename', {
+        textDocument: { uri: location.uri },
+        position,
+        newName,
+      });
+
+      if (!response || typeof response !== 'object') {
+        return null;
+      }
+
+      return response as LspWorkspaceEdit;
+    } catch (error) {
+      debugLogger.warn('Rename failed:', error);
+      return null;
+    }
   }
 }

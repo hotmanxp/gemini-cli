@@ -15,6 +15,8 @@ import type {
   LspSocketOptions,
 } from './types.js';
 import { debugLogger } from '../utils/debugLogger.js';
+import { getBuiltinServerConfig } from './builtinServers.js';
+import { parse as parseJsonc } from 'jsonc-parser';
 
 /**
  * Replace template variables in a string.
@@ -56,21 +58,45 @@ export class LspConfigLoader {
   constructor(private readonly workspaceRoot: string) {}
 
   /**
-   * Load user .lsp.json configuration.
-   * Supports basic format: { "language": { "command": "...", "extensionToLanguage": {...} } }
+   * Load user LSP configuration from .lsp.json or .lsp.jsonc files.
+   * Supports JSONC format (allows comments and trailing commas).
    */
   async loadUserConfigs(): Promise<LspServerConfig[]> {
-    const lspConfigPath = path.join(this.workspaceRoot, '.lsp.json');
-    if (!fs.existsSync(lspConfigPath)) {
+    // Try .lsp.jsonc first (supports comments), then fall back to .lsp.json
+    const lspJsoncPath = path.join(this.workspaceRoot, '.lsp.jsonc');
+    const lspJsonPath = path.join(this.workspaceRoot, '.lsp.json');
+
+    let configPath: string | null = null;
+    let configContent: string | null = null;
+
+    if (fs.existsSync(lspJsoncPath)) {
+      configPath = lspJsoncPath;
+      try {
+        const rawContent = fs.readFileSync(lspJsoncPath, 'utf-8');
+        configContent = JSON.stringify(parseJsonc(rawContent));
+      } catch (error) {
+        debugLogger.warn('Failed to parse .lsp.jsonc config:', error);
+      }
+    }
+
+    if (!configContent && fs.existsSync(lspJsonPath)) {
+      configPath = lspJsonPath;
+      try {
+        configContent = fs.readFileSync(lspJsonPath, 'utf-8');
+      } catch (error) {
+        debugLogger.warn('Failed to read .lsp.json config:', error);
+      }
+    }
+
+    if (!configContent || !configPath) {
       return [];
     }
 
     try {
-      const configContent = fs.readFileSync(lspConfigPath, 'utf-8');
       const data = JSON.parse(configContent);
-      return this.parseConfigSource(data, lspConfigPath);
+      return this.parseConfigSource(data, configPath);
     } catch (error) {
-      debugLogger.warn('Failed to load user .lsp.json config:', error);
+      debugLogger.warn(`Failed to parse LSP config from ${configPath}:`, error);
       return [];
     }
   }
@@ -189,7 +215,8 @@ export class LspConfigLoader {
   }
 
   /**
-   * Get built-in preset configurations
+   * Get built-in preset configurations based on detected languages.
+   * Supports 40+ languages from builtinServers.ts.
    */
   private getBuiltInPresets(detectedLanguages: string[]): LspServerConfig[] {
     const presets: LspServerConfig[] = [];
@@ -198,57 +225,18 @@ export class LspConfigLoader {
     const rootUri = pathToFileURL(this.workspaceRoot).toString();
 
     // Generate corresponding LSP server config based on detected languages
-    if (
-      detectedLanguages.includes('typescript') ||
-      detectedLanguages.includes('javascript')
-    ) {
-      presets.push({
-        name: 'typescript-language-server',
-        languages: [
-          'typescript',
-          'javascript',
-          'typescriptreact',
-          'javascriptreact',
-        ],
-        command: 'typescript-language-server',
-        args: ['--stdio'],
-        transport: 'stdio',
-        initializationOptions: {},
-        rootUri,
-        workspaceFolder: this.workspaceRoot,
-        trustRequired: true,
-      });
-    }
+    for (const language of detectedLanguages) {
+      const config = getBuiltinServerConfig(language);
+      if (!config) {
+        continue;
+      }
 
-    if (detectedLanguages.includes('python')) {
-      presets.push({
-        name: 'pylsp',
-        languages: ['python'],
-        command: 'pylsp',
-        args: [],
-        transport: 'stdio',
-        initializationOptions: {},
-        rootUri,
-        workspaceFolder: this.workspaceRoot,
-        trustRequired: true,
-      });
-    }
+      // Merge with detected language info
+      config.rootUri = rootUri;
+      config.workspaceFolder = this.workspaceRoot;
 
-    if (detectedLanguages.includes('go')) {
-      presets.push({
-        name: 'gopls',
-        languages: ['go'],
-        command: 'gopls',
-        args: [],
-        transport: 'stdio',
-        initializationOptions: {},
-        rootUri,
-        workspaceFolder: this.workspaceRoot,
-        trustRequired: true,
-      });
+      presets.push(config);
     }
-
-    // Additional language presets can be added as needed
 
     return presets;
   }

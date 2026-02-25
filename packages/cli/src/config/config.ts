@@ -11,7 +11,6 @@ import { mcpCommand } from '../commands/mcp.js';
 import { extensionsCommand } from '../commands/extensions.js';
 import { skillsCommand } from '../commands/skills.js';
 import { hooksCommand } from '../commands/hooks.js';
-import { lspCommand } from '../commands/lsp.js';
 import { qwenAuthCommand } from '../commands/qwen/auth.js';
 import {
   setGeminiMdFilename as setServerGeminiMdFilename,
@@ -295,8 +294,6 @@ export async function parseArguments(
     )
     // Register MCP subcommands
     .command(mcpCommand)
-    // Register LSP subcommands
-    .command(lspCommand)
     // Ensure validation flows through .fail() for clean UX
     .fail((msg, err) => {
       if (err) throw err;
@@ -893,6 +890,7 @@ export async function loadCliConfig(
 
   if (folderTrust) {
     try {
+      debugLogger.log('Initializing LSP service...');
       const lspService = new NativeLspService(
         config,
         config.getWorkspaceContext(),
@@ -903,10 +901,15 @@ export async function loadCliConfig(
         },
       );
 
+      debugLogger.log('Calling discoverAndPrepare (lazy loading enabled)...');
       await lspService.discoverAndPrepare();
-      await lspService.start();
+      // Don't call start() - servers will be started on-demand
+      // debugLogger.log('Calling start...');
+      // await lspService.start();
+      
       const lspClient = new NativeLspClient(lspService);
       config.setLspClient(lspClient);
+      debugLogger.log('LSP service initialized successfully (lazy loading enabled)');
     } catch (err) {
       debugLogger.warn('Failed to initialize native LSP service:', err);
     }

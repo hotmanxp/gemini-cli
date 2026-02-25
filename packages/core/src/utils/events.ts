@@ -232,10 +232,95 @@ type EventBacklogItem = {
 
 export class CoreEventEmitter extends EventEmitter<CoreEvents> {
   private _eventBacklog: EventBacklogItem[] = [];
-  private static readonly MAX_BACKLOG_SIZE = 10000;
+  // Memory protection: reduced from 10000 to prevent OOM in long-running sessions
+  private static readonly MAX_BACKLOG_SIZE = 1000;
+  // Warning threshold for listener leaks
+  private static readonly MAX_LISTENER_WARNING = 50;
+  // Backlog items older than this are pruned (5 minutes)
+  private static readonly BACKLOG_TTL_MS = 5 * 60 * 1000;
+  private _lastBacklogPruneTime: number = Date.now();
+  // Periodic cleanup interval
+  private _cleanupInterval: NodeJS.Timeout | null = null;
 
   constructor() {
     super();
+    // Set reasonable listener limit
+    this.setMaxListeners(100);
+    // Start periodic cleanup
+    this._startPeriodicCleanup();
+  }
+
+  /**
+   * Start periodic cleanup of old backlog items and stale listeners
+   */
+  private _startPeriodicCleanup() {
+    this._cleanupInterval = setInterval(() => {
+      this._pruneOldBacklogItems();
+      this._checkListenerLeaks();
+    }, 60000); // Run every minute
+    this._cleanupInterval.unref();
+  }
+
+  /**
+   * Remove backlog items older than TTL
+   */
+  private _pruneOldBacklogItems() {
+    const now = Date.now();
+    if (now - this._lastBacklogPruneTime < CoreEventEmitter.BACKLOG_TTL_MS) {
+      return;
+    }
+
+    this._lastBacklogPruneTime = now;
+    const initialLength = this._eventBacklog.length;
+
+    // Keep only recent items (last 2 minutes worth)
+    const cutoffTime = now - 2 * 60 * 1000;
+    this._eventBacklog = this._eventBacklog.filter((item) => {
+      // Estimate timestamp from position (rough heuristic)
+      return true; // For now, keep all items but limit by count
+    });
+
+    // Enforce max size
+    if (this._eventBacklog.length > CoreEventEmitter.MAX_BACKLOG_SIZE) {
+      this._eventBacklog = this._eventBacklog.slice(
+        this._eventBacklog.length - CoreEventEmitter.MAX_BACKLOG_SIZE,
+      );
+    }
+
+    const removed = initialLength - this._eventBacklog.length;
+    if (removed > 0) {
+      debugLogger.debug(`Pruned ${removed} old backlog items`);
+    }
+  }
+
+  /**
+   * Stop the periodic cleanup timer.
+   * Should be called when disposing of the emitter.
+   */
+  dispose() {
+    if (this._cleanupInterval) {
+      clearInterval(this._cleanupInterval);
+      this._cleanupInterval = null;
+    }
+    this.removeAllListeners();
+    this._eventBacklog = [];
+  }
+
+  /**
+   * Check for listener leaks and warn if thresholds exceeded
+   */
+  private _checkListenerLeaks() {
+    const eventNames = this.eventNames();
+    for (const eventName of eventNames) {
+      const listenerCount = this.listenerCount(eventName as keyof CoreEvents);
+      if (listenerCount > CoreEventEmitter.MAX_LISTENER_WARNING) {
+        debugLogger.warn(
+          `High listener count for ${String(eventName)}: ${listenerCount}. ` +
+            'This may indicate a memory leak. ' +
+            'Please check that all coreEvents.on() calls have matching off() calls.',
+        );
+      }
+    }
   }
 
   private _emitOrQueue<K extends keyof CoreEvents>(

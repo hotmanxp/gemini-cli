@@ -258,8 +258,11 @@ export class LspConnectionFactory {
     return new Promise((resolve, reject) => {
       const spawnOptions: cp.SpawnOptions = {
         stdio: 'pipe',
+        shell: true,  // 使用 shell 启动，确保能从 PATH 找到命令
         ...options,
       };
+      
+      debugLogger.log(`Spawning LSP server: ${command} ${args.join(' ')}`);
       const processInstance = cp.spawn(command, args, spawnOptions);
 
       const timeoutId = setTimeout(() => {
@@ -271,11 +274,13 @@ export class LspConnectionFactory {
 
       processInstance.once('error', (error) => {
         clearTimeout(timeoutId);
+        debugLogger.error(`LSP server spawn error: ${error.message}`);
         reject(new Error(`Failed to spawn LSP server: ${error.message}`));
       });
 
       processInstance.once('spawn', () => {
         clearTimeout(timeoutId);
+        debugLogger.log(`LSP server spawned successfully: ${command}`);
 
         if (!processInstance.stdout || !processInstance.stdin) {
           reject(new Error('LSP server stdio not available'));
