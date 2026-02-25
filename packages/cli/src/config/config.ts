@@ -885,6 +885,8 @@ export async function loadCliConfig(
         agents: refreshedSettings.merged.agents,
       };
     },
+    // Pass loadedSettings for accessing lastProviderModel and other settings
+    settings: loadedSettings,
     enableConseca: settings.security?.enableConseca,
   });
 

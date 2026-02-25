@@ -125,6 +125,7 @@ export interface OpenDialogActionReturn {
     | 'settings'
     | 'sessionBrowser'
     | 'model'
+    | 'providerModel'
     | 'agentConfig'
     | 'permissions';
 }

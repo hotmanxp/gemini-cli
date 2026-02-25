@@ -23,7 +23,7 @@ import { InstallationManager } from '../utils/installationManager.js';
 import { FakeContentGenerator } from './fakeContentGenerator.js';
 import { parseCustomHeaders } from '../utils/customHeaderUtils.js';
 import { RecordingContentGenerator } from './recordingContentGenerator.js';
-import { getVersion, resolveModel } from '../../index.js';
+import { getVersion, resolveModel, debugLogger } from '../../index.js';
 import type { LlmRole } from '../telemetry/llmRole.js';
 
 /**
@@ -58,6 +58,7 @@ export enum AuthType {
   LEGACY_CLOUD_SHELL = 'cloud-shell',
   COMPUTE_ADC = 'compute-default-credentials',
   USE_QWEN = 'qwen-oauth',
+  CONFIG_LOGIN = 'config-login',
 }
 
 /**
@@ -113,7 +114,8 @@ export async function createContentGeneratorConfig(
   // If we are using Google auth or we are in Cloud Shell, there is nothing else to validate for now
   if (
     authType === AuthType.LOGIN_WITH_GOOGLE ||
-    authType === AuthType.COMPUTE_ADC
+    authType === AuthType.COMPUTE_ADC ||
+    authType === AuthType.CONFIG_LOGIN
   ) {
     return contentGeneratorConfig;
   }
@@ -221,8 +223,49 @@ export async function createContentGenerator(
     // Qwen OAuth authentication
     if (config.authType === AuthType.USE_QWEN) {
       const { createQwenContentGenerator } = await import('./qwenContentGenerator.js');
-      const model = gcConfig.getModel() || 'qwen-plus';
+      const model = gcConfig.getModel() || 'coder-model';
       return createQwenContentGenerator(gcConfig, model);
+    }
+
+    // Config Login - use provider/model from configuration
+    if (config.authType === AuthType.CONFIG_LOGIN) {
+      const { createProviderContentGenerator } = await import('./providerContentGenerator.js');
+      const model = gcConfig.getModel() || 'qwen/coder-model';
+      
+      // Parse provider/model format
+      const parts = model.split('/');
+      if (parts.length < 2) {
+        throw new Error(
+          `Invalid model format for CONFIG_LOGIN: ${model}. Expected provider/model format.`,
+        );
+      }
+      
+      const providerId = parts[0];
+      const modelId = parts.slice(1).join('/');
+      debugLogger.log('[createContentGenerator.CONFIG_LOGIN] providerId:', providerId, 'modelId:', modelId);
+      
+      // Get provider and model configuration from registry
+      const providerRegistry = gcConfig.getProviderRegistry();
+      const provider = providerRegistry.getProvider(providerId);
+      
+      if (!provider) {
+        throw new Error(`Provider '${providerId}' not found in configuration.`);
+      }
+      
+      const modelConfig = provider.models?.[modelId];
+      
+      if (!modelConfig) {
+        throw new Error(
+          `Model '${modelId}' not found in provider '${providerId}' configuration.`,
+        );
+      }
+
+      return createProviderContentGenerator(
+        providerId,
+        modelId,
+        provider,
+        gcConfig,
+      );
     }
 
     throw new Error(

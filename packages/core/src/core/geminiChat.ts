@@ -844,9 +844,10 @@ export class GeminiChat {
           // that may coexist with thought property
           modelResponseParts.push(
             ...content.parts
-              .map((part) => 
-                // Keep the thought property so UI can display it
-                 part
+              .map(
+                (part) =>
+                  // Keep the thought property so UI can display it
+                  part,
               )
               .filter((part) => Object.keys(part).length > 0),
           );

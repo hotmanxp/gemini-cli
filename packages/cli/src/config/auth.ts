@@ -12,7 +12,8 @@ export function validateAuthMethod(authMethod: string): string | null {
   if (
     authMethod === AuthType.LOGIN_WITH_GOOGLE ||
     authMethod === AuthType.COMPUTE_ADC ||
-    authMethod === AuthType.USE_QWEN
+    authMethod === AuthType.USE_QWEN ||
+    authMethod === AuthType.CONFIG_LOGIN
   ) {
     return null;
   }

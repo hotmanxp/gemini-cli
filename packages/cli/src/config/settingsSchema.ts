@@ -164,6 +164,22 @@ const SETTINGS_SCHEMA = {
     mergeStrategy: MergeStrategy.UNION,
   },
 
+  provider: {
+    type: 'object',
+    label: 'Providers',
+    category: 'Advanced',
+    requiresRestart: true,
+    default: {} as Record<string, unknown>,
+    description:
+      'Configuration for model providers (opencode compatible schema). Each provider defines models, authentication, and options.',
+    showInDialog: false,
+    mergeStrategy: MergeStrategy.SHALLOW_MERGE,
+    additionalProperties: {
+      type: 'object',
+      ref: 'Provider',
+    },
+  },
+
   general: {
     type: 'object',
     label: 'General',
@@ -326,6 +342,16 @@ const SETTINGS_SCHEMA = {
         default: false,
         description: 'Enable debug logging of keystrokes to the console.',
         showInDialog: true,
+      },
+      lastProviderModel: {
+        type: 'string',
+        label: 'Last Provider Model',
+        category: 'General',
+        requiresRestart: false,
+        default: undefined as string | undefined,
+        description:
+          'Last selected provider/model for CONFIG_LOGIN authentication. Persisted across sessions.',
+        showInDialog: false,
       },
       sessionRetention: {
         type: 'object',
@@ -2193,6 +2219,53 @@ export const SETTINGS_SCHEMA_DEFINITIONS: Record<
   string,
   SettingsJsonSchemaDefinition
 > = {
+  Provider: {
+    type: 'object',
+    description: 'Provider configuration matching opencode schema.',
+    additionalProperties: true,
+    properties: {
+      name: {
+        type: 'string',
+        description: 'Display name for the provider.',
+      },
+      npm: {
+        type: 'string',
+        description: 'NPM package name (e.g., "@ai-sdk/openai-compatible").',
+      },
+      api: {
+        type: 'string',
+        description: 'API identifier.',
+      },
+      env: {
+        type: 'array',
+        description: 'Environment variables required by the provider.',
+        items: { type: 'string' },
+      },
+      whitelist: {
+        type: 'array',
+        description: 'List of allowed model IDs.',
+        items: { type: 'string' },
+      },
+      blacklist: {
+        type: 'array',
+        description: 'List of blocked model IDs.',
+        items: { type: 'string' },
+      },
+      models: {
+        type: 'object',
+        description: 'Models available from this provider.',
+        additionalProperties: {
+          type: 'object',
+          additionalProperties: true,
+        },
+      },
+      options: {
+        type: 'object',
+        description: 'Provider-specific options.',
+        additionalProperties: true,
+      },
+    },
+  },
   MCPServerConfig: {
     type: 'object',
     description:

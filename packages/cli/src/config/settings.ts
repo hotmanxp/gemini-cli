@@ -1071,7 +1071,18 @@ export function saveModelChange(
   model: string,
 ): void {
   try {
+    // Always save the model name
     loadedSettings.setValue(SettingScope.User, 'model.name', model);
+
+    // If this is a provider/model format, also persist to lastProviderModel
+    // for cross-session memory and CONFIG_LOGIN quick re-selection
+    if (model.includes('/')) {
+      loadedSettings.setValue(
+        SettingScope.User,
+        'general.lastProviderModel',
+        model,
+      );
+    }
   } catch (error) {
     coreEvents.emitFeedback(
       'error',
@@ -1080,7 +1091,6 @@ export function saveModelChange(
     );
   }
 }
-
 function migrateExperimentalSettings(
   settings: Settings,
   loadedSettings: LoadedSettings,

@@ -533,6 +533,7 @@ const mockUIActions: UIActions = {
   exitPrivacyNotice: vi.fn(),
   closeSettingsDialog: vi.fn(),
   closeModelDialog: vi.fn(),
+  closeProviderModelDialog: vi.fn(),
   openAgentConfigDialog: vi.fn(),
   closeAgentConfigDialog: vi.fn(),
   openPermissionsDialog: vi.fn(),
