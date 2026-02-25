@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-type-assertion */
-
 import { LspClient } from './LspClient.js';
 import { LspServerManager } from './LspServerManager.js';
 import { getLanguageConfigById, getLanguageConfig } from './languages.js';
@@ -146,7 +144,9 @@ export class LspService {
         position: { line, character: column },
       });
       if (!result) return null;
-      return Array.isArray(result) ? result : (result as any).items;
+      return Array.isArray(result)
+        ? result
+        : (result as { items: unknown[] }).items;
     } catch (err) {
       debugLogger.debug('Completion error:', err);
       return null;
@@ -224,7 +224,11 @@ export class LspService {
       if (typeof result.contents === 'string') return result.contents;
       if ('value' in result.contents) return result.contents.value;
       if (Array.isArray(result.contents)) {
-        return result.contents.map((c: any) => c.value || '').join('\n');
+        return result.contents
+          .map((c: { value?: string } | string) =>
+            typeof c === 'string' ? c : c.value || '',
+          )
+          .join('\n');
       }
       return null;
     } catch (err) {

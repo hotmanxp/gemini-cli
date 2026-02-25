@@ -4,10 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-type-assertion */
+/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
+
 import OpenAI from 'openai';
 import { OpenAIContentGenerator } from './openaiContentGenerator/index.js';
-import type { Config } from '../config/config.js';
+import { type Config } from '../config/config.js';
+import { AuthType } from './contentGenerator.js';
 import type { OpenAIContentGeneratorConfig } from './openaiContentGenerator/types.js';
 import { debugLogger } from '../utils/debugLogger.js';
 import type { Provider, ProviderModel } from '../services/providerRegistry.js';
@@ -29,7 +31,7 @@ export class ProviderContentGenerator extends OpenAIContentGenerator {
   ) {
     // Create OpenAI-compatible config from provider settings
     const contentGeneratorConfig: OpenAIContentGeneratorConfig = {
-      authType: 'provider' as any,
+      authType: AuthType.PROVIDER,
       apiKey: extractApiKey(providerConfig, providerId),
       baseUrl: extractBaseUrl(providerConfig),
       model: initialModelId,
@@ -57,13 +59,15 @@ export class ProviderContentGenerator extends OpenAIContentGenerator {
    */
   async switchModel(newModelId: string): Promise<void> {
     const modelConfig = this.providerConfig.models?.[newModelId];
-    
+
     if (!modelConfig) {
-      throw new Error(`Model '${newModelId}' not found in provider '${this.providerId}'`);
+      throw new Error(
+        `Model '${newModelId}' not found in provider '${this.providerId}'`,
+      );
     }
 
     this.currentModelId = newModelId;
-    
+
     // Update the model in the pipeline's content generator config
     if (this.pipeline?.contentGeneratorConfig) {
       this.pipeline.contentGeneratorConfig.model = newModelId;
@@ -107,8 +111,9 @@ export class ProviderContentGenerator extends OpenAIContentGenerator {
  * Extract API key from provider options
  */
 function extractApiKey(providerConfig: Provider, providerId: string): string {
-  const options = providerConfig.options || {};
-  let apiKey = options.apiKey || process.env[providerConfig.env?.[0] || ''];
+  const options: Record<string, unknown> = providerConfig.options || {};
+  const envValue = process.env[providerConfig.env?.[0] || ''];
+  let apiKey = (options['apiKey'] as string) ?? (envValue as string) ?? '';
 
   if (!apiKey) {
     debugLogger.warn(
@@ -136,10 +141,10 @@ function extractApiKey(providerConfig: Provider, providerId: string): string {
  * Extract base URL from provider options
  */
 function extractBaseUrl(providerConfig: Provider): string {
-  const options = providerConfig.options || {};
+  const options: Record<string, unknown> = providerConfig.options || {};
   return (
-    options.baseURL ||
-    options.enterpriseUrl ||
+    (options['baseURL'] as string) ||
+    (options['enterpriseUrl'] as string) ||
     'https://api.openai.com/v1'
   );
 }
@@ -148,13 +153,13 @@ function extractBaseUrl(providerConfig: Provider): string {
  * Extract timeout from provider options
  */
 function extractTimeout(providerConfig: Provider): number | undefined {
-  const options = providerConfig.options || {};
-  const timeout = options.timeout;
+  const options: Record<string, unknown> = providerConfig.options || {};
+  const timeout = options['timeout'];
   // Convert false to undefined, return number or undefined
   if (timeout === false) {
     return undefined;
   }
-  return timeout ?? 120000; // Default 2 minutes
+  return (timeout as number) ?? 120000; // Default 2 minutes
 }
 
 /**
@@ -163,8 +168,8 @@ function extractTimeout(providerConfig: Provider): number | undefined {
 function extractCustomHeaders(
   providerConfig: Provider,
 ): Record<string, string> {
-  const options = providerConfig.options || {};
-  return options.headers || {};
+  const options: Record<string, unknown> = providerConfig.options || {};
+  return (options['headers'] as Record<string, string>) || {};
 }
 
 /**
@@ -206,7 +211,7 @@ export class GenericOpenAICompatibleProvider {
     return { ...defaultHeaders, ...customHeaders };
   }
 
-  buildClient(): any {
+  buildClient(): OpenAI {
     const {
       apiKey,
       baseUrl = 'https://api.openai.com/v1',
@@ -216,7 +221,7 @@ export class GenericOpenAICompatibleProvider {
 
     const defaultHeaders = this.buildHeaders();
 
-    debugLogger.log(apiKey,)
+    debugLogger.log(apiKey);
     return new OpenAI({
       apiKey: apiKey === 'DYNAMIC_API_KEY' ? 'sk-dummy' : apiKey,
       baseURL: baseUrl,
@@ -227,9 +232,9 @@ export class GenericOpenAICompatibleProvider {
   }
 
   buildRequest(
-    request: any,
+    request: OpenAI.Chat.ChatCompletionCreateParams,
     userPromptId: string,
-  ): any {
+  ): OpenAI.Chat.ChatCompletionCreateParams {
     // Generic request builder - pass through most parameters
     const sessionId = this.cliConfig.getSessionId();
 
@@ -242,7 +247,7 @@ export class GenericOpenAICompatibleProvider {
     };
   }
 
-  getDefaultGenerationConfig(): any {
+  getDefaultGenerationConfig(): { temperature: number } {
     return {
       temperature: 0.3,
     };
@@ -255,7 +260,7 @@ export class GenericOpenAICompatibleProvider {
 export async function createProviderContentGenerator(
   providerId: string,
   initialModelId: string,
-  providerConfig: any,
+  providerConfig: Provider,
   cliConfig: Config,
 ): Promise<ProviderContentGenerator> {
   return new ProviderContentGenerator(

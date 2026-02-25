@@ -93,14 +93,18 @@ export class ProviderRegistry {
       }
 
       const configContent = fs.readFileSync(configPath, 'utf-8');
-      const config = JSON.parse(configContent);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+      const config = JSON.parse(configContent) as {
+        provider?: Record<string, Provider>;
+        providers?: Record<string, Provider>;
+      };
 
       if (config.provider) {
         // Single provider format (opencode compatible)
         for (const [providerId, providerConfig] of Object.entries(
           config.provider,
         )) {
-          this.providers.set(providerId, providerConfig as Provider);
+          this.providers.set(providerId, providerConfig);
           debugLogger.debug(
             `[ProviderRegistry] Loaded provider: ${providerId}`,
           );
@@ -110,7 +114,7 @@ export class ProviderRegistry {
         for (const [providerId, providerConfig] of Object.entries(
           config.providers,
         )) {
-          this.providers.set(providerId, providerConfig as Provider);
+          this.providers.set(providerId, providerConfig);
           debugLogger.debug(
             `[ProviderRegistry] Loaded provider: ${providerId}`,
           );
@@ -121,10 +125,7 @@ export class ProviderRegistry {
         `[ProviderRegistry] Loaded ${this.providers.size} provider(s)`,
       );
     } catch (error) {
-      debugLogger.error(
-        '[ProviderRegistry] Failed to load providers:',
-        error,
-      );
+      debugLogger.error('[ProviderRegistry] Failed to load providers:', error);
       throw new Error(
         `Failed to load provider configuration: ${this.getErrorMessage(error)}`,
       );

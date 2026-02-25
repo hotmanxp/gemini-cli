@@ -248,7 +248,10 @@ export class QwenOAuth2Client implements IQwenOAuth2Client {
         null;
 
       try {
-        errorData = JSON.parse(responseText);
+        errorData = JSON.parse(responseText) as {
+          error?: string;
+          error_description?: string;
+        } | null;
       } catch {
         // Not JSON
       }

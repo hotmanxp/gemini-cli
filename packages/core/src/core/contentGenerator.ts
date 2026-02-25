@@ -59,6 +59,7 @@ export enum AuthType {
   COMPUTE_ADC = 'compute-default-credentials',
   USE_QWEN = 'qwen-oauth',
   CONFIG_LOGIN = 'config-login',
+  PROVIDER = 'provider',
 }
 
 /**
@@ -222,16 +223,20 @@ export async function createContentGenerator(
 
     // Qwen OAuth authentication
     if (config.authType === AuthType.USE_QWEN) {
-      const { createQwenContentGenerator } = await import('./qwenContentGenerator.js');
+      const { createQwenContentGenerator } = await import(
+        './qwenContentGenerator.js'
+      );
       const model = gcConfig.getModel() || 'coder-model';
       return createQwenContentGenerator(gcConfig, model);
     }
 
     // Config Login - use provider/model from configuration
     if (config.authType === AuthType.CONFIG_LOGIN) {
-      const { createProviderContentGenerator } = await import('./providerContentGenerator.js');
+      const { createProviderContentGenerator } = await import(
+        './providerContentGenerator.js'
+      );
       const model = gcConfig.getModel() || 'qwen/coder-model';
-      
+
       // Parse provider/model format
       const parts = model.split('/');
       if (parts.length < 2) {
@@ -239,21 +244,26 @@ export async function createContentGenerator(
           `Invalid model format for CONFIG_LOGIN: ${model}. Expected provider/model format.`,
         );
       }
-      
+
       const providerId = parts[0];
       const modelId = parts.slice(1).join('/');
-      debugLogger.log('[createContentGenerator.CONFIG_LOGIN] providerId:', providerId, 'modelId:', modelId);
-      
+      debugLogger.log(
+        '[createContentGenerator.CONFIG_LOGIN] providerId:',
+        providerId,
+        'modelId:',
+        modelId,
+      );
+
       // Get provider and model configuration from registry
       const providerRegistry = gcConfig.getProviderRegistry();
       const provider = providerRegistry.getProvider(providerId);
-      
+
       if (!provider) {
         throw new Error(`Provider '${providerId}' not found in configuration.`);
       }
-      
+
       const modelConfig = provider.models?.[modelId];
-      
+
       if (!modelConfig) {
         throw new Error(
           `Model '${modelId}' not found in provider '${providerId}' configuration.`,

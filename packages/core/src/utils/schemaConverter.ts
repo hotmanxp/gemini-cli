@@ -24,15 +24,18 @@ export function convertSchema(
   }
 
   // Deep clone the schema to avoid mutating the original
-  const converted = JSON.parse(JSON.stringify(schema));
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  const converted = JSON.parse(JSON.stringify(schema)) as Record<
+    string,
+    unknown
+  >;
 
   if (mode === 'auto' || mode === 'strict') {
     // Convert types to JSON Schema format
     convertTypes(converted);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-  return converted as Record<string, unknown>;
+  return converted;
 }
 
 /**

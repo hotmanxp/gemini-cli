@@ -24,34 +24,19 @@ interface ModelSelectorDialogProps {
 
 export function ModelSelectorDialog({
   config,
-  settings,
   setAuthState,
   onAuthError,
 }: ModelSelectorDialogProps): React.JSX.Element {
   const providerRegistry = config.getProviderRegistry();
   const allModels = providerRegistry.getAllModels();
-  
-  const modelItems = Array.from(allModels.entries()).map(([modelId, modelData]) => ({
-    label: `${modelId} - ${modelData.model.name || 'Custom Model'}`,
-    value: modelId,
-    key: modelId,
-  }));
 
-  if (modelItems.length === 0) {
-    return (
-      <Box flexDirection="column" gap={1}>
-        <Text color={theme.status.error}>
-          No models found in provider configuration.
-        </Text>
-        <Text color={theme.text.secondary}>
-          Please configure providers in your settings.json file first.
-        </Text>
-        <Text color={theme.text.accent}>
-          Press any key to return to auth selection...
-        </Text>
-      </Box>
-    );
-  }
+  const modelItems = Array.from(allModels.entries()).map(
+    ([modelId, modelData]) => ({
+      label: `${modelId} - ${modelData.model.name || 'Custom Model'}`,
+      value: modelId,
+      key: modelId,
+    }),
+  );
 
   // Find the last selected model index, or default to 0
   const lastProviderModel = config.getLastProviderModel();
@@ -65,25 +50,44 @@ export function ModelSelectorDialog({
 
   const handleSelection = useCallback(async () => {
     debugLogger.log('[ModelSelectorDialog] handleSelection called');
-    debugLogger.log('[ModelSelectorDialog] selectedModelIndex:', selectedModelIndex);
+    debugLogger.log(
+      '[ModelSelectorDialog] selectedModelIndex:',
+      selectedModelIndex,
+    );
     debugLogger.log('[ModelSelectorDialog] modelItems:', modelItems);
     debugLogger.log('[ModelSelectorDialog] config:', config);
-    debugLogger.log('[ModelSelectorDialog] config.getModel() before setModel:', config.getModel());
+    debugLogger.log(
+      '[ModelSelectorDialog] config.getModel() before setModel:',
+      config.getModel(),
+    );
 
     const selectedModelId = modelItems[selectedModelIndex].value;
 
     try {
-      debugLogger.log('[ModelSelectorDialog] Setting model to:', selectedModelId);
+      debugLogger.log(
+        '[ModelSelectorDialog] Setting model to:',
+        selectedModelId,
+      );
       debugLogger.log('[ModelSelectorDialog] About to call config.setModel');
       // Set the model in config
       config.setModel(selectedModelId, false);
-      debugLogger.log('[ModelSelectorDialog] Model after setModel:', config.getModel());
-      debugLogger.log('[ModelSelectorDialog] config.getLastProviderModel():', config.getLastProviderModel());
+      debugLogger.log(
+        '[ModelSelectorDialog] Model after setModel:',
+        config.getModel(),
+      );
+      debugLogger.log(
+        '[ModelSelectorDialog] config.getLastProviderModel():',
+        config.getLastProviderModel(),
+      );
 
       // For CONFIG_LOGIN, we need to call refreshAuth to create the content generator
-      debugLogger.log('[ModelSelectorDialog] Calling refreshAuth to create content generator');
+      debugLogger.log(
+        '[ModelSelectorDialog] Calling refreshAuth to create content generator',
+      );
       await config.refreshAuth(AuthType.CONFIG_LOGIN);
-      debugLogger.log('[ModelSelectorDialog] refreshAuth completed successfully');
+      debugLogger.log(
+        '[ModelSelectorDialog] refreshAuth completed successfully',
+      );
 
       setAuthState(AuthState.Authenticated);
       onAuthError(null);
@@ -100,21 +104,38 @@ export function ModelSelectorDialog({
     (pressedKey) => {
       debugLogger.log('[ModelSelectorDialog] keypress:', pressedKey);
       if ('return' in pressedKey && pressedKey.return) {
-        debugLogger.log('[ModelSelectorDialog] Enter pressed, calling handleSelection');
+        debugLogger.log(
+          '[ModelSelectorDialog] Enter pressed, calling handleSelection',
+        );
         // Call handleSelection to proceed with the selected model
-        handleSelection();
+        void handleSelection();
       } else if ('down' in pressedKey && pressedKey.down) {
-        setSelectedModelIndex((prev) => 
-          prev < modelItems.length - 1 ? prev + 1 : prev
+        setSelectedModelIndex((prev) =>
+          prev < modelItems.length - 1 ? prev + 1 : prev,
         );
       } else if ('up' in pressedKey && pressedKey.up) {
-        setSelectedModelIndex((prev) => 
-          prev > 0 ? prev - 1 : prev
-        );
+        setSelectedModelIndex((prev) => (prev > 0 ? prev - 1 : prev));
       }
     },
     { isActive: true },
   );
+
+  // Early return after hooks - moved here to avoid rules-of-hooks violation
+  if (modelItems.length === 0) {
+    return (
+      <Box flexDirection="column" gap={1}>
+        <Text color={theme.status.error}>
+          No models found in provider configuration.
+        </Text>
+        <Text color={theme.text.secondary}>
+          Please configure providers in your settings.json file first.
+        </Text>
+        <Text color={theme.text.accent}>
+          Press any key to return to auth selection...
+        </Text>
+      </Box>
+    );
+  }
 
   return (
     <Box flexDirection="column" gap={1}>
@@ -126,26 +147,33 @@ export function ModelSelectorDialog({
       </Text>
       {lastProviderModel && initialModelIndex >= 0 && (
         <Text color={theme.text.accent} italic>
-          Last selected model is pre-selected. Press Enter to use {lastProviderModel}.
+          Last selected model is pre-selected. Press Enter to use{' '}
+          {lastProviderModel}.
         </Text>
       )}
       <Box marginTop={1}>
         <RadioButtonSelect
-          items={modelItems as any}
+          items={modelItems}
           initialIndex={selectedModelIndex}
-          onSelect={(value: any) => {
-            debugLogger.log('[ModelSelectorDialog] RadioButtonSelect onSelect called with value:', value);
+          onSelect={(value: (typeof modelItems)[number]['value']) => {
+            debugLogger.log(
+              '[ModelSelectorDialog] RadioButtonSelect onSelect called with value:',
+              value,
+            );
             // Find and set the index for the selected value
-            const index = modelItems.findIndex(item => item.value === value);
+            const index = modelItems.findIndex((item) => item.value === value);
             if (index >= 0) {
               setSelectedModelIndex(index);
             }
             // Call handleSelection to proceed with the selected model
-            handleSelection();
+            void handleSelection();
           }}
-          onHighlight={(value: any) => {
-            debugLogger.log('[ModelSelectorDialog] RadioButtonSelect onHighlight called with value:', value);
-            const index = modelItems.findIndex(item => item.value === value);
+          onHighlight={(value: (typeof modelItems)[number]['value']) => {
+            debugLogger.log(
+              '[ModelSelectorDialog] RadioButtonSelect onHighlight called with value:',
+              value,
+            );
+            const index = modelItems.findIndex((item) => item.value === value);
             if (index >= 0) {
               setSelectedModelIndex(index);
             }

@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
-
 import { EventEmitter } from 'node:events';
 import type { ChildProcess } from 'node:child_process';
 import type {
@@ -28,6 +26,23 @@ import type {
   ServerCapabilities,
 } from './types.js';
 import { debugLogger } from '../../utils/debugLogger.js';
+
+/**
+ * Type guard to check if a message is a valid JSON-RPC response or notification
+ */
+function isJsonRpcResponseOrNotification(
+  message: unknown,
+): message is JsonRpcResponse | JsonRpcNotification {
+  if (typeof message !== 'object' || message === null) {
+    return false;
+  }
+   
+  return (
+    'jsonrpc' in message &&
+    (message as Record<string, unknown>).jsonrpc === '2.0' &&
+    ('id' in message || 'method' in message)
+  );
+}
 
 interface PendingRequest {
   resolve: (value: unknown) => void;
@@ -104,8 +119,10 @@ export class LspClient extends EventEmitter<LspClientEventMap> {
       const body = this.buffer.substring(bodyStart, bodyEnd);
       this.buffer = this.buffer.substring(bodyEnd);
       try {
-        const message = JSON.parse(body);
-        this.handleMessage(message);
+        const message = JSON.parse(body) as unknown;
+        if (isJsonRpcResponseOrNotification(message)) {
+          this.handleMessage(message);
+        }
       } catch (err) {
         debugLogger.debug('Failed to parse LSP message:', err);
       }
@@ -126,6 +143,7 @@ export class LspClient extends EventEmitter<LspClientEventMap> {
     } else if ('method' in message) {
       this.emit('notification', message.method, message.params);
       if (message.method === 'textDocument/publishDiagnostics') {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
         this.emit('diagnostics', message.params as PublishDiagnosticsParams);
       }
     }
@@ -145,8 +163,9 @@ export class LspClient extends EventEmitter<LspClientEventMap> {
         reject(new Error('Request timed out'));
       }, timeout);
       this.pendingRequests.set(id, {
-        resolve: (value) => {
+        resolve: (value: unknown) => {
           clearTimeout(timeoutId);
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
           resolve(value as T);
         },
         reject,
