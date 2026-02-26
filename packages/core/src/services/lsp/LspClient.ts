@@ -36,10 +36,10 @@ function isJsonRpcResponseOrNotification(
   if (typeof message !== 'object' || message === null) {
     return false;
   }
-   
+
   return (
     'jsonrpc' in message &&
-    (message as Record<string, unknown>).jsonrpc === '2.0' &&
+    (message as Record<string, unknown>)['jsonrpc'] === '2.0' &&
     ('id' in message || 'method' in message)
   );
 }
