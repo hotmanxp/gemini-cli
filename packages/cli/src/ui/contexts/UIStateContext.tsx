@@ -88,7 +88,6 @@ export interface UIState {
   isSettingsDialogOpen: boolean;
   isSessionBrowserOpen: boolean;
   isModelDialogOpen: boolean;
-  isProviderModelDialogOpen: boolean;
   isAgentConfigDialogOpen: boolean;
   selectedAgentName?: string;
   selectedAgentDisplayName?: string;

@@ -40,7 +40,6 @@ export interface UIActions {
   exitPrivacyNotice: () => void;
   closeSettingsDialog: () => void;
   closeModelDialog: () => void;
-  closeProviderModelDialog: () => void;
   openAgentConfigDialog: (
     name: string,
     displayName: string,

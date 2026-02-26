@@ -27,7 +27,6 @@ import { commandsCommand } from '../ui/commands/commandsCommand.js';
 import { compressCommand } from '../ui/commands/compressCommand.js';
 import { copyCommand } from '../ui/commands/copyCommand.js';
 import { corgiCommand } from '../ui/commands/corgiCommand.js';
-import { customModelsCommand } from '../ui/commands/customModelsCommand.js';
 import { docsCommand } from '../ui/commands/docsCommand.js';
 import { directoryCommand } from '../ui/commands/directoryCommand.js';
 import { editorCommand } from '../ui/commands/editorCommand.js';
@@ -40,7 +39,8 @@ import { ideCommand } from '../ui/commands/ideCommand.js';
 import { initCommand } from '../ui/commands/initCommand.js';
 import { mcpCommand } from '../ui/commands/mcpCommand.js';
 import { memoryCommand } from '../ui/commands/memoryCommand.js';
-import { modelCommand } from '../ui/commands/modelCommand.js';
+// import { modelCommand } from '../ui/commands/modelCommand.js';
+import { customModelsCommand as modelCommand } from '../ui/commands/customModelsCommand.js';
 import { oncallCommand } from '../ui/commands/oncallCommand.js';
 import { permissionsCommand } from '../ui/commands/permissionsCommand.js';
 import { planCommand } from '../ui/commands/planCommand.js';
@@ -95,7 +95,6 @@ export class BuiltinCommandLoader implements ICommandLoader {
       compressCommand,
       copyCommand,
       corgiCommand,
-      customModelsCommand,
       docsCommand,
       directoryCommand,
       editorCommand,

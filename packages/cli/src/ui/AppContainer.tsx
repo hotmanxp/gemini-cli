@@ -865,7 +865,7 @@ Logging in with Google... Restarting Gemini CLI to continue.
     onAuthError,
   ]);
 
-  const { isModelDialogOpen, openModelDialog, closeModelDialog, isProviderModelDialogOpen, openProviderModelDialog, closeProviderModelDialog } =
+  const { isModelDialogOpen, openModelDialog, closeModelDialog } =
     useModelCommand();
 
   const { toggleVimEnabled } = useVimMode();
@@ -891,7 +891,6 @@ Logging in with Google... Restarting Gemini CLI to continue.
       openSettingsDialog,
       openSessionBrowser,
       openModelDialog,
-      openProviderModelDialog,
       openAgentConfigDialog,
       openPermissionsDialog,
       quit: (messages: HistoryItem[]) => {
@@ -927,7 +926,6 @@ Logging in with Google... Restarting Gemini CLI to continue.
       openSettingsDialog,
       openSessionBrowser,
       openModelDialog,
-      openProviderModelDialog,
       openAgentConfigDialog,
       setQuittingMessages,
       setDebugMessage,
@@ -2049,7 +2047,6 @@ Logging in with Google... Restarting Gemini CLI to continue.
     isThemeDialogOpen ||
     isSettingsDialogOpen ||
     isModelDialogOpen ||
-    isProviderModelDialogOpen || 
     isAgentConfigDialogOpen ||
     isPermissionsDialogOpen ||
     isAuthenticating ||
@@ -2238,7 +2235,6 @@ Logging in with Google... Restarting Gemini CLI to continue.
       isSettingsDialogOpen,
       isSessionBrowserOpen,
       isModelDialogOpen,
-      isProviderModelDialogOpen,
       isAgentConfigDialogOpen,
       selectedAgentName,
       selectedAgentDisplayName,
@@ -2365,7 +2361,6 @@ Logging in with Google... Restarting Gemini CLI to continue.
       isSettingsDialogOpen,
       isSessionBrowserOpen,
       isModelDialogOpen,
-      isProviderModelDialogOpen,
       isAgentConfigDialogOpen,
       selectedAgentName,
       selectedAgentDisplayName,
@@ -2487,7 +2482,6 @@ Logging in with Google... Restarting Gemini CLI to continue.
       exitPrivacyNotice,
       closeSettingsDialog,
       closeModelDialog,
-      closeProviderModelDialog,
       openAgentConfigDialog,
       closeAgentConfigDialog,
       openPermissionsDialog,
@@ -2573,7 +2567,6 @@ Logging in with Google... Restarting Gemini CLI to continue.
       exitPrivacyNotice,
       closeSettingsDialog,
       closeModelDialog,
-      closeProviderModelDialog,
       openAgentConfigDialog,
       closeAgentConfigDialog,
       openPermissionsDialog,

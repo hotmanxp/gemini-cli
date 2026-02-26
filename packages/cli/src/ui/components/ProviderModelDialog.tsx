@@ -11,7 +11,6 @@ import {
   ModelSlashCommandEvent,
   logModelSlashCommand,
   AuthType,
-  debugLogger,
 } from '@google/gemini-cli-core';
 import { useKeypress } from '../hooks/useKeypress.js';
 import { theme } from '../semantic-colors.js';
@@ -82,33 +81,12 @@ export function ProviderModelDialog({
       // Respect persistMode toggle: only save when persistMode is true
       const isTemporary = !persistMode;
 
-      debugLogger.log('[ProviderModelDialog] handleSelect called');
-      debugLogger.log('[ProviderModelDialog] model:', model);
-      debugLogger.log('[ProviderModelDialog] persistMode:', persistMode);
-      debugLogger.log('[ProviderModelDialog] isTemporary:', isTemporary);
-      debugLogger.log(
-        '[ProviderModelDialog] config.getLastProviderModel() before:',
-        config.getLastProviderModel(),
-      );
-
       config.setModel(model, isTemporary);
 
       // Manually call saveModelChange when persistMode is true to ensure settings.json is updated
       if (persistMode && loadedSettings) {
-        debugLogger.log(
-          '[ProviderModelDialog] Calling saveModelChange to persist to settings.json',
-        );
         saveModelChange(loadedSettings, model);
       }
-
-      debugLogger.log(
-        '[ProviderModelDialog] config.getLastProviderModel() after:',
-        config.getLastProviderModel(),
-      );
-      debugLogger.log(
-        '[ProviderModelDialog] config.getModel() after:',
-        config.getModel(),
-      );
 
       const event = new ModelSlashCommandEvent(model);
       logModelSlashCommand(config, event);
@@ -116,36 +94,21 @@ export function ProviderModelDialog({
       // Always refresh auth when model is selected to ensure content generator is initialized
       // Switch provider if different, or just switch model if same provider
       if (newProvider !== currentProvider) {
-        debugLogger.log(
-          '[ProviderModelDialog] Different provider, calling refreshAuth',
-        );
         await config.refreshAuth(AuthType.CONFIG_LOGIN);
       } else {
-        debugLogger.log(
-          '[ProviderModelDialog] Same provider, calling switchModel',
-        );
         // Same provider, just switch model using the content generator's switchModel
         const contentGenerator = config.getContentGenerator();
         if (contentGenerator && 'switchModel' in contentGenerator) {
           // switchModel expects just the modelId without provider prefix
           const modelId = model.includes('/') ? model.split('/')[1] : model;
-          debugLogger.log(
-            '[ProviderModelDialog] switchModel called with modelId:',
-            modelId,
-          );
+
           // eslint-disable-next-line
           await (contentGenerator as any).switchModel(modelId);
         } else {
-          debugLogger.log(
-            '[ProviderModelDialog] switchModel not available, calling refreshAuth',
-          );
           // If switchModel not available, refresh auth to recreate content generator
           await config.refreshAuth(AuthType.CONFIG_LOGIN);
         }
       }
-      debugLogger.log(
-        '[ProviderModelDialog] handleSelect completed, closing dialog',
-      );
       onClose();
     },
     [config, onClose, persistMode, loadedSettings],

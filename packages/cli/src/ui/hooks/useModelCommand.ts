@@ -10,14 +10,10 @@ interface UseModelCommandReturn {
   isModelDialogOpen: boolean;
   openModelDialog: () => void;
   closeModelDialog: () => void;
-  isProviderModelDialogOpen: boolean;
-  openProviderModelDialog: () => void;
-  closeProviderModelDialog: () => void;
 }
 
 export const useModelCommand = (): UseModelCommandReturn => {
   const [isModelDialogOpen, setIsModelDialogOpen] = useState(false);
-  const [isProviderModelDialogOpen, setIsProviderModelDialogOpen] = useState(false);
 
   const openModelDialog = useCallback(() => {
     setIsModelDialogOpen(true);
@@ -27,20 +23,9 @@ export const useModelCommand = (): UseModelCommandReturn => {
     setIsModelDialogOpen(false);
   }, []);
 
-  const openProviderModelDialog = useCallback(() => {
-    setIsProviderModelDialogOpen(true);
-  }, []);
-
-  const closeProviderModelDialog = useCallback(() => {
-    setIsProviderModelDialogOpen(false);
-  }, []);
-
   return {
     isModelDialogOpen,
     openModelDialog,
     closeModelDialog,
-    isProviderModelDialogOpen,
-    openProviderModelDialog,
-    closeProviderModelDialog,
   };
 };
