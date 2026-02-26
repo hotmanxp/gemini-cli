@@ -40,7 +40,8 @@ export const LSP_INSTALL_HINTS: Record<string, string> = {
   astro: 'npm install -g @astrojs/language-server',
   'bash-ls': 'npm install -g bash-language-server',
   bash: 'npm install -g bash-language-server',
-  jdtls: 'See https://github.com/eclipse-jdtls/eclipse.jdt.ls',
+  jdtls:
+    'Java 21+ required. JDTLS will be auto-downloaded to ~/.gemini/lsp-servers/jdtls. For offline installation: manually download release.tar.gz from https://www.eclipse.org/downloads/download.php?file=/jdtls/snapshots/jdt-language-server-latest.tar.gz and place it in ~/.gemini/lsp-servers/jdtls/',
   'yaml-ls': 'npm install -g yaml-language-server',
   'lua-ls': 'See https://github.com/LuaLS/lua-language-server',
   php: 'npm install -g intelephense',
@@ -264,10 +265,48 @@ export const BUILTIN_SERVERS: Record<
 
   // Java
   jdtls: {
-    command: 'jdtls',
-    args: [],
+    command: 'java',
+    args: [], // Args will be set dynamically in NativeLspService
     transport: 'stdio' as const,
     trustRequired: true,
+    initializationOptions: {
+      // JDTLS specific options
+      bundles: [],
+      vmArgs: [
+        '-Declipse.application=org.eclipse.jdt.ls.core.id1',
+        '-Dosgi.bundles.defaultStartLevel=4',
+        '-Declipse.product=org.eclipse.jdt.ls.core.product',
+        '-Dlog.level=ALL',
+        '--add-modules=ALL-SYSTEM',
+        '--add-opens',
+        'java.base/java.util=ALL-UNNAMED',
+        '--add-opens',
+        'java.base/java.lang=ALL-UNNAMED',
+      ],
+    },
+  },
+
+  // Java alias (for language detection)
+  java: {
+    command: 'java',
+    args: [], // Args will be set dynamically in NativeLspService
+    transport: 'stdio' as const,
+    trustRequired: true,
+    initializationOptions: {
+      // JDTLS specific options
+      bundles: [],
+      vmArgs: [
+        '-Declipse.application=org.eclipse.jdt.ls.core.id1',
+        '-Dosgi.bundles.defaultStartLevel=4',
+        '-Declipse.product=org.eclipse.jdt.ls.core.product',
+        '-Dlog.level=ALL',
+        '--add-modules=ALL-SYSTEM',
+        '--add-opens',
+        'java.base/java.util=ALL-UNNAMED',
+        '--add-opens',
+        'java.base/java.lang=ALL-UNNAMED',
+      ],
+    },
   },
 
   // YAML
@@ -474,6 +513,7 @@ export const EXT_TO_LANG: Record<string, string> = {
   pyi: 'python',
   pyw: 'python',
   java: 'java',
+  class: 'java',
   cs: 'csharp',
   fs: 'fsharp',
   fsi: 'fsharp',

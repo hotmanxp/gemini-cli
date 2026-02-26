@@ -125,10 +125,45 @@ export class LspLanguageDetector {
     }
 
     // Count files per language
+    // Only count source code files, not documentation or config files
+    const SOURCE_CODE_LANGUAGES = new Set([
+      'typescript',
+      'javascript',
+      'typescriptreact',
+      'javascriptreact',
+      'python',
+      'java',
+      'go',
+      'rust',
+      'c',
+      'cpp',
+      'csharp',
+      'ruby',
+      'php',
+      'swift',
+      'kotlin',
+      'scala',
+      'vue',
+      'svelte',
+      'astro',
+      'html',
+      'css',
+      'scss',
+      'less',
+      'sql',
+      'graphql',
+    ]);
+
     const languageCounts = new Map<string, number>();
     for (const file of Array.from(files)) {
       const lang = this.mapFileToLanguage(file, extensionMap);
-      if (lang) {
+      // Skip Python files - only detect Python via project markers
+      // This avoids false positives from test fixtures or incidental .py files
+      if (lang === 'python') {
+        continue;
+      }
+      // Only count source code languages, skip documentation/config files
+      if (lang && SOURCE_CODE_LANGUAGES.has(lang)) {
         languageCounts.set(lang, (languageCounts.get(lang) || 0) + 1);
       }
     }

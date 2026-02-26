@@ -1085,13 +1085,6 @@ export class Config {
     // Load last selected provider model from settings for cross-session memory
     // This is used for CONFIG_LOGIN quick re-selection
     this.lastProviderModel = this.settings?.merged.general?.lastProviderModel;
-    if (this.lastProviderModel) {
-      debugLogger.log(
-        '[Config._initialize] Loaded lastProviderModel from settings:',
-        this.lastProviderModel,
-      );
-    }
-
     this.agentRegistry = new AgentRegistry(this);
     await this.agentRegistry.initialize();
 

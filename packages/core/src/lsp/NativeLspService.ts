@@ -99,7 +99,7 @@ export class NativeLspService {
       return;
     }
 
-    // Detect languages in workspace
+    // Detect languages in workspace (for LSP server configuration)
     const userConfigs = await this.configLoader.loadUserConfigs();
     const extensionConfigs = await this.configLoader.loadExtensionConfigs(
       this.getActiveExtensions(),
@@ -118,17 +118,29 @@ export class NativeLspService {
       extensionConfigs,
       userConfigs,
     );
-    
+
     // Only configure servers, don't start them yet (lazy loading)
     this.serverManager.setServerConfigs(serverConfigs);
-    
-    // Auto-warmup for TypeScript and Python projects
-    // These languages benefit from early initialization due to project-wide analysis
-    const shouldWarmupTypescript = detectedLanguages.includes('typescript') || 
-                                    detectedLanguages.includes('typescriptreact') ||
-                                    detectedLanguages.includes('javascript');
-    const shouldWarmupPython = detectedLanguages.includes('python');
-    
+
+    // Lightweight check for TypeScript/Python project detection (no full file scan)
+    // Only check for project marker files, not individual source files
+    const hasTsConfig = fs.existsSync(
+      path.join(this.workspaceRoot, 'tsconfig.json'),
+    );
+    const hasPackageJson = fs.existsSync(
+      path.join(this.workspaceRoot, 'package.json'),
+    );
+    const hasPyProject = fs.existsSync(
+      path.join(this.workspaceRoot, 'pyproject.toml'),
+    );
+    const hasSetupPy = fs.existsSync(path.join(this.workspaceRoot, 'setup.py'));
+    const hasRequirements = fs.existsSync(
+      path.join(this.workspaceRoot, 'requirements.txt'),
+    );
+
+    const shouldWarmupTypescript = hasTsConfig || hasPackageJson;
+    const shouldWarmupPython = hasPyProject || hasSetupPy || hasRequirements;
+
     if (shouldWarmupTypescript) {
       try {
         await this.warmup('typescript');
@@ -136,7 +148,7 @@ export class NativeLspService {
         debugLogger.warn('TypeScript warmup failed:', error);
       }
     }
-    
+
     if (shouldWarmupPython) {
       try {
         // Use 'python' as the server name (which maps to pyright-langserver)
@@ -166,7 +178,9 @@ export class NativeLspService {
    * @deprecated Servers are now started on-demand when needed
    */
   async start(): Promise<void> {
-    debugLogger.warn('LSP service start() called - lazy loading is now default');
+    debugLogger.warn(
+      'LSP service start() called - lazy loading is now default',
+    );
     // Don't start all servers automatically
     // Servers will be started on-demand when tools request them
   }
@@ -296,9 +310,11 @@ export class NativeLspService {
           },
         },
       });
-      
+
       // Wait for the server to process the file
-      await new Promise(resolve => setTimeout(resolve, DEFAULT_LSP_WARMUP_DELAY_MS));
+      await new Promise((resolve) =>
+        setTimeout(resolve, DEFAULT_LSP_WARMUP_DELAY_MS),
+      );
     } catch (error) {
       debugLogger.warn(`Failed to open file in LSP server: ${uri}`, error);
     }
@@ -641,7 +657,7 @@ export class NativeLspService {
         await this.serverManager.warmupTypescriptServer(handle);
 
         // Small delay to allow LSP server to process the file
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
 
         const response = await handle.connection.request(
           'textDocument/documentSymbol',
@@ -650,7 +666,9 @@ export class NativeLspService {
           },
         );
         if (!Array.isArray(response)) {
-          debugLogger.warn(`LSP documentSymbol response is not an array: ${typeof response}`);
+          debugLogger.warn(
+            `LSP documentSymbol response is not an array: ${typeof response}`,
+          );
           continue;
         }
         const symbols: LspSymbolInformation[] = [];
@@ -675,7 +693,9 @@ export class NativeLspService {
             if (normalized) {
               symbols.push(normalized);
             } else {
-              debugLogger.warn(`Failed to normalize symbol: ${JSON.stringify(itemObj['name'])}`);
+              debugLogger.warn(
+                `Failed to normalize symbol: ${JSON.stringify(itemObj['name'])}`,
+              );
             }
           }
           if (symbols.length >= limit) {
@@ -955,7 +975,7 @@ export class NativeLspService {
     const startTime = Date.now();
 
     while (Date.now() - startTime < timeout) {
-      await new Promise(resolve => setTimeout(resolve, pollInterval));
+      await new Promise((resolve) => setTimeout(resolve, pollInterval));
 
       for (const [name, handle] of handles) {
         try {
@@ -1248,18 +1268,24 @@ export class NativeLspService {
     try {
       // Ensure the file is opened and server is ready
       await this.openFileInServer(handle, location.uri);
-      
+
       const position = location.range.start;
-      const response = await handle.connection.request('textDocument/prepareRename', {
-        textDocument: { uri: location.uri },
-        position,
-      });
+      const response = await handle.connection.request(
+        'textDocument/prepareRename',
+        {
+          textDocument: { uri: location.uri },
+          position,
+        },
+      );
 
       if (!response || typeof response !== 'object') {
         return null;
       }
 
-      const result = response as { range?: LspRange; placeholder?: string } | null;
+      const result = response as {
+        range?: LspRange;
+        placeholder?: string;
+      } | null;
       if (!result?.range || !result?.placeholder) {
         return null;
       }
@@ -1295,7 +1321,7 @@ export class NativeLspService {
     try {
       // Ensure the file is opened and server is ready
       await this.openFileInServer(handle, location.uri);
-      
+
       const position = location.range.start;
       const response = await handle.connection.request('textDocument/rename', {
         textDocument: { uri: location.uri },

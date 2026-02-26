@@ -1,19 +1,25 @@
 # Gemini CLI LSP 自动下载实现总结
 
 > 实现日期：2026-02-25  
-> 实现内容：选择性 LSP 服务器自动下载机制
+> 更新日期：2026-02-26  
+> 实现内容：选择性 LSP 服务器自动下载机制（包括 Java JDTLS 自动下载）
 
 ---
 
 ## 实现概述
 
-为 Gemini CLI 实现了选择性 LSP 服务器自动下载功能，支持通过 npm/yarn/pnpm/pip 自动安装 LSP 服务器。
+为 Gemini
+CLI 实现了选择性 LSP 服务器自动下载功能，支持通过 npm/yarn/pnpm/pip 自动安装 LSP 服务器，以及 Java
+JDTLS 的自动下载和安装。
 
 ### 核心特性
 
 - ✅ **选择性自动下载** - 用户可选择启用/禁用
 - ✅ **多包管理器支持** - npm, yarn, pnpm, pip
 - ✅ **服务器级别配置** - 可为每个 LSP 服务器单独配置
+- ✅ **Java JDTLS 自动下载** - 自动下载、安装和配置 JDTLS
+- ✅ **Java 版本检测** - 自动检测 Java 21+ 是否满足要求
+- ✅ **平台特定配置** - 支持 macOS/Linux/Windows 平台
 - ✅ **安装提示** - 对不可自动安装的服务器提供安装指导
 - ✅ **安全保护** - 超时限制、路径验证、确认提示
 
@@ -28,6 +34,7 @@
 **功能**：LSP 服务器自动安装核心逻辑
 
 **导出函数**：
+
 - `autoInstallLspServer()` - 执行自动安装
 - `checkLspServerInstallation()` - 检查安装状态
 - `getInstallHint()` - 获取安装提示
@@ -35,12 +42,20 @@
 - `getAvailablePackageManager()` - 检测可用的包管理器
 
 **常量**：
+
 - `LSP_INSTALL_HINTS` - 27 种 LSP 服务器的安装信息
 
 **支持的服务器**：
-- **npm (10 种)**: typescript-language-server, vue-language-server, svelte-language-server, yaml-language-server, bash-language-server, intelephense, dockerfile-language-server-nodejs, sql-language-server, vscode-eslint-language-server, prisma
+
+- **npm (10 种)**: typescript-language-server, vue-language-server,
+  svelte-language-server, yaml-language-server, bash-language-server,
+  intelephense, dockerfile-language-server-nodejs, sql-language-server,
+  vscode-eslint-language-server, prisma
 - **pip (2 种)**: pylsp, pyright-langserver
-- **系统工具 (15 种)**: clangd, rust-analyzer, gopls, jdtls, ruby-lsp, zls, elixir-ls, lua-language-server, terraform-ls, kotlin-lsp, dart, texlab, ocamllsp, clojure-lsp, nixd, haskell-language-server-wrapper, gleam, tinymist
+- **Java JDTLS (特殊)**: 自动从 Eclipse 下载，需要 Java 21+
+- **系统工具 (15 种)**: clangd, rust-analyzer, gopls, ruby-lsp, zls, elixir-ls,
+  lua-language-server, terraform-ls, kotlin-lsp, dart, texlab, ocamllsp,
+  clojure-lsp, nixd, haskell-language-server-wrapper, gleam, tinymist
 
 ---
 
@@ -80,21 +95,24 @@ export interface LspServerConfig {
 #### `packages/core/src/lsp/LspConfigLoader.ts`
 
 **新增方法**：
+
 - `normalizeAutoInstall()` - 解析自动安装配置
 
 **修改**：
+
 - 导入 `LspAutoInstallConfig` 和 `AutoInstallServerConfig` 类型
 - 在 `buildServerConfig()` 中解析 `autoInstall` 字段
 
 **配置解析逻辑**：
+
 ```typescript
 private normalizeAutoInstall(
   value: unknown
 ): AutoInstallServerConfig | undefined {
   if (!this.isRecord(value)) return undefined;
 
-  const enabled = typeof value['enabled'] === 'boolean' 
-    ? value['enabled'] 
+  const enabled = typeof value['enabled'] === 'boolean'
+    ? value['enabled']
     : undefined;
   const packageManager = typeof value['packageManager'] === 'string'
     ? value['packageManager'] as AutoInstallServerConfig['packageManager']
@@ -116,19 +134,23 @@ private normalizeAutoInstall(
 #### `packages/core/src/lsp/LspServerManager.ts`
 
 **新增属性**：
+
 ```typescript
 private autoInstallOptions: AutoInstallOptions;
 ```
 
 **新增方法**：
+
 - `tryAutoInstall()` - 尝试自动安装 LSP 服务器
 
 **修改**：
+
 - 导入 `autoInstallLspServer` 和 `checkLspServerInstallation`
 - 在 `startServer()` 中集成自动安装逻辑
 - 在构造函数中初始化 `autoInstallOptions`
 
 **自动安装流程**：
+
 ```typescript
 // 1. 检查命令是否存在
 const commandExists = await this.commandExists(...);
@@ -136,7 +158,7 @@ const commandExists = await this.commandExists(...);
 // 2. 如果不存在，尝试自动安装
 if (!commandExists) {
   const installResult = await this.tryAutoInstall(name, config);
-  
+
   if (!installResult.success) {
     handle.status = 'FAILED';
     return;
@@ -154,6 +176,7 @@ const connection = await this.createLspConnection(...);
 #### `packages/core/src/config/config.ts`
 
 **修改**：
+
 ```typescript
 export interface ConfigParameters {
   // ... existing fields
@@ -170,6 +193,7 @@ export interface ConfigParameters {
 #### `docs/lsp-auto-install.md` (320 行)
 
 **内容**：
+
 - 快速开始指南
 - 配置选项说明
 - 支持的 LSP 服务器列表
@@ -263,22 +287,27 @@ if (result.success) {
 ## 安全机制
 
 ### 1. 超时保护
+
 - 默认 2 分钟超时
 - 防止安装命令挂起
 
 ### 2. 包管理器白名单
+
 - 仅支持：npm, yarn, pnpm, pip
 - 其他包管理器需要显式配置
 
 ### 3. 确认提示
+
 - 默认首次安装需要确认
 - 可通过 `skipConfirmation: true` 禁用
 
 ### 4. 路径验证
+
 - 验证安装的二进制文件路径
 - 确保在工作区或全局 bin 目录中
 
 ### 5. 服务器级别覆盖
+
 - 可为特定服务器禁用自动安装
 - 防止误安装不需要的服务器
 
@@ -295,6 +324,7 @@ if (result.success) {
 ```
 
 **默认配置**：
+
 ```typescript
 {
   enabled: false,
@@ -312,7 +342,7 @@ if (result.success) {
 
 ```typescript
 import { describe, it, expect } from 'vitest';
-import { 
+import {
   autoInstallLspServer,
   checkLspServerInstallation,
   LSP_INSTALL_HINTS,
@@ -350,10 +380,15 @@ import { LspServerManager } from './LspServerManager.js';
 
 describe('LspServerManager with auto-install', () => {
   it('should auto-install missing server', async () => {
-    const manager = new LspServerManager(config, workspaceContext, fileDiscoveryService, {
-      requireTrustedWorkspace: true,
-      workspaceRoot: '/test/project',
-    });
+    const manager = new LspServerManager(
+      config,
+      workspaceContext,
+      fileDiscoveryService,
+      {
+        requireTrustedWorkspace: true,
+        workspaceRoot: '/test/project',
+      },
+    );
 
     const handle = {
       config: {
@@ -463,21 +498,26 @@ describe('LspServerManager with auto-install', () => {
 - ✅ 完整的自动下载机制
 - ✅ 27 种 LSP 服务器支持
 - ✅ 4 种包管理器支持
+- ✅ Java JDTLS 自动下载（特殊支持）
+- ✅ Java 版本检测（21+）
+- ✅ 平台特定配置（macOS/Linux/Windows）
 - ✅ 多层配置系统
 - ✅ 完善的安全保护
 - ✅ 详细的用户文档
 
 ### 代码统计
 
-| 文件 | 行数 | 功能 |
-|------|------|------|
-| `LspInstaller.ts` | 424 | 核心安装逻辑 |
-| `types.ts` | +50 | 类型定义 |
-| `LspConfigLoader.ts` | +30 | 配置解析 |
-| `LspServerManager.ts` | +60 | 集成自动安装 |
-| `config.ts` | +5 | 配置集成 |
-| `lsp-auto-install.md` | 320 | 用户文档 |
-| **总计** | **~889** | **完整实现** |
+| 文件                      | 行数      | 功能                 |
+| ------------------------- | --------- | -------------------- |
+| `LspInstaller.ts`         | 424       | 核心安装逻辑         |
+| `jdtls.ts`                | 456       | Java JDTLS 自动下载  |
+| `types.ts`                | +50       | 类型定义             |
+| `LspConfigLoader.ts`      | +30       | 配置解析             |
+| `LspServerManager.ts`     | +100      | 集成自动安装和 JDTLS |
+| `LspConnectionFactory.ts` | +50       | 进程连接支持         |
+| `builtinServers.ts`       | +20       | Java 配置            |
+| `lsp-auto-install.md`     | 320       | 用户文档             |
+| **总计**                  | **~1450** | **完整实现**         |
 
 ### 用户体验提升
 
@@ -485,12 +525,14 @@ describe('LspServerManager with auto-install', () => {
 - **智能提示** - 不可自动安装的服务器提供明确指导
 - **灵活控制** - 用户可选择启用/禁用
 - **安全可靠** - 多重保护机制
+- **Java 友好** - 自动下载 JDTLS，无需手动配置
 
 ---
 
 ## 致谢
 
 参考项目：
+
 - OpenCode LSP 自动下载机制
 - oh-my-opencode LSP 安装提示系统
 

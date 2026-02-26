@@ -36,6 +36,7 @@ import {
   tryAutoInstallLspServer,
   getInstallationHint,
 } from './LspInstaller.js';
+import { spawnJdtls, checkJavaPrerequisites } from './jdtls.js';
 
 /**
  * Get environment variable safely
@@ -116,8 +117,9 @@ export class LspServerManager {
   async startServerByName(name: string): Promise<void> {
     const serverHandle = this.serverHandles.get(name);
     if (!serverHandle) {
-      debugLogger.warn(`LSP server ${name} not configured`);
-      return;
+      const message = `LSP server "${name}" is not configured. This usually means the required language server is not installed. Please install the LSP server for this language.`;
+      debugLogger.error(message);
+      throw new Error(message);
     }
 
     const now = Date.now();
@@ -156,6 +158,14 @@ export class LspServerManager {
       serverHandle.refCount++;
       serverHandle.lastUsedAt = now;
       return;
+    }
+
+    // Check if server previously failed to start
+    if (serverHandle.status === 'FAILED') {
+      const errorMessage = serverHandle.error?.message || 'Unknown error';
+      const message = `LSP server "${name}" failed to start: ${errorMessage}. Please check if the required language server is installed and properly configured.`;
+      debugLogger.error(message);
+      throw new Error(message);
     }
 
     // Start new initialization with lock
@@ -473,6 +483,17 @@ export class LspServerManager {
   }
 
   /**
+   * Check if the given config is the Java language server (JDTLS).
+   */
+  private isJdtlsServer(config: LspServerConfig): boolean {
+    return (
+      config.name.includes('jdtls') ||
+      config.name.includes('java') ||
+      config.command === 'java'
+    );
+  }
+
+  /**
    * Warm up a specific LSP server or all servers if no name is provided.
    * This is the public API for manual warmup.
    * First ensures the server is started, then performs warmup.
@@ -579,7 +600,63 @@ export class LspServerManager {
       return;
     }
 
-    // Check if command exists
+    // Special handling for JDTLS (Java Language Server)
+    if (this.isJdtlsServer(handle.config)) {
+      debugLogger.log('Starting JDTLS (Java Language Server)...');
+      // Check Java prerequisites
+      const javaCheck = await checkJavaPrerequisites(21);
+      if (!javaCheck.available) {
+        const message = `JDTLS requires Java 21+: ${javaCheck.error}. Please install Java 21 or newer and ensure it's in your PATH.`;
+        debugLogger.error(message);
+        handle.status = 'FAILED';
+        handle.error = new Error(message);
+        throw new Error(message);
+      }
+      debugLogger.log(`Java version: ${javaCheck.version}`);
+
+      try {
+        handle.error = undefined;
+        handle.warmedUp = false;
+        handle.status = 'IN_PROGRESS';
+
+        // Use spawnJdtls to download and start JDTLS
+        const jdtlsResult = await spawnJdtls(
+          handle.config.workspaceFolder ?? this.workspaceRoot,
+        );
+
+        if (!jdtlsResult) {
+          const message =
+            'Failed to spawn JDTLS process. Please check if release.tar.gz is downloaded to ~/.gemini/lsp-servers/jdtls/ or check your network connection.';
+          throw new Error(message);
+        }
+
+        handle.process = jdtlsResult.process;
+        handle.connection = undefined; // Will be set by createLspConnection
+
+        // Create LSP connection using the JDTLS process
+        const connection = await this.createLspConnectionFromProcess(
+          jdtlsResult.process,
+          handle.config,
+        );
+        handle.connection = connection.connection;
+
+        // Initialize LSP server
+        await this.initializeLspServer(connection, handle.config);
+
+        handle.status = 'READY';
+        this.attachRestartHandler(name, handle);
+        this.resetIdleTimeout(name);
+        debugLogger.log('JDTLS started successfully');
+        return;
+      } catch (error) {
+        handle.status = 'FAILED';
+        handle.error = error as Error;
+        debugLogger.error('JDTLS failed to start:', error);
+        throw error;
+      }
+    }
+
+    // Check if command exists (for other servers)
     if (handle.config.command) {
       const commandCwd = handle.config.workspaceFolder ?? this.workspaceRoot;
 
@@ -924,6 +1001,39 @@ export class LspServerManager {
     } else {
       throw new Error(`Unsupported transport: ${config.transport}`);
     }
+  }
+
+  /**
+   * Create LSP connection from an existing process (used by JDTLS)
+   */
+  private async createLspConnectionFromProcess(
+    process: ChildProcess,
+    config: LspServerConfig,
+  ): Promise<LspConnectionResult> {
+    const startupTimeout =
+      config.startupTimeout ?? DEFAULT_LSP_STARTUP_TIMEOUT_MS;
+
+    const lspConnection =
+      await LspConnectionFactory.createStdioConnectionFromProcess(
+        process as import('node:child_process').ChildProcessWithoutNullStreams,
+        startupTimeout,
+      );
+
+    return {
+      connection: lspConnection.connection,
+      process,
+      shutdown: async () => {
+        await lspConnection.connection.shutdown();
+      },
+      exit: () => {
+        if (process && !process.killed) {
+          process.kill();
+        }
+        lspConnection.connection.end();
+      },
+      initialize: async (params: unknown) =>
+        lspConnection.connection.initialize(params),
+    };
   }
 
   /**

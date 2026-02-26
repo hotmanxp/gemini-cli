@@ -305,6 +305,49 @@ export class LspConnectionFactory {
   }
 
   /**
+   * Create stdio LSP connection from an existing process
+   */
+  static async createStdioConnectionFromProcess(
+    process: cp.ChildProcessWithoutNullStreams,
+    timeoutMs = 10000,
+  ): Promise<LspConnection> {
+    return new Promise((resolve, reject) => {
+      if (!process.stdout || !process.stdin) {
+        reject(new Error('Process stdio not available'));
+        return;
+      }
+
+      const timeoutId = setTimeout(() => {
+        reject(new Error('LSP connection setup timeout'));
+      }, timeoutMs);
+
+      const connection = new JsonRpcConnection(
+        (payload) => process.stdin.write(payload),
+        () => process.stdin.end(),
+      );
+
+      connection.listen(process.stdout);
+      process.once('exit', () => connection.end());
+      process.once('close', () => connection.end());
+
+      process.once('error', (error) => {
+        clearTimeout(timeoutId);
+        debugLogger.error(`LSP process error: ${error.message}`);
+        reject(new Error(`LSP process error: ${error.message}`));
+      });
+
+      // Process is already running, resolve immediately
+      clearTimeout(timeoutId);
+      debugLogger.log('LSP connection established from existing process');
+
+      resolve({
+        connection,
+        process,
+      });
+    });
+  }
+
+  /**
    * 创建基于 TCP 的 LSP 连接
    */
   static async createTcpConnection(
