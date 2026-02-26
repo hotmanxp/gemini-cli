@@ -865,6 +865,7 @@ export async function loadCliConfig(
     fakeResponses: argv.fakeResponses,
     recordResponses: argv.recordResponses,
     retryFetchErrors: settings.general?.retryFetchErrors,
+    maxAttempts: settings.general?.maxAttempts,
     ptyInfo: ptyInfo?.name,
     disableLLMCorrection: settings.tools?.disableLLMCorrection,
     rawOutput: argv.rawOutput,
@@ -908,10 +909,12 @@ export async function loadCliConfig(
       // Don't call start() - servers will be started on-demand
       // debugLogger.log('Calling start...');
       // await lspService.start();
-      
+
       const lspClient = new NativeLspClient(lspService);
       config.setLspClient(lspClient);
-      debugLogger.log('LSP service initialized successfully (lazy loading enabled)');
+      debugLogger.log(
+        'LSP service initialized successfully (lazy loading enabled)',
+      );
     } catch (err) {
       debugLogger.warn('Failed to initialize native LSP service:', err);
     }
