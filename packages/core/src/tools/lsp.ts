@@ -13,6 +13,7 @@ import type { MessageBus } from '../confirmation-bus/message-bus.js';
 import { BaseDeclarativeTool, BaseToolInvocation, Kind } from './tools.js';
 // Tool names defined inline
 import type { Config } from '../config/config.js';
+import { debugLogger } from '../utils/debugLogger.js';
 import type {
   LspCallHierarchyIncomingCall,
   LspCallHierarchyItem,
@@ -195,6 +196,8 @@ class LspToolInvocation extends BaseToolInvocation<LspToolParams, ToolResult> {
   }
 
   private async executeDefinitions(client: LspClient): Promise<ToolResult> {
+    // Warm up the LSP server on-demand before executing the operation
+    await this.asyncWarmupIfNeeded(client);
     const target = this.resolveLocationTarget();
     if ('error' in target) {
       return { llmContent: target.error, returnDisplay: target.error };
@@ -236,6 +239,8 @@ class LspToolInvocation extends BaseToolInvocation<LspToolParams, ToolResult> {
   }
 
   private async executeImplementations(client: LspClient): Promise<ToolResult> {
+    // Warm up the LSP server on-demand before executing the operation
+    await this.asyncWarmupIfNeeded(client);
     const target = this.resolveLocationTarget();
     if ('error' in target) {
       return { llmContent: target.error, returnDisplay: target.error };
@@ -277,6 +282,8 @@ class LspToolInvocation extends BaseToolInvocation<LspToolParams, ToolResult> {
   }
 
   private async executeReferences(client: LspClient): Promise<ToolResult> {
+    // Warm up the LSP server on-demand before executing the operation
+    await this.asyncWarmupIfNeeded(client);
     const target = this.resolveLocationTarget();
     if ('error' in target) {
       return { llmContent: target.error, returnDisplay: target.error };
@@ -319,6 +326,8 @@ class LspToolInvocation extends BaseToolInvocation<LspToolParams, ToolResult> {
   }
 
   private async executeHover(client: LspClient): Promise<ToolResult> {
+    // Warm up the LSP server on-demand before executing the operation
+    await this.asyncWarmupIfNeeded(client);
     const target = this.resolveLocationTarget();
     if ('error' in target) {
       return { llmContent: target.error, returnDisplay: target.error };
@@ -354,6 +363,8 @@ class LspToolInvocation extends BaseToolInvocation<LspToolParams, ToolResult> {
   }
 
   private async executeDocumentSymbols(client: LspClient): Promise<ToolResult> {
+    // Warm up the LSP server on-demand before executing the operation
+    await this.asyncWarmupIfNeeded(client);
     const workspaceRoot = this.config.getProjectRoot();
     const filePath = this.params.filePath ?? '';
     const uri = this.resolveUri(filePath, workspaceRoot);
@@ -407,6 +418,8 @@ class LspToolInvocation extends BaseToolInvocation<LspToolParams, ToolResult> {
   private async executeWorkspaceSymbols(
     client: LspClient,
   ): Promise<ToolResult> {
+    // Warm up the LSP server on-demand before executing the operation
+    await this.asyncWarmupIfNeeded(client);
     const limit = this.params.limit ?? 20;
     const query = this.params.query ?? '';
     let symbols: LspSymbolInformation[] = [];
@@ -492,6 +505,8 @@ class LspToolInvocation extends BaseToolInvocation<LspToolParams, ToolResult> {
   private async executePrepareCallHierarchy(
     client: LspClient,
   ): Promise<ToolResult> {
+    // Warm up the LSP server on-demand before executing the operation
+    await this.asyncWarmupIfNeeded(client);
     const target = this.resolveLocationTarget();
     if ('error' in target) {
       return { llmContent: target.error, returnDisplay: target.error };
@@ -535,6 +550,8 @@ class LspToolInvocation extends BaseToolInvocation<LspToolParams, ToolResult> {
   }
 
   private async executeIncomingCalls(client: LspClient): Promise<ToolResult> {
+    // Warm up the LSP server on-demand before executing the operation
+    await this.asyncWarmupIfNeeded(client);
     const item = this.params.callHierarchyItem;
     if (!item) {
       const message = 'callHierarchyItem is required for incomingCalls.';
@@ -592,6 +609,8 @@ class LspToolInvocation extends BaseToolInvocation<LspToolParams, ToolResult> {
   }
 
   private async executeOutgoingCalls(client: LspClient): Promise<ToolResult> {
+    // Warm up the LSP server on-demand before executing the operation
+    await this.asyncWarmupIfNeeded(client);
     const item = this.params.callHierarchyItem;
     if (!item) {
       const message = 'callHierarchyItem is required for outgoingCalls.';
@@ -649,6 +668,8 @@ class LspToolInvocation extends BaseToolInvocation<LspToolParams, ToolResult> {
   }
 
   private async executeDiagnostics(client: LspClient): Promise<ToolResult> {
+    // Warm up the LSP server on-demand before executing the operation
+    await this.asyncWarmupIfNeeded(client);
     const workspaceRoot = this.config.getProjectRoot();
     const filePath = this.params.filePath ?? '';
     const uri = this.resolveUri(filePath, workspaceRoot);
@@ -741,6 +762,8 @@ class LspToolInvocation extends BaseToolInvocation<LspToolParams, ToolResult> {
   }
 
   private async executeCodeActions(client: LspClient): Promise<ToolResult> {
+    // Warm up the LSP server on-demand before executing the operation
+    await this.asyncWarmupIfNeeded(client);
     const workspaceRoot = this.config.getProjectRoot();
     const filePath = this.params.filePath ?? '';
     const uri = this.resolveUri(filePath, workspaceRoot);
@@ -837,6 +860,22 @@ class LspToolInvocation extends BaseToolInvocation<LspToolParams, ToolResult> {
         (error as Error)?.message || String(error)
       }`;
       return { llmContent: message, returnDisplay: message };
+    }
+  }
+
+  /**
+   * Warm up LSP server on-demand before executing an operation.
+   * This is a no-op if the server is already warmed up.
+   * Errors during warmup are logged but not surfaced to the user.
+   */
+  private async asyncWarmupIfNeeded(client: LspClient): Promise<void> {
+    try {
+      if (client && typeof client.warmup === 'function') {
+        await client.warmup(this.params.serverName);
+      }
+    } catch (error) {
+      // Silently ignore warmup errors - they don't affect operation execution
+      debugLogger.warn('LSP on-demand warmup failed:', error);
     }
   }
 
