@@ -23,6 +23,59 @@ import {
   EXIT_PLAN_MODE_TOOL_NAME,
   ENTER_PLAN_MODE_TOOL_NAME,
   LSP_TOOL_NAME,
+  // Shared parameter names
+  PARAM_FILE_PATH,
+  PARAM_DIR_PATH,
+  PARAM_PATTERN,
+  PARAM_CASE_SENSITIVE,
+  PARAM_RESPECT_GIT_IGNORE,
+  PARAM_RESPECT_GEMINI_IGNORE,
+  PARAM_FILE_FILTERING_OPTIONS,
+  PARAM_DESCRIPTION,
+  // Tool-specific parameter names
+  READ_FILE_PARAM_START_LINE,
+  READ_FILE_PARAM_END_LINE,
+  WRITE_FILE_PARAM_CONTENT,
+  GREP_PARAM_INCLUDE_PATTERN,
+  GREP_PARAM_EXCLUDE_PATTERN,
+  GREP_PARAM_NAMES_ONLY,
+  GREP_PARAM_MAX_MATCHES_PER_FILE,
+  GREP_PARAM_TOTAL_MAX_MATCHES,
+  GREP_PARAM_FIXED_STRINGS,
+  GREP_PARAM_CONTEXT,
+  GREP_PARAM_AFTER,
+  GREP_PARAM_BEFORE,
+  GREP_PARAM_NO_IGNORE,
+  EDIT_PARAM_INSTRUCTION,
+  EDIT_PARAM_OLD_STRING,
+  EDIT_PARAM_NEW_STRING,
+  EDIT_PARAM_ALLOW_MULTIPLE,
+  LS_PARAM_IGNORE,
+  SHELL_PARAM_COMMAND,
+  SHELL_PARAM_IS_BACKGROUND,
+  WEB_SEARCH_PARAM_QUERY,
+  WEB_FETCH_PARAM_PROMPT,
+  READ_MANY_PARAM_INCLUDE,
+  READ_MANY_PARAM_EXCLUDE,
+  READ_MANY_PARAM_RECURSIVE,
+  READ_MANY_PARAM_USE_DEFAULT_EXCLUDES,
+  MEMORY_PARAM_FACT,
+  TODOS_PARAM_TODOS,
+  TODOS_ITEM_PARAM_DESCRIPTION,
+  TODOS_ITEM_PARAM_STATUS,
+  DOCS_PARAM_PATH,
+  ASK_USER_PARAM_QUESTIONS,
+  ASK_USER_QUESTION_PARAM_QUESTION,
+  ASK_USER_QUESTION_PARAM_HEADER,
+  ASK_USER_QUESTION_PARAM_TYPE,
+  ASK_USER_QUESTION_PARAM_OPTIONS,
+  ASK_USER_QUESTION_PARAM_MULTI_SELECT,
+  ASK_USER_QUESTION_PARAM_PLACEHOLDER,
+  ASK_USER_OPTION_PARAM_LABEL,
+  ASK_USER_OPTION_PARAM_DESCRIPTION,
+  PLAN_MODE_PARAM_REASON,
+  EXIT_PLAN_PARAM_PLAN_PATH,
+  SKILL_PARAM_NAME,
 } from './definitions/coreTools.js';
 
 export {
@@ -44,6 +97,59 @@ export {
   EXIT_PLAN_MODE_TOOL_NAME,
   ENTER_PLAN_MODE_TOOL_NAME,
   LSP_TOOL_NAME,
+  // Shared parameter names
+  PARAM_FILE_PATH,
+  PARAM_DIR_PATH,
+  PARAM_PATTERN,
+  PARAM_CASE_SENSITIVE,
+  PARAM_RESPECT_GIT_IGNORE,
+  PARAM_RESPECT_GEMINI_IGNORE,
+  PARAM_FILE_FILTERING_OPTIONS,
+  PARAM_DESCRIPTION,
+  // Tool-specific parameter names
+  READ_FILE_PARAM_START_LINE,
+  READ_FILE_PARAM_END_LINE,
+  WRITE_FILE_PARAM_CONTENT,
+  GREP_PARAM_INCLUDE_PATTERN,
+  GREP_PARAM_EXCLUDE_PATTERN,
+  GREP_PARAM_NAMES_ONLY,
+  GREP_PARAM_MAX_MATCHES_PER_FILE,
+  GREP_PARAM_TOTAL_MAX_MATCHES,
+  GREP_PARAM_FIXED_STRINGS,
+  GREP_PARAM_CONTEXT,
+  GREP_PARAM_AFTER,
+  GREP_PARAM_BEFORE,
+  GREP_PARAM_NO_IGNORE,
+  EDIT_PARAM_INSTRUCTION,
+  EDIT_PARAM_OLD_STRING,
+  EDIT_PARAM_NEW_STRING,
+  EDIT_PARAM_ALLOW_MULTIPLE,
+  LS_PARAM_IGNORE,
+  SHELL_PARAM_COMMAND,
+  SHELL_PARAM_IS_BACKGROUND,
+  WEB_SEARCH_PARAM_QUERY,
+  WEB_FETCH_PARAM_PROMPT,
+  READ_MANY_PARAM_INCLUDE,
+  READ_MANY_PARAM_EXCLUDE,
+  READ_MANY_PARAM_RECURSIVE,
+  READ_MANY_PARAM_USE_DEFAULT_EXCLUDES,
+  MEMORY_PARAM_FACT,
+  TODOS_PARAM_TODOS,
+  TODOS_ITEM_PARAM_DESCRIPTION,
+  TODOS_ITEM_PARAM_STATUS,
+  DOCS_PARAM_PATH,
+  ASK_USER_PARAM_QUESTIONS,
+  ASK_USER_QUESTION_PARAM_QUESTION,
+  ASK_USER_QUESTION_PARAM_HEADER,
+  ASK_USER_QUESTION_PARAM_TYPE,
+  ASK_USER_QUESTION_PARAM_OPTIONS,
+  ASK_USER_QUESTION_PARAM_MULTI_SELECT,
+  ASK_USER_QUESTION_PARAM_PLACEHOLDER,
+  ASK_USER_OPTION_PARAM_LABEL,
+  ASK_USER_OPTION_PARAM_DESCRIPTION,
+  PLAN_MODE_PARAM_REASON,
+  EXIT_PLAN_PARAM_PLAN_PATH,
+  SKILL_PARAM_NAME,
 };
 
 export const LS_TOOL_NAME_LEGACY = 'list_directory'; // Just to be safe if anything used the old exported name directly
@@ -115,69 +221,4 @@ export const ALL_BUILTIN_TOOL_NAMES = [
   EXIT_PLAN_MODE_TOOL_NAME,
 ] as const;
 
-/**
- * Read-only tools available in Plan Mode.
- * This list is used to dynamically generate the Plan Mode prompt,
- * filtered by what tools are actually enabled in the current configuration.
- */
-export const PLAN_MODE_TOOLS = [
-  GLOB_TOOL_NAME,
-  GREP_TOOL_NAME,
-  READ_FILE_TOOL_NAME,
-  LS_TOOL_NAME,
-  WEB_SEARCH_TOOL_NAME,
-  ASK_USER_TOOL_NAME,
-  ACTIVATE_SKILL_TOOL_NAME,
-  EXIT_PLAN_MODE_TOOL_NAME,
-] as const;
-
-/**
- * Validates if a tool name is syntactically valid.
- * Checks against built-in tools, discovered tools, and MCP naming conventions.
- */
-export function isValidToolName(
-  name: string,
-  options: { allowWildcards?: boolean } = {},
-): boolean {
-  // Built-in tools
-  if ((ALL_BUILTIN_TOOL_NAMES as readonly string[]).includes(name)) {
-    return true;
-  }
-
-  // Legacy aliases
-  if (TOOL_LEGACY_ALIASES[name]) {
-    return true;
-  }
-
-  // Discovered tools
-  if (name.startsWith(DISCOVERED_TOOL_PREFIX)) {
-    return true;
-  }
-
-  // Policy wildcards
-  if (options.allowWildcards && name === '*') {
-    return true;
-  }
-
-  // MCP tools (format: server__tool)
-  if (name.includes('__')) {
-    const parts = name.split('__');
-    if (parts.length !== 2 || parts[0].length === 0 || parts[1].length === 0) {
-      return false;
-    }
-
-    const server = parts[0];
-    const tool = parts[1];
-
-    if (tool === '*') {
-      return !!options.allowWildcards;
-    }
-
-    // Basic slug validation for server and tool names
-    const slugRegex = /^[a-z0-9-_]+$/i;
-    return slugRegex.test(server) && slugRegex.test(tool);
-  }
-
-  return false;
-}
 export const LSP_DISPLAY_NAME = 'LSP';

@@ -4,7 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { vi, describe, it, expect, beforeEach, type Mock } from 'vitest';
+import {
+  vi,
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  type Mock,
+} from 'vitest';
 import { listMcpServers } from './list.js';
 import { loadSettings, mergeSettings } from '../../config/settings.js';
 import { createTransport, debugLogger } from '@google/gemini-cli-core';
@@ -107,6 +115,10 @@ describe('mcp list command', () => {
     mockedGetUserExtensionsDir.mockReturnValue('/mocked/extensions/dir');
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('should display message when no servers configured', async () => {
     const defaultMergedSettings = mergeSettings({}, {}, {}, {}, true);
     mockedLoadSettings.mockReturnValue({
@@ -134,6 +146,7 @@ describe('mcp list command', () => {
           },
         },
       },
+      isTrusted: true,
     });
 
     mockClient.connect.mockResolvedValue(undefined);
@@ -200,6 +213,7 @@ describe('mcp list command', () => {
           'config-server': { command: '/config/server' },
         },
       },
+      isTrusted: true,
     });
 
     mockExtensionManager.loadExtensions.mockReturnValue([
@@ -265,6 +279,30 @@ describe('mcp list command', () => {
       expect.objectContaining({ url: 'http://allowed' }), // Should use admin config
       false,
       expect.anything(),
+    );
+  });
+
+  it('should show stdio servers as disconnected in untrusted folders', async () => {
+    const defaultMergedSettings = mergeSettings({}, {}, {}, {}, true);
+    mockedLoadSettings.mockReturnValue({
+      merged: {
+        ...defaultMergedSettings,
+        mcpServers: {
+          'test-server': { command: '/test/server' },
+        },
+      },
+      isTrusted: false,
+    });
+
+    // createTransport will throw in core if not trusted
+    mockedCreateTransport.mockRejectedValue(new Error('Folder not trusted'));
+
+    await listMcpServers();
+
+    expect(debugLogger.log).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'test-server: /test/server  (stdio) - Disconnected',
+      ),
     );
   });
 });
