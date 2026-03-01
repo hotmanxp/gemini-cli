@@ -22,7 +22,6 @@ import {
   ASK_USER_TOOL_NAME,
   EXIT_PLAN_MODE_TOOL_NAME,
   ENTER_PLAN_MODE_TOOL_NAME,
-  LSP_TOOL_NAME,
   // Shared parameter names
   PARAM_FILE_PATH,
   PARAM_DIR_PATH,
@@ -96,7 +95,6 @@ export {
   ASK_USER_TOOL_NAME,
   EXIT_PLAN_MODE_TOOL_NAME,
   ENTER_PLAN_MODE_TOOL_NAME,
-  LSP_TOOL_NAME,
   // Shared parameter names
   PARAM_FILE_PATH,
   PARAM_DIR_PATH,
@@ -217,8 +215,55 @@ export const ALL_BUILTIN_TOOL_NAMES = [
   ASK_USER_TOOL_NAME,
   GET_INTERNAL_DOCS_TOOL_NAME,
   ENTER_PLAN_MODE_TOOL_NAME,
-  LSP_TOOL_NAME,
   EXIT_PLAN_MODE_TOOL_NAME,
 ] as const;
 
-export const LSP_DISPLAY_NAME = 'LSP';
+/**
+ * Validates if a tool name is syntactically valid.
+ * Checks against built-in tools, discovered tools, and MCP naming conventions.
+ */
+export function isValidToolName(
+  name: string,
+  options: { allowWildcards?: boolean } = {},
+): boolean {
+  // Built-in tools
+  if ((ALL_BUILTIN_TOOL_NAMES as readonly string[]).includes(name)) {
+    return true;
+  }
+
+  // Legacy aliases
+  if (TOOL_LEGACY_ALIASES[name]) {
+    return true;
+  }
+
+  // Discovered tools
+  if (name.startsWith(DISCOVERED_TOOL_PREFIX)) {
+    return true;
+  }
+
+  // Policy wildcards
+  if (options.allowWildcards && name === '*') {
+    return true;
+  }
+
+  // MCP tools (format: server__tool)
+  if (name.includes('__')) {
+    const parts = name.split('__');
+    if (parts.length !== 2 || parts[0].length === 0 || parts[1].length === 0) {
+      return false;
+    }
+
+    const server = parts[0];
+    const tool = parts[1];
+
+    if (tool === '*') {
+      return !!options.allowWildcards;
+    }
+
+    // Basic slug validation for server and tool names
+    const slugRegex = /^[a-z0-9-_]+$/i;
+    return slugRegex.test(server) && slugRegex.test(tool);
+  }
+
+  return false;
+}
