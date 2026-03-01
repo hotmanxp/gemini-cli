@@ -34,6 +34,7 @@ export * from './core/baseLlmClient.js';
 export * from './core/client.js';
 export * from './core/contentGenerator.js';
 export * from './core/loggingContentGenerator.js';
+export * from './core/providerContentGenerator.js';
 export * from './core/geminiChat.js';
 export * from './core/logger.js';
 export * from './core/prompts.js';
@@ -116,6 +117,7 @@ export * from './utils/sessionUtils.js';
 
 // Export services
 export * from './services/fileDiscoveryService.js';
+export * from './services/providerRegistry.js';
 export * from './services/gitService.js';
 export * from './services/FolderTrustDiscoveryService.js';
 export * from './services/chatRecordingService.js';

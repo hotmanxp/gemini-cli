@@ -202,7 +202,10 @@ export class OpenAIContentConverter {
       return parameters;
     }
 
-    const converted = JSON.parse(JSON.stringify(parameters));
+    const converted = JSON.parse(JSON.stringify(parameters)) as Record<
+      string,
+      unknown
+    >;
 
     const convertTypes = (obj: unknown): unknown => {
       if (typeof obj !== 'object' || obj === null) {

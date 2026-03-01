@@ -266,4 +266,54 @@ export class NativeLspClient implements LspClient {
   warmup(serverName?: string): Promise<void> {
     return this.service.warmup(serverName);
   }
+
+  /**
+   * Prepare rename operation at a location.
+   *
+   * @param location - The source location to prepare rename for
+   * @param serverName - Optional specific LSP server to query
+   * @returns Promise resolving to rename range and placeholder or null if not available
+   */
+  prepareRename(
+    location: LspLocation,
+    serverName?: string,
+  ): Promise<{ range: LspRange; placeholder: string } | null> {
+    return this.service.prepareRename(location, serverName);
+  }
+
+  /**
+   * Rename a symbol at a location to a new name.
+   *
+   * @param location - The source location to rename
+   * @param newName - The new name for the symbol
+   * @param serverName - Optional specific LSP server to query
+   * @returns Promise resolving to workspace edit or null if rename failed
+   */
+  rename(
+    location: LspLocation,
+    newName: string,
+    serverName?: string,
+  ): Promise<LspWorkspaceEdit | null> {
+    return this.service.rename(location, newName, serverName);
+  }
+
+  /**
+   * Ensure LSP server is running for a given language (lazy loading).
+   * This starts the server on-demand when needed.
+   *
+   * @param language - The programming language to ensure server for
+   */
+  ensureServerRunning(language: string): Promise<void> {
+    return this.service.ensureServerRunning(language);
+  }
+
+  /**
+   * Release reference to LSP server.
+   * Called when LSP operation is complete.
+   *
+   * @param language - The programming language to release
+   */
+  releaseServer(language: string): Promise<void> {
+    return this.service.releaseServer(language);
+  }
 }

@@ -7,7 +7,7 @@
 import http from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
-import { WebSocketServer, type WebSocket } from 'ws';
+import { WebSocketServer, WebSocket } from 'ws';
 import type {
   NetworkLog,
   ConsoleLogPayload,
@@ -52,10 +52,17 @@ export class DevTools extends EventEmitter {
   private static readonly DEFAULT_PORT = 25417;
   private static readonly MAX_PORT_RETRIES = 10;
 
+  // Memory protection: reduced limits to prevent OOM in long-running sessions
+  private static readonly MAX_CONSOLE_LOGS = 1000; // Reduced from 5000
+  private static readonly MAX_NETWORK_LOGS = 500; // Reduced from 2000
+  private static readonly SSE_CLEANUP_TIMEOUT = 5000; // 5s cleanup timeout for SSE connections
+
   private constructor() {
     super();
     // Each SSE client adds 3 listeners; raise the limit to avoid warnings
-    this.setMaxListeners(50);
+    this.setMaxListeners(100);
+    // Suppress MaxListenersExceededWarning for debugging
+    this.on('error', () => {}); // Ignore EventEmitter errors
   }
 
   static getInstance(): DevTools {
@@ -77,7 +84,11 @@ export class DevTools extends EventEmitter {
       timestamp: timestamp || Date.now(),
     };
     this.consoleLogs.push(entry);
-    if (this.consoleLogs.length > 5000) this.consoleLogs.shift();
+    // Memory protection: trim array when exceeding limit
+    if (this.consoleLogs.length > DevTools.MAX_CONSOLE_LOGS) {
+      const removeCount = this.consoleLogs.length - DevTools.MAX_CONSOLE_LOGS;
+      this.consoleLogs.splice(0, removeCount);
+    }
     this.emit('console-update', entry);
   }
 
@@ -94,6 +105,11 @@ export class DevTools extends EventEmitter {
       // Handle chunk accumulation
       if (payload.chunk) {
         const chunks = existing.chunks || [];
+        // Memory protection: limit chunk accumulation
+        if (chunks.length >= 100) {
+          // Drop oldest chunks if we have too many
+          chunks.splice(0, chunks.length - 100);
+        }
         chunks.push(payload.chunk);
         this.logs[existingIndex] = {
           ...existing,
@@ -124,7 +140,11 @@ export class DevTools extends EventEmitter {
         chunks: payload.chunk ? [payload.chunk] : undefined,
       } as NetworkLog;
       this.logs.push(entry);
-      if (this.logs.length > 2000) this.logs.shift();
+      // Memory protection: trim array when exceeding limit
+      if (this.logs.length > DevTools.MAX_NETWORK_LOGS) {
+        const removeCount = this.logs.length - DevTools.MAX_NETWORK_LOGS;
+        this.logs.splice(0, removeCount);
+      }
       this.emit('update', entry);
     }
   }
@@ -192,6 +212,10 @@ export class DevTools extends EventEmitter {
           });
           res.write(`event: snapshot\ndata: ${snapshot}\n\n`);
 
+          // Memory protection: track cleanup state
+          let cleanupDone = false;
+          let cleanupTimeout: NodeJS.Timeout | null = null;
+
           // Incremental updates
           const onNetwork = (log: NetworkLog) => {
             res.write(`event: network\ndata: ${JSON.stringify(log)}\n\n`);
@@ -203,14 +227,42 @@ export class DevTools extends EventEmitter {
             const sessions = Array.from(this.sessions.keys());
             res.write(`event: session\ndata: ${JSON.stringify(sessions)}\n\n`);
           };
-          this.on('update', onNetwork);
-          this.on('console-update', onConsole);
-          this.on('session-update', onSession);
-          req.on('close', () => {
+
+          // Safe cleanup function that can only be called once
+          const cleanup = () => {
+            if (cleanupDone) return;
+            cleanupDone = true;
+            if (cleanupTimeout) {
+              clearTimeout(cleanupTimeout);
+              cleanupTimeout = null;
+            }
             this.off('update', onNetwork);
             this.off('console-update', onConsole);
             this.off('session-update', onSession);
-          });
+          };
+
+          this.on('update', onNetwork);
+          this.on('console-update', onConsole);
+          this.on('session-update', onSession);
+
+          // Cleanup on close with timeout protection
+          const handleClose = () => {
+            cleanup();
+          };
+          const handleError = () => {
+            cleanup();
+          };
+
+          req.on('close', handleClose);
+          req.on('error', handleError);
+
+          // Memory protection: force cleanup after timeout even if close doesn't fire
+          cleanupTimeout = setTimeout(() => {
+            cleanup();
+          }, DevTools.SSE_CLEANUP_TIMEOUT);
+
+          // Unref timeout to allow process to exit
+          cleanupTimeout.unref();
         } else if (req.url === '/' || req.url === '/index.html') {
           res.writeHead(200, { 'Content-Type': 'text/html' });
           res.end(INDEX_HTML);
@@ -257,6 +309,29 @@ export class DevTools extends EventEmitter {
 
     this.wss.on('connection', (ws: WebSocket) => {
       let sessionId: string | null = null;
+      let cleanupDone = false;
+      let connectionTimeout: NodeJS.Timeout | null = null;
+
+      // Memory protection: timeout for unregistered connections
+      connectionTimeout = setTimeout(() => {
+        if (!sessionId && !cleanupDone) {
+          ws.terminate(); // Force close unregistered connections
+        }
+      }, 60000); // 1 minute timeout for registration
+      connectionTimeout.unref();
+
+      const cleanup = () => {
+        if (cleanupDone) return;
+        cleanupDone = true;
+        if (connectionTimeout) {
+          clearTimeout(connectionTimeout);
+          connectionTimeout = null;
+        }
+        if (sessionId) {
+          this.sessions.delete(sessionId);
+          this.emit('session-update');
+        }
+      };
 
       ws.on('message', (data: Buffer) => {
         try {
@@ -267,6 +342,12 @@ export class DevTools extends EventEmitter {
           if (message.type === 'register') {
             sessionId = String(message.sessionId);
             if (!sessionId) return;
+
+            // Clear registration timeout
+            if (connectionTimeout) {
+              clearTimeout(connectionTimeout);
+              connectionTimeout = null;
+            }
 
             this.sessions.set(sessionId, {
               sessionId,
@@ -294,29 +375,52 @@ export class DevTools extends EventEmitter {
       });
 
       ws.on('close', () => {
-        if (sessionId) {
-          this.sessions.delete(sessionId);
-          this.emit('session-update');
-        }
+        cleanup();
       });
 
       ws.on('error', () => {
-        // WebSocket error — no action needed
+        // WebSocket error — cleanup will be handled by close event
       });
     });
 
     // Heartbeat mechanism
     this.heartbeatTimer = setInterval(() => {
       const now = Date.now();
+      const sessionsToRemove: string[] = [];
+
+      // First pass: identify stale sessions
       this.sessions.forEach((session, sessionId) => {
         if (now - session.lastPing > 30000) {
-          session.ws.close();
-          this.sessions.delete(sessionId);
+          sessionsToRemove.push(sessionId);
         } else {
-          // Send ping
-          session.ws.send(JSON.stringify({ type: 'ping', timestamp: now }));
+          // Send ping with error handling
+          try {
+            if (session.ws.readyState === WebSocket.OPEN) {
+              session.ws.send(JSON.stringify({ type: 'ping', timestamp: now }));
+            }
+          } catch {
+            // Mark for removal if send fails
+            sessionsToRemove.push(sessionId);
+          }
         }
       });
+
+      // Second pass: remove stale sessions
+      for (const sessionId of sessionsToRemove) {
+        const session = this.sessions.get(sessionId);
+        if (session) {
+          try {
+            session.ws.close();
+          } catch {
+            // Ignore close errors
+          }
+          this.sessions.delete(sessionId);
+        }
+      }
+
+      if (sessionsToRemove.length > 0) {
+        this.emit('session-update');
+      }
     }, 10000);
     this.heartbeatTimer.unref();
   }

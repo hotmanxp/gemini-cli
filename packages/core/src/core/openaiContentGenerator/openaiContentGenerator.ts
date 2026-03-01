@@ -4,7 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { ContentGenerator } from '../contentGenerator.js';
+import type {
+  ContentGenerator,
+  ContentGeneratorConfig,
+} from '../contentGenerator.js';
 import type { Config } from '../../config/config.js';
 import { type OpenAICompatibleProvider } from './provider/index.js';
 import type {
@@ -19,7 +22,6 @@ import type { PipelineConfig } from './pipeline.js';
 import { ContentGenerationPipeline } from './pipeline.js';
 import { EnhancedErrorHandler } from './errorHandler.js';
 import { RequestTokenEstimator } from '../../utils/request-tokenizer/index.js';
-import type { ContentGeneratorConfig } from '../contentGenerator.js';
 import { isAbortError } from '../../utils/errors.js';
 import { debugLogger } from '../../utils/debugLogger.js';
 

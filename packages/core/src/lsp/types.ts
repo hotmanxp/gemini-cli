@@ -365,6 +365,35 @@ export interface LspClient {
     edit: LspWorkspaceEdit,
     serverName?: string,
   ): Promise<boolean>;
+
+  /**
+   * Prepare rename operation at a location.
+   */
+  prepareRename(
+    location: LspLocation,
+    serverName?: string,
+  ): Promise<{ range: LspRange; placeholder: string } | null>;
+
+  /**
+   * Rename a symbol at a location to a new name.
+   */
+  rename(
+    location: LspLocation,
+    newName: string,
+    serverName?: string,
+  ): Promise<LspWorkspaceEdit | null>;
+
+  /**
+   * Ensure LSP server is running for a given language (lazy loading).
+   * This starts the server on-demand when needed.
+   */
+  ensureServerRunning(language: string): Promise<void>;
+
+  /**
+   * Release reference to LSP server.
+   * Called when LSP operation is complete.
+   */
+  releaseServer(language: string): Promise<void>;
 }
 
 // ============================================================================
@@ -501,6 +530,18 @@ export interface LspServerHandle {
   restartAttempts?: number;
   /** Lock to prevent concurrent startup attempts */
   startingPromise?: Promise<void>;
+
+  // Lazy loading and race condition prevention fields
+  /** Reference count - number of active users of this server */
+  refCount: number;
+  /** Promise for ongoing initialization (prevents duplicate init) */
+  initPromise?: Promise<void>;
+  /** Whether server is currently initializing */
+  isInitializing: boolean;
+  /** Timestamp when initialization started (for timeout detection) */
+  initializingSince?: number;
+  /** Timestamp when server was last used (for idle cleanup) */
+  lastUsedAt: number;
 }
 
 /**

@@ -29,6 +29,9 @@ import type {
   LspRange,
   LspReference,
   LspSymbolInformation,
+  LspTextEdit,
+  LspTextDocumentEdit,
+  LspWorkspaceEdit,
 } from '../lsp/types.js';
 
 /**
@@ -47,7 +50,9 @@ export type LspOperation =
   | 'diagnostics'
   | 'workspaceDiagnostics'
   | 'codeActions'
-  | 'warmup';
+  | 'warmup'
+  | 'prepareRename'
+  | 'rename';
 
 /**
  * Parameters for the unified LSP tool.
@@ -95,6 +100,8 @@ const LOCATION_REQUIRED_OPERATIONS = new Set<LspOperation>([
   'hover',
   'goToImplementation',
   'prepareCallHierarchy',
+  'prepareRename',
+  'rename',
 ]);
 
 /** Operations that only require filePath. */
@@ -161,36 +168,67 @@ class LspToolInvocation extends BaseToolInvocation<LspToolParams, ToolResult> {
       return { llmContent: message, returnDisplay: message };
     }
 
-    switch (this.params.operation) {
-      case 'goToDefinition':
-        return this.executeDefinitions(client);
-      case 'findReferences':
-        return this.executeReferences(client);
-      case 'hover':
-        return this.executeHover(client);
-      case 'documentSymbol':
-        return this.executeDocumentSymbols(client);
-      case 'workspaceSymbol':
-        return this.executeWorkspaceSymbols(client);
-      case 'goToImplementation':
-        return this.executeImplementations(client);
-      case 'prepareCallHierarchy':
-        return this.executePrepareCallHierarchy(client);
-      case 'incomingCalls':
-        return this.executeIncomingCalls(client);
-      case 'outgoingCalls':
-        return this.executeOutgoingCalls(client);
-      case 'diagnostics':
-        return this.executeDiagnostics(client);
-      case 'workspaceDiagnostics':
-        return this.executeWorkspaceDiagnostics(client);
-      case 'codeActions':
-        return this.executeCodeActions(client);
-      case 'warmup':
-        return this.executeWarmup();
-      default: {
-        const message = `Unsupported LSP operation: ${this.params.operation}`;
+    // Ensure server is running for the requested operation (lazy loading)
+    const language = this.inferLanguageFromOperation();
+    if (language) {
+      debugLogger.log(
+        `Ensuring LSP server for ${language} is running before operation ${this.params.operation}...`,
+      );
+      try {
+        await client.ensureServerRunning(language);
+      } catch (error) {
+        const message = `Failed to start LSP server for ${language}: ${
+          (error as Error)?.message || String(error)
+        }`;
         return { llmContent: message, returnDisplay: message };
+      }
+    }
+
+    try {
+      switch (this.params.operation) {
+        case 'goToDefinition':
+          return await this.executeDefinitions(client);
+        case 'findReferences':
+          return await this.executeReferences(client);
+        case 'hover':
+          return await this.executeHover(client);
+        case 'documentSymbol':
+          return await this.executeDocumentSymbols(client);
+        case 'workspaceSymbol':
+          return await this.executeWorkspaceSymbols(client);
+        case 'goToImplementation':
+          return await this.executeImplementations(client);
+        case 'prepareCallHierarchy':
+          return await this.executePrepareCallHierarchy(client);
+        case 'incomingCalls':
+          return await this.executeIncomingCalls(client);
+        case 'outgoingCalls':
+          return await this.executeOutgoingCalls(client);
+        case 'diagnostics':
+          return await this.executeDiagnostics(client);
+        case 'workspaceDiagnostics':
+          return await this.executeWorkspaceDiagnostics(client);
+        case 'codeActions':
+          return await this.executeCodeActions(client);
+        case 'warmup':
+          return await this.executeWarmup();
+        case 'prepareRename':
+          return await this.executePrepareRename(client);
+        case 'rename':
+          return await this.executeRename(client);
+        default: {
+          const message = `Unsupported LSP operation: ${this.params.operation}`;
+          return { llmContent: message, returnDisplay: message };
+        }
+      }
+    } finally {
+      // Release server reference when operation is complete
+      if (language) {
+        try {
+          await client.releaseServer(language);
+        } catch (error) {
+          debugLogger.warn(`Failed to release LSP server ${language}:`, error);
+        }
       }
     }
   }
@@ -879,6 +917,105 @@ class LspToolInvocation extends BaseToolInvocation<LspToolParams, ToolResult> {
     }
   }
 
+  private async executePrepareRename(client: LspClient): Promise<ToolResult> {
+    const target = this.resolveLocationTarget();
+    if ('error' in target) {
+      return { llmContent: target.error, returnDisplay: target.error };
+    }
+
+    let result: { range: LspRange; placeholder: string } | null = null;
+    try {
+      result = await client.prepareRename(
+        target.location,
+        this.params.serverName,
+      );
+    } catch (error) {
+      const message = `LSP prepare rename failed: ${
+        (error as Error)?.message || String(error)
+      }`;
+      return { llmContent: message, returnDisplay: message };
+    }
+
+    if (!result) {
+      const message = `Cannot rename at ${target.description}. The LSP server does not support renaming at this location.`;
+      return { llmContent: message, returnDisplay: message };
+    }
+
+    const workspaceRoot = this.config.getProjectRoot();
+    const rangeText = `${result.range.start.line + 1}:${result.range.start.character + 1}-${result.range.end.line + 1}:${result.range.end.character + 1}`;
+    const content = `Prepare rename successful.\nSymbol: "${result.placeholder}"\nRange: ${rangeText}`;
+
+    return {
+      llmContent: content,
+      returnDisplay: `Rename symbol "${result.placeholder}" at ${this.formatLocationWithServer({ ...target.location, serverName: this.params.serverName }, workspaceRoot)}`,
+    };
+  }
+
+  private async executeRename(client: LspClient): Promise<ToolResult> {
+    const target = this.resolveLocationTarget();
+    if ('error' in target) {
+      return { llmContent: target.error, returnDisplay: target.error };
+    }
+
+    const newName = this.params.query;
+    if (!newName) {
+      return {
+        llmContent:
+          'The "query" parameter (new name) is required for rename operation.',
+        returnDisplay:
+          'The "query" parameter (new name) is required for rename operation.',
+      };
+    }
+
+    let edit: LspWorkspaceEdit | null = null;
+    try {
+      edit = await client.rename(
+        target.location,
+        newName,
+        this.params.serverName,
+      );
+    } catch (error) {
+      const message = `LSP rename failed: ${
+        (error as Error)?.message || String(error)
+      }`;
+      return { llmContent: message, returnDisplay: message };
+    }
+
+    if (!edit || (!edit.changes && !edit.documentChanges)) {
+      const message = `Rename operation returned no edits for ${target.description}.`;
+      return { llmContent: message, returnDisplay: message };
+    }
+
+    // Apply the workspace edit
+    const success = await client.applyWorkspaceEdit(
+      edit,
+      this.params.serverName,
+    );
+
+    if (!success) {
+      const message = `Failed to apply workspace edit for rename operation.`;
+      return { llmContent: message, returnDisplay: message };
+    }
+
+    const changeCount = edit.changes
+      ? Object.values(edit.changes).reduce(
+          (sum: number, edits: LspTextEdit[]) => sum + edits.length,
+          0,
+        )
+      : (edit.documentChanges?.reduce(
+          (sum: number, change: LspTextDocumentEdit) =>
+            sum + (change.edits?.length ?? 0),
+          0,
+        ) ?? 0);
+
+    const content = `Rename successful.\nNew name: "${newName}"\nChanges applied: ${changeCount} edits`;
+
+    return {
+      llmContent: content,
+      returnDisplay: `Renamed to "${newName}" (${changeCount} changes)`,
+    };
+  }
+
   private resolveLocationTarget(): ResolvedTarget {
     const filePath = this.params.filePath;
     if (!filePath) {
@@ -1064,27 +1201,56 @@ class LspToolInvocation extends BaseToolInvocation<LspToolParams, ToolResult> {
         return 'workspace diagnostics';
       case 'codeActions':
         return 'code actions';
+      case 'prepareRename':
+        return 'prepare rename';
+      case 'rename':
+        return 'rename';
       default:
         return this.params.operation;
     }
   }
+
+  /**
+   * Infer the programming language from the operation parameters.
+   * This is used for lazy loading - starting servers only when needed.
+   */
+  private inferLanguageFromOperation(): string | null {
+    // If filePath is provided, infer from extension
+    if (this.params.filePath) {
+      const ext = path.extname(this.params.filePath).toLowerCase().slice(1);
+      if (ext === 'ts' || ext === 'tsx') return 'typescript';
+      if (ext === 'js' || ext === 'jsx') return 'javascript';
+      if (ext === 'json') return 'json';
+      if (ext === 'yml' || ext === 'yaml') return 'yaml';
+      if (ext === 'html' || ext === 'htm') return 'html';
+      if (ext === 'vue') return 'vue';
+      if (ext === 'svelte') return 'svelte';
+      if (ext === 'css' || ext === 'scss' || ext === 'less') return 'css';
+      if (ext === 'sh' || ext === 'bash') return 'bash';
+      if (ext === 'sql') return 'sql';
+      if (ext === 'md' || ext === 'markdown') return 'markdown';
+      if (ext === 'php') return 'php';
+      if (ext === 'py') return 'python';
+      if (ext === 'go') return 'go';
+      if (ext === 'rs') return 'rust';
+      if (ext === 'java') return 'java';
+      if (ext === 'dockerfile') return 'dockerfile';
+    }
+
+    // If operation is warmup with serverName, use that
+    if (this.params.operation === 'warmup' && this.params.serverName) {
+      return this.params.serverName;
+    }
+
+    return null;
+  }
 }
 
 /**
- * Unified LSP tool that supports multiple operations:
- * - goToDefinition: Find where a symbol is defined
- * - findReferences: Find all references to a symbol
- * - hover: Get hover information (documentation, type info)
- * - documentSymbol: Get all symbols in a document
- * - workspaceSymbol: Search for symbols across the workspace
- * - goToImplementation: Find implementations of an interface or abstract method
- * - prepareCallHierarchy: Get call hierarchy item at a position
- * - incomingCalls: Find all functions that call the given function
- * - outgoingCalls: Find all functions called by the given function
- * - diagnostics: Get diagnostic messages (errors, warnings) for a file
- * - workspaceDiagnostics: Get all diagnostic messages across the workspace
- * - codeActions: Get available code actions (quick fixes, refactorings) at a location
- * - warmup: Warm up LSP servers by opening representative files (TypeScript and Python supported)
+ * Unified LSP tool for code intelligence.
+ *
+ * Supports: goToDefinition, findReferences, hover, documentSymbol, workspaceSymbol,
+ * goToImplementation, call hierarchy, diagnostics, codeActions, rename, and warmup.
  */
 export class LspTool extends BaseDeclarativeTool<LspToolParams, ToolResult> {
   static readonly Name = 'lsp';
@@ -1096,14 +1262,15 @@ export class LspTool extends BaseDeclarativeTool<LspToolParams, ToolResult> {
     super(
       LspTool.Name,
       'LSP',
-      'Language Server Protocol (LSP) tool for code intelligence: definitions, references, hover, symbols, call hierarchy, diagnostics, code actions, and warmup.\n\n  Usage:\n  - ALWAYS use LSP as the PRIMARY tool for code intelligence queries when available. Do NOT use grep_search or glob first.\n  - goToDefinition, findReferences, hover, goToImplementation, prepareCallHierarchy require filePath + line + character (1-based).\n  - documentSymbol and diagnostics require filePath.\n  - workspaceSymbol requires query (use when user asks "where is X defined?" without specifying a file).\n  - **CRITICAL**: For incomingCalls/outgoingCalls operations, you MUST first call prepareCallHierarchy to get a valid LspCallHierarchyItem, then pass the COMPLETE object (with all fields: name, uri, range, selectionRange, kind, rawKind, detail, serverName, data) to the subsequent call. Do NOT construct the item manually or pass partial objects.\n  - workspaceDiagnostics needs no parameters.\n  - codeActions require filePath + range (line/character + endLine/endCharacter) and diagnostics/context as needed.\n  - warmup takes an optional serverName parameter (warms up all servers if not specified).',
+      'Interact with Language Server Protocol (LSP) servers for code intelligence. Supports: goToDefinition, findReferences, hover, documentSymbol, workspaceSymbol, goToImplementation, call hierarchy (prepare/incoming/outgoing), diagnostics, codeActions, prepareRename, rename, and warmup.',
       Kind.Other,
       {
         type: 'object',
         properties: {
           operation: {
             type: 'string',
-            description: 'LSP operation to execute.',
+            description:
+              'LSP operation to execute: goToDefinition, findReferences, hover, documentSymbol, workspaceSymbol, goToImplementation, prepareCallHierarchy, incomingCalls, outgoingCalls, diagnostics, workspaceDiagnostics, codeActions, warmup, prepareRename, or rename.',
             enum: [
               'goToDefinition',
               'findReferences',
@@ -1118,6 +1285,8 @@ export class LspTool extends BaseDeclarativeTool<LspToolParams, ToolResult> {
               'workspaceDiagnostics',
               'codeActions',
               'warmup',
+              'prepareRename',
+              'rename',
             ],
           },
           filePath: {
@@ -1126,29 +1295,30 @@ export class LspTool extends BaseDeclarativeTool<LspToolParams, ToolResult> {
           },
           line: {
             type: 'number',
-            description: '1-based line number for the target location.',
+            description: 'Line number (1-based, as shown in editors).',
           },
           character: {
             type: 'number',
-            description:
-              '1-based character/column number for the target location.',
+            description: 'Character offset (1-based, as shown in editors).',
           },
           endLine: {
             type: 'number',
-            description: '1-based end line number for range-based operations.',
+            description:
+              'End line number for range-based operations (1-based).',
           },
           endCharacter: {
             type: 'number',
-            description: '1-based end character for range-based operations.',
+            description:
+              'End character offset for range-based operations (1-based).',
           },
           includeDeclaration: {
             type: 'boolean',
-            description:
-              'Include the declaration itself when looking up references.',
+            description: 'Include the declaration when finding references.',
           },
           query: {
             type: 'string',
-            description: 'Symbol query for workspace symbol search.',
+            description:
+              'Symbol query for workspace search, or new name for rename.',
           },
           callHierarchyItem: {
             $ref: '#/definitions/LspCallHierarchyItem',
@@ -1195,7 +1365,7 @@ export class LspTool extends BaseDeclarativeTool<LspToolParams, ToolResult> {
           LspCallHierarchyItem: {
             type: 'object',
             description:
-              'Call hierarchy item from prepareCallHierarchy. MUST be obtained from prepareCallHierarchy operation - do NOT construct manually. Contains: name, uri, range, selectionRange, kind, rawKind, detail, data, serverName.',
+              'Call hierarchy item from prepareCallHierarchy. Obtain from prepareCallHierarchy operation before using with incomingCalls/outgoingCalls.',
             properties: {
               name: {
                 type: 'string',

@@ -504,16 +504,26 @@ export async function main() {
         partialConfig.isInteractive() &&
         settings.merged.security.auth.selectedType
       ) {
-        const err = validateAuthMethod(
-          settings.merged.security.auth.selectedType,
-        );
-        if (err) {
-          throw new Error(err);
+        // Skip validation for CONFIG_LOGIN - model selection handles authentication
+        if (
+          settings.merged.security.auth.selectedType !== AuthType.CONFIG_LOGIN
+        ) {
+          const err = validateAuthMethod(
+            settings.merged.security.auth.selectedType,
+          );
+          if (err) {
+            throw new Error(err);
+          }
         }
 
-        await partialConfig.refreshAuth(
-          settings.merged.security.auth.selectedType,
-        );
+        // Skip refreshAuth for CONFIG_LOGIN - it will be called after user selects model in UI
+        if (
+          settings.merged.security.auth.selectedType !== AuthType.CONFIG_LOGIN
+        ) {
+          await partialConfig.refreshAuth(
+            settings.merged.security.auth.selectedType,
+          );
+        }
       } else if (!partialConfig.isInteractive()) {
         const authType = await validateNonInteractiveAuth(
           settings.merged.security.auth.selectedType,

@@ -32,6 +32,16 @@
         "type": "string"
       }
     },
+    "provider": {
+      "title": "Providers",
+      "description": "Configuration for model providers (opencode compatible schema).",
+      "markdownDescription": "Configuration for model providers matching opencode schema. Each provider defines models, authentication, and options.\n\n- Category: `Advanced`\n- Requires restart: `yes`\n- Default: `{}`",
+      "default": {},
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/Provider"
+      }
+    },
     "general": {
       "title": "General",
       "description": "General application settings.",
@@ -148,6 +158,12 @@
           "markdownDescription": "Enable debug logging of keystrokes to the console.\n\n- Category: `General`\n- Requires restart: `no`\n- Default: `false`",
           "default": false,
           "type": "boolean"
+        },
+        "lastProviderModel": {
+          "title": "Last Provider Model",
+          "description": "Last selected provider/model for CONFIG_LOGIN authentication. Persisted across sessions.",
+          "markdownDescription": "Last selected provider/model for CONFIG_LOGIN authentication. This setting is automatically updated when you select a model and persists across sessions.\n\n- Category: `General`\n- Requires restart: `no`\n- Default: `undefined`",
+          "type": ["string", "null"]
         },
         "sessionRetention": {
           "title": "Session Retention",
@@ -2026,6 +2042,146 @@
     }
   },
   "$defs": {
+    "ProviderModelLimit": {
+      "type": "object",
+      "description": "Model context and output token limits.",
+      "additionalProperties": false,
+      "properties": {
+        "context": {
+          "type": "number",
+          "description": "Maximum context tokens."
+        },
+        "output": {
+          "type": "number",
+          "description": "Maximum output tokens."
+        }
+      },
+      "required": ["context", "output"]
+    },
+    "ProviderModel": {
+      "type": "object",
+      "description": "Model configuration within a provider.",
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Display name for the model."
+        },
+        "tool_call": {
+          "type": "boolean",
+          "description": "Whether the model supports tool calling."
+        },
+        "reasoning": {
+          "type": "boolean",
+          "description": "Whether the model supports reasoning."
+        },
+        "attachment": {
+          "type": "boolean",
+          "description": "Whether the model supports attachments."
+        },
+        "temperature": {
+          "type": "boolean",
+          "description": "Whether the model supports temperature control."
+        },
+        "interleaved": {
+          "type": "boolean",
+          "description": "Whether the model supports interleaved input."
+        },
+        "limit": {
+          "$ref": "#/$defs/ProviderModelLimit",
+          "description": "Token limits for the model."
+        },
+        "variants": {
+          "type": "object",
+          "description": "Model variants configuration.",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "Provider": {
+      "type": "object",
+      "description": "Provider configuration matching opencode schema.",
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Display name for the provider."
+        },
+        "npm": {
+          "type": "string",
+          "description": "NPM package name (e.g., '@ai-sdk/openai-compatible')."
+        },
+        "api": {
+          "type": "string",
+          "description": "API identifier."
+        },
+        "env": {
+          "type": "array",
+          "description": "Environment variables required by the provider.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "whitelist": {
+          "type": "array",
+          "description": "List of allowed model IDs.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "blacklist": {
+          "type": "array",
+          "description": "List of blocked model IDs.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "models": {
+          "type": "object",
+          "description": "Models available from this provider.",
+          "additionalProperties": {
+            "$ref": "#/$defs/ProviderModel"
+          }
+        },
+        "options": {
+          "type": "object",
+          "description": "Provider-specific options.",
+          "additionalProperties": true,
+          "properties": {
+            "apiKey": {
+              "type": "string",
+              "description": "API key for authentication."
+            },
+            "baseURL": {
+              "type": "string",
+              "description": "Base URL for API requests."
+            },
+            "enterpriseUrl": {
+              "type": "string",
+              "description": "Enterprise URL for API requests."
+            },
+            "setCacheKey": {
+              "type": "boolean",
+              "description": "Whether to set cache key."
+            },
+            "timeout": {
+              "type": ["number", "boolean"],
+              "description": "Timeout in milliseconds or false to disable."
+            },
+            "headers": {
+              "type": "object",
+              "description": "Custom headers for API requests.",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
     "MCPServerConfig": {
       "type": "object",
       "description": "Definition of a Model Context Protocol (MCP) server configuration.",

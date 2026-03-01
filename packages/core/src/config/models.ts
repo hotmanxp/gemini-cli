@@ -50,6 +50,13 @@ export function resolveModel(
   useGemini3_1: boolean = false,
   useCustomToolModel: boolean = false,
 ): string {
+  // Handle provider/model format (e.g., "qwen/qwen-plus")
+  if (requestedModel.includes('/')) {
+    // For provider models, return as-is or extract the actual model name
+    // The provider prefix helps identify which provider to use
+    return requestedModel;
+  }
+
   switch (requestedModel) {
     case PREVIEW_GEMINI_MODEL:
     case PREVIEW_GEMINI_MODEL_AUTO:
@@ -92,17 +99,24 @@ export function resolveClassifierModel(
   useGemini3_1: boolean = false,
   useCustomToolModel: boolean = false,
 ): string {
-  // For Qwen OAuth, use Qwen models
+  // Handle provider/model format (e.g., "qwen/qwen-plus", "openai/gpt-4")
+  if (requestedModel.includes('/')) {
+    // Already in provider/model format, return as-is
+    return requestedModel;
+  }
+
+  // Check for OAuth-based provider selection
   // Check both explicit authType and environment variable
-  const isQwenOAuth = authType === 'qwen-oauth' || process.env['USE_QWEN_OAUTH'] === 'true';
-  
+  const isQwenOAuth =
+    authType === 'qwen-oauth' || process.env['USE_QWEN_OAUTH'] === 'true';
+
   if (isQwenOAuth) {
     // Qwen uses 'coder-model' as the default/pro model
     // For now, we use the same model for both flash and pro
     // In the future, we could have different Qwen models for different complexities
     return 'coder-model';
   }
-  
+
   if (modelAlias === GEMINI_MODEL_ALIAS_FLASH) {
     if (
       requestedModel === DEFAULT_GEMINI_MODEL_AUTO ||

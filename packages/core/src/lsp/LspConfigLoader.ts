@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-type-assertion */
+/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -15,6 +15,8 @@ import type {
   LspSocketOptions,
 } from './types.js';
 import { debugLogger } from '../utils/debugLogger.js';
+import { getBuiltinServerConfig } from './builtinServers.js';
+import { parse as parseJsonc } from 'jsonc-parser';
 
 /**
  * Replace template variables in a string.
@@ -56,21 +58,45 @@ export class LspConfigLoader {
   constructor(private readonly workspaceRoot: string) {}
 
   /**
-   * Load user .lsp.json configuration.
-   * Supports basic format: { "language": { "command": "...", "extensionToLanguage": {...} } }
+   * Load user LSP configuration from .lsp.json or .lsp.jsonc files.
+   * Supports JSONC format (allows comments and trailing commas).
    */
   async loadUserConfigs(): Promise<LspServerConfig[]> {
-    const lspConfigPath = path.join(this.workspaceRoot, '.lsp.json');
-    if (!fs.existsSync(lspConfigPath)) {
+    // Try .lsp.jsonc first (supports comments), then fall back to .lsp.json
+    const lspJsoncPath = path.join(this.workspaceRoot, '.lsp.jsonc');
+    const lspJsonPath = path.join(this.workspaceRoot, '.lsp.json');
+
+    let configPath: string | null = null;
+    let configContent: string | null = null;
+
+    if (fs.existsSync(lspJsoncPath)) {
+      configPath = lspJsoncPath;
+      try {
+        const rawContent = fs.readFileSync(lspJsoncPath, 'utf-8');
+        configContent = JSON.stringify(parseJsonc(rawContent));
+      } catch (error) {
+        debugLogger.warn('Failed to parse .lsp.jsonc config:', error);
+      }
+    }
+
+    if (!configContent && fs.existsSync(lspJsonPath)) {
+      configPath = lspJsonPath;
+      try {
+        configContent = fs.readFileSync(lspJsonPath, 'utf-8');
+      } catch (error) {
+        debugLogger.warn('Failed to read .lsp.json config:', error);
+      }
+    }
+
+    if (!configContent || !configPath) {
       return [];
     }
 
     try {
-      const configContent = fs.readFileSync(lspConfigPath, 'utf-8');
-      const data = JSON.parse(configContent);
-      return this.parseConfigSource(data, lspConfigPath);
-    } catch (error) {
-      debugLogger.warn('Failed to load user .lsp.json config:', error);
+      const data = JSON.parse(configContent) as unknown;
+      return this.parseConfigSource(data, configPath);
+    } catch (_error) {
+      debugLogger.warn(`Failed to parse LSP config from ${configPath}:`);
       return [];
     }
   }
@@ -78,19 +104,25 @@ export class LspConfigLoader {
   /**
    * Load LSP configurations declared by extensions (Claude plugins).
    */
-  async loadExtensionConfigs(_extensions: any[]): Promise<LspServerConfig[]> {
-    const configs: any[] = [];
+  async loadExtensionConfigs(
+    _extensions: unknown[],
+  ): Promise<LspServerConfig[]> {
+    const configs: LspServerConfig[] = [];
 
     for (const extension of _extensions) {
-      const lspServers = extension.config?.lspServers;
+      const extRecord = extension as Record<string, unknown>;
+      const extConfig = extRecord['config'] as
+        | Record<string, unknown>
+        | undefined;
+      const lspServers = extConfig?.['lspServers'];
       if (!lspServers) {
         continue;
       }
 
-      const originBase = `extension ${extension.name}`;
+      const originBase = `extension ${String(extRecord['name'] ?? 'unknown')}`;
       if (typeof lspServers === 'string') {
         const configPath = this.resolveExtensionConfigPath(
-          extension.path,
+          String(extRecord['path'] ?? ''),
           lspServers,
         );
         if (!fs.existsSync(configPath)) {
@@ -103,23 +135,25 @@ export class LspConfigLoader {
         try {
           const configContent = fs.readFileSync(configPath, 'utf-8');
           const data = JSON.parse(configContent) as unknown;
-          const hydrated = this.hydrateExtensionLspConfig(data, extension.path);
+          const hydrated = this.hydrateExtensionLspConfig(
+            data,
+            String(extRecord['path'] ?? ''),
+          );
           configs.push(
             ...this.parseConfigSource(
               hydrated,
               `${originBase} (${configPath})`,
             ),
           );
-        } catch (error) {
+        } catch (_error) {
           debugLogger.warn(
             `Failed to load extension LSP config from ${configPath}:`,
-            error,
           );
         }
       } else if (this.isRecord(lspServers)) {
         const hydrated = this.hydrateExtensionLspConfig(
-          lspServers as unknown,
-          extension.path,
+          lspServers,
+          String(extRecord['path'] ?? ''),
         );
         configs.push(
           ...this.parseConfigSource(hydrated, `${originBase} (lspServers)`),
@@ -148,7 +182,7 @@ export class LspConfigLoader {
     // Merge configs, user configs take priority
     const mergedConfigs = [...presets];
 
-    const applyConfigs = (configs: any[]) => {
+    const applyConfigs = (configs: LspServerConfig[]) => {
       for (const config of configs) {
         // Find if there's a preset with the same name, if so replace it
         const existingIndex = mergedConfigs.findIndex(
@@ -168,7 +202,9 @@ export class LspConfigLoader {
     return mergedConfigs;
   }
 
-  collectExtensionToLanguageOverrides(configs: any[]): Record<string, string> {
+  collectExtensionToLanguageOverrides(
+    configs: LspServerConfig[],
+  ): Record<string, string> {
     const overrides: Record<string, string> = {};
     for (const config of configs) {
       if (!config.extensionToLanguage) {
@@ -189,7 +225,8 @@ export class LspConfigLoader {
   }
 
   /**
-   * Get built-in preset configurations
+   * Get built-in preset configurations based on detected languages.
+   * Supports 40+ languages from builtinServers.ts.
    */
   private getBuiltInPresets(detectedLanguages: string[]): LspServerConfig[] {
     const presets: LspServerConfig[] = [];
@@ -198,57 +235,18 @@ export class LspConfigLoader {
     const rootUri = pathToFileURL(this.workspaceRoot).toString();
 
     // Generate corresponding LSP server config based on detected languages
-    if (
-      detectedLanguages.includes('typescript') ||
-      detectedLanguages.includes('javascript')
-    ) {
-      presets.push({
-        name: 'typescript-language-server',
-        languages: [
-          'typescript',
-          'javascript',
-          'typescriptreact',
-          'javascriptreact',
-        ],
-        command: 'typescript-language-server',
-        args: ['--stdio'],
-        transport: 'stdio',
-        initializationOptions: {},
-        rootUri,
-        workspaceFolder: this.workspaceRoot,
-        trustRequired: true,
-      });
-    }
+    for (const language of detectedLanguages) {
+      const config = getBuiltinServerConfig(language);
+      if (!config) {
+        continue;
+      }
 
-    if (detectedLanguages.includes('python')) {
-      presets.push({
-        name: 'pylsp',
-        languages: ['python'],
-        command: 'pylsp',
-        args: [],
-        transport: 'stdio',
-        initializationOptions: {},
-        rootUri,
-        workspaceFolder: this.workspaceRoot,
-        trustRequired: true,
-      });
-    }
+      // Merge with detected language info
+      config.rootUri = rootUri;
+      config.workspaceFolder = this.workspaceRoot;
 
-    if (detectedLanguages.includes('go')) {
-      presets.push({
-        name: 'gopls',
-        languages: ['go'],
-        command: 'gopls',
-        args: [],
-        transport: 'stdio',
-        initializationOptions: {},
-        rootUri,
-        workspaceFolder: this.workspaceRoot,
-        trustRequired: true,
-      });
+      presets.push(config);
     }
-
-    // Additional language presets can be added as needed
 
     return presets;
   }
@@ -265,7 +263,7 @@ export class LspConfigLoader {
       return [];
     }
 
-    const configs: any[] = [];
+    const configs: LspServerConfig[] = [];
 
     for (const [key, spec] of Object.entries(source)) {
       if (!this.isRecord(spec)) {

@@ -99,6 +99,7 @@ import { ModelConfigService } from '../services/modelConfigService.js';
 import { DEFAULT_MODEL_CONFIGS } from './defaultModelConfigs.js';
 import { ContextManager } from '../services/contextManager.js';
 import type { GenerateContentParameters } from '@google/genai';
+import { ProviderRegistry } from '../services/providerRegistry.js';
 
 // Re-export OAuth config type
 export type { MCPOAuthConfig, AnyToolInvocation, AnyDeclarativeTool };
@@ -579,6 +580,7 @@ export interface ConfigParameters {
     agents?: AgentSettings;
   }>;
   allowOutsideProjectAccess?: boolean;
+  settings?: { merged: { general?: { lastProviderModel?: string } } };
   enableConseca?: boolean;
   billing?: {
     overageStrategy?: OverageStrategy;
@@ -610,6 +612,9 @@ export class Config implements McpContext {
   private workspaceContext: WorkspaceContext;
   private readonly debugMode: boolean;
   private readonly question: string | undefined;
+  private readonly settings:
+    | { merged: { general?: { lastProviderModel?: string } } }
+    | undefined;
   readonly enableConseca: boolean;
 
   private readonly coreTools: string[] | undefined;
@@ -794,6 +799,8 @@ export class Config implements McpContext {
   private lastModeSwitchTime: number = performance.now();
   readonly userHintService: UserHintService;
   private approvedPlanPath: string | undefined;
+  readonly providerRegistry: ProviderRegistry;
+  private lastProviderModel: string | undefined;
 
   constructor(params: ConfigParameters) {
     this.sessionId = params.sessionId;
@@ -802,6 +809,7 @@ export class Config implements McpContext {
     this.embeddingModel =
       params.embeddingModel ?? DEFAULT_GEMINI_EMBEDDING_MODEL;
     this.fileSystemService = new StandardFileSystemService();
+    this.settings = params.settings;
     this.sandbox = params.sandbox;
     this.targetDir = path.resolve(params.targetDir);
     this.folderTrust = params.folderTrust ?? false;
@@ -1027,6 +1035,9 @@ export class Config implements McpContext {
       overageStrategy: params.billing?.overageStrategy ?? 'ask',
     };
 
+    // Initialize provider registry (will be fully initialized in _initialize)
+    this.providerRegistry = new ProviderRegistry();
+
     if (params.contextFileName) {
       setGeminiMdFilename(params.contextFileName);
     }
@@ -1121,6 +1132,13 @@ export class Config implements McpContext {
     this.promptRegistry = new PromptRegistry();
     this.resourceRegistry = new ResourceRegistry();
 
+    // Initialize provider registry
+    const settingsPath = Storage.getGlobalSettingsPath();
+    await this.providerRegistry.loadFromConfig(settingsPath);
+
+    // Load last selected provider model from settings for cross-session memory
+    // This is used for CONFIG_LOGIN quick re-selection
+    this.lastProviderModel = this.settings?.merged.general?.lastProviderModel;
     this.agentRegistry = new AgentRegistry(this);
     await this.agentRegistry.initialize();
 
@@ -1377,6 +1395,10 @@ export class Config implements McpContext {
     return this.model;
   }
 
+  getProviderRegistry(): ProviderRegistry {
+    return this.providerRegistry;
+  }
+
   getDisableLoopDetection(): boolean {
     return this.disableLoopDetection ?? false;
   }
@@ -1390,12 +1412,29 @@ export class Config implements McpContext {
       this.model = newModel;
       // When the user explicitly sets a model, that becomes the active model.
       this._activeModel = newModel;
+
+      // Track last provider model for CONFIG_LOGIN quick re-selection
+      if (newModel.includes('/')) {
+        this.lastProviderModel = newModel;
+        debugLogger.log(
+          '[Config.setModel] Set lastProviderModel to:',
+          this.lastProviderModel,
+        );
+      }
+
       coreEvents.emitModelChanged(newModel);
       if (this.onModelChange && !isTemporary) {
         this.onModelChange(newModel);
       }
     }
     this.modelAvailabilityService.reset();
+  }
+
+  /**
+   * Get the last selected provider model for CONFIG_LOGIN
+   */
+  getLastProviderModel(): string | undefined {
+    return this.lastProviderModel;
   }
 
   activateFallbackMode(model: string): void {

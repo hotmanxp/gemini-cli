@@ -6,13 +6,12 @@
  * @license
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-type-assertion */
-
 import { OpenAIContentGenerator } from './openaiContentGenerator/index.js';
 import { DashScopeOpenAICompatibleProvider } from './openaiContentGenerator/provider/dashscope.js';
 import type { IQwenOAuth2Client } from '../qwen/qwenOAuth2.js';
 import { SharedTokenManager } from '../qwen/sharedTokenManager.js';
 import type { Config } from '../config/config.js';
+import { AuthType } from './contentGenerator.js';
 import type {
   GenerateContentParameters,
   GenerateContentResponse,
@@ -206,7 +205,7 @@ export async function createQwenContentGenerator(
   const qwenClient = await getQwenOAuthClient(config);
 
   const contentGeneratorConfig: OpenAIContentGeneratorConfig = {
-    authType: 'qwen-oauth' as any,
+    authType: AuthType.USE_QWEN,
     apiKey: 'QWEN_OAUTH_DYNAMIC_TOKEN', // Placeholder, will be replaced dynamically
     baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     model,

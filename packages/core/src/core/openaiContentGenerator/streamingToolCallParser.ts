@@ -183,13 +183,18 @@ export class StreamingToolCallParser {
     if (depth === 0 && newBuffer.trim().length > 0) {
       try {
         // Standard JSON parsing attempt
-        const parsed = JSON.parse(newBuffer);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+        const parsed = JSON.parse(newBuffer) as Record<string, unknown>;
         return { complete: true, value: parsed };
       } catch (e) {
         // Intelligent repair: try auto-closing unclosed strings
         if (inString) {
           try {
-            const repaired = JSON.parse(newBuffer + '"');
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+            const repaired = JSON.parse(newBuffer + '"') as Record<
+              string,
+              unknown
+            >;
             return {
               complete: true,
               value: repaired,
@@ -253,13 +258,15 @@ export class StreamingToolCallParser {
 
         // Try to parse the final buffer
         try {
-          args = JSON.parse(buffer);
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+          args = JSON.parse(buffer) as Record<string, unknown>;
         } catch {
           // Try with repair (auto-close strings)
           const inString = this.inStrings.get(index);
           if (inString) {
             try {
-              args = JSON.parse(buffer + '"');
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+              args = JSON.parse(buffer + '"') as Record<string, unknown>;
             } catch {
               // If all parsing fails, use safeJsonParse as fallback
               args = safeJsonParse(buffer, {});

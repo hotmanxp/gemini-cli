@@ -173,7 +173,7 @@ class JsonRpcConnection {
       this.buffer = this.buffer.slice(messageEnd);
 
       try {
-        const message = JSON.parse(body);
+        const message = JSON.parse(body) as JsonRpcMessage;
         this.routeMessage(message);
       } catch {
         // ignore malformed messages
@@ -258,8 +258,11 @@ export class LspConnectionFactory {
     return new Promise((resolve, reject) => {
       const spawnOptions: cp.SpawnOptions = {
         stdio: 'pipe',
+        shell: true, // 使用 shell 启动，确保能从 PATH 找到命令
         ...options,
       };
+
+      debugLogger.log(`Spawning LSP server: ${command} ${args.join(' ')}`);
       const processInstance = cp.spawn(command, args, spawnOptions);
 
       const timeoutId = setTimeout(() => {
@@ -271,11 +274,13 @@ export class LspConnectionFactory {
 
       processInstance.once('error', (error) => {
         clearTimeout(timeoutId);
+        debugLogger.error(`LSP server spawn error: ${error.message}`);
         reject(new Error(`Failed to spawn LSP server: ${error.message}`));
       });
 
       processInstance.once('spawn', () => {
         clearTimeout(timeoutId);
+        debugLogger.log(`LSP server spawned successfully: ${command}`);
 
         if (!processInstance.stdout || !processInstance.stdin) {
           reject(new Error('LSP server stdio not available'));
@@ -295,6 +300,49 @@ export class LspConnectionFactory {
           connection,
           process: processInstance,
         });
+      });
+    });
+  }
+
+  /**
+   * Create stdio LSP connection from an existing process
+   */
+  static async createStdioConnectionFromProcess(
+    process: cp.ChildProcessWithoutNullStreams,
+    timeoutMs = 10000,
+  ): Promise<LspConnection> {
+    return new Promise((resolve, reject) => {
+      if (!process.stdout || !process.stdin) {
+        reject(new Error('Process stdio not available'));
+        return;
+      }
+
+      const timeoutId = setTimeout(() => {
+        reject(new Error('LSP connection setup timeout'));
+      }, timeoutMs);
+
+      const connection = new JsonRpcConnection(
+        (payload) => process.stdin.write(payload),
+        () => process.stdin.end(),
+      );
+
+      connection.listen(process.stdout);
+      process.once('exit', () => connection.end());
+      process.once('close', () => connection.end());
+
+      process.once('error', (error) => {
+        clearTimeout(timeoutId);
+        debugLogger.error(`LSP process error: ${error.message}`);
+        reject(new Error(`LSP process error: ${error.message}`));
+      });
+
+      // Process is already running, resolve immediately
+      clearTimeout(timeoutId);
+      debugLogger.log('LSP connection established from existing process');
+
+      resolve({
+        connection,
+        process,
       });
     });
   }
