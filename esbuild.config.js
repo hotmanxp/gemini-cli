@@ -95,6 +95,10 @@ const cliConfig = {
   plugins: createWasmPlugins(),
   alias: {
     'is-in-ci': path.resolve(__dirname, 'packages/cli/src/patches/is-in-ci.ts'),
+    'jsonc-parser': path.resolve(
+      __dirname,
+      'node_modules/jsonc-parser/lib/esm/main.js',
+    ),
     ...commonAliases,
   },
   metafile: true,
