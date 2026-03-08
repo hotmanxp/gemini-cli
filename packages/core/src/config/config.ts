@@ -2822,7 +2822,7 @@ export class Config implements McpContext {
     const override = this.getAgentOverride('browser_agent');
     const customConfig = this.getAgentsSettings()?.browser ?? {};
     return {
-      enabled: override?.enabled ?? false,
+      enabled: override?.enabled ?? true,
       model: override?.modelConfig?.model,
       customConfig: {
         sessionMode: customConfig.sessionMode ?? 'persistent',

@@ -1431,7 +1431,7 @@ describe('Server Config (config.ts)', () => {
       const config = new Config(baseParams);
       const browserConfig = config.getBrowserAgentConfig();
 
-      expect(browserConfig.enabled).toBe(false);
+      expect(browserConfig.enabled).toBe(true);
       expect(browserConfig.model).toBeUndefined();
       expect(browserConfig.customConfig.sessionMode).toBe('persistent');
       expect(browserConfig.customConfig.headless).toBe(false);

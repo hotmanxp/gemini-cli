@@ -244,6 +244,7 @@ export class AgentRegistry {
     this.registerLocalAgent(GeneralistAgent(this.config));
 
     // Register the browser agent if enabled in settings.
+    // Browser agent is enabled by default. Set enabled: false to disable.
     // Tools are configured dynamically at invocation time via browserAgentFactory.
     const browserConfig = this.config.getBrowserAgentConfig();
     if (browserConfig.enabled) {

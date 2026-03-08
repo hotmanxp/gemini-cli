@@ -103,14 +103,15 @@ The browser agent requires:
 
 #### Enabling the browser agent
 
-The browser agent is disabled by default. Enable it in your `settings.json`:
+The browser agent is **enabled by default**. To disable it, set `enabled: false`
+in your `settings.json`:
 
 ```json
 {
   "agents": {
     "overrides": {
       "browser_agent": {
-        "enabled": true
+        "enabled": false
       }
     }
   }
