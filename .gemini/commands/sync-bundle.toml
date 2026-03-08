@@ -1,4 +1,4 @@
-description="Builds and syncs bundle to pnpm_global"
+description = "Builds and syncs bundle to pnpm_global"
 prompt = """
 Builds the Gemini CLI bundle and synchronizes it to the global pnpm directory.
 
