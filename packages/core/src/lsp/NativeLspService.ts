@@ -52,6 +52,14 @@ export class NativeLspService {
   private languageDetector: LspLanguageDetector;
   private normalizer: LspResponseNormalizer;
 
+  private isString(value: unknown): value is string {
+    return typeof value === 'string';
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+  }
+
   constructor(
     config: CoreConfig,
     workspaceContext: WorkspaceContext,
@@ -939,9 +947,8 @@ export class NativeLspService {
           },
         );
 
-        if (response && typeof response === 'object') {
-          const responseObj = response as Record<string, unknown>;
-          const items = responseObj['items'];
+        if (this.isRecord(response)) {
+          const items = response['items'];
           if (Array.isArray(items)) {
             for (const item of items) {
               const normalized = this.normalizer.normalizeDiagnostic(
@@ -986,9 +993,8 @@ export class NativeLspService {
             },
           );
 
-          if (response && typeof response === 'object') {
-            const responseObj = response as Record<string, unknown>;
-            const items = responseObj['items'];
+          if (this.isRecord(response)) {
+            const items = response['items'];
             if (Array.isArray(items) && items.length > 0) {
               allDiagnostics.length = 0; // Clear previous empty results
               for (const item of items) {
@@ -1037,9 +1043,8 @@ export class NativeLspService {
           },
         );
 
-        if (response && typeof response === 'object') {
-          const responseObj = response as Record<string, unknown>;
-          const items = responseObj['items'];
+        if (this.isRecord(response)) {
+          const items = response['items'];
           if (Array.isArray(items)) {
             for (const item of items) {
               if (results.length >= limit) {
@@ -1230,12 +1235,11 @@ export class NativeLspService {
     if (!response) {
       return false;
     }
-    const message =
-      typeof response === 'string'
-        ? response
-        : typeof (response as Record<string, unknown>)['message'] === 'string'
-          ? ((response as Record<string, unknown>)['message'] as string)
-          : '';
+    const message = this.isString(response)
+      ? response
+      : this.isRecord(response) && this.isString(response['message'])
+        ? response['message']
+        : '';
     return message.includes('No Project');
   }
 

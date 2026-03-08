@@ -51,6 +51,7 @@ export default tseslint.config(
       'evals/**',
       'packages/test-utils/**',
       '.gemini/skills/**',
+      'packages/**/src/generated/**',
     ],
   },
   eslint.configs.recommended,

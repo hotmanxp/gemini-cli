@@ -40,6 +40,26 @@ import {
  */
 export class LspResponseNormalizer {
   // ============================================================================
+  // Type Guards
+  // ============================================================================
+
+  private isString(value: unknown): value is string {
+    return typeof value === 'string';
+  }
+
+  private isNumber(value: unknown): value is number {
+    return typeof value === 'number';
+  }
+
+  private isBoolean(value: unknown): value is boolean {
+    return typeof value === 'boolean';
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+  }
+
+  // ============================================================================
   // Diagnostic Normalization
   // ============================================================================
 
@@ -47,38 +67,36 @@ export class LspResponseNormalizer {
    * Normalize diagnostic result from LSP response
    */
   normalizeDiagnostic(item: unknown, serverName: string): LspDiagnostic | null {
-    if (!item || typeof item !== 'object') {
+    if (!this.isRecord(item)) {
       return null;
     }
 
-    const itemObj = item as Record<string, unknown>;
-    const range = this.normalizeRange(itemObj['range']);
+    const range = this.normalizeRange(item['range']);
     if (!range) {
       return null;
     }
 
-    const message =
-      typeof itemObj['message'] === 'string' ? itemObj['message'] : '';
+    const message = this.isString(item['message']) ? item['message'] : '';
     if (!message) {
       return null;
     }
 
-    const severityNum =
-      typeof itemObj['severity'] === 'number' ? itemObj['severity'] : undefined;
+    const severityNum = this.isNumber(item['severity'])
+      ? item['severity']
+      : undefined;
     const severity = severityNum
       ? DIAGNOSTIC_SEVERITY_LABELS[severityNum]
       : undefined;
 
-    const code = itemObj['code'];
+    const code = item['code'];
     const codeValue =
-      typeof code === 'string' || typeof code === 'number' ? code : undefined;
+      this.isString(code) || this.isNumber(code) ? code : undefined;
 
-    const source =
-      typeof itemObj['source'] === 'string' ? itemObj['source'] : undefined;
+    const source = this.isString(item['source']) ? item['source'] : undefined;
 
-    const tags = this.normalizeDiagnosticTags(itemObj['tags']);
+    const tags = this.normalizeDiagnosticTags(item['tags']);
     const relatedInfo = this.normalizeDiagnosticRelatedInfo(
-      itemObj['relatedInformation'],
+      item['relatedInformation'],
     );
 
     return {
@@ -146,20 +164,18 @@ export class LspResponseNormalizer {
 
     const result: Array<{ location: LspLocation; message: string }> = [];
     for (const item of info) {
-      if (!item || typeof item !== 'object') {
+      if (!this.isRecord(item)) {
         continue;
       }
-      const itemObj = item as Record<string, unknown>;
-      const location = itemObj['location'];
-      if (!location || typeof location !== 'object') {
+      const location = item['location'];
+      if (!this.isRecord(location)) {
         continue;
       }
-      const locObj = location as Record<string, unknown>;
-      const uri = locObj['uri'];
-      const range = this.normalizeRange(locObj['range']);
-      const message = itemObj['message'];
+      const uri = location['uri'];
+      const range = this.normalizeRange(location['range']);
+      const message = item['message'];
 
-      if (typeof uri === 'string' && range && typeof message === 'string') {
+      if (this.isString(uri) && range && this.isString(message)) {
         result.push({
           location: { uri, range },
           message,
@@ -176,17 +192,16 @@ export class LspResponseNormalizer {
     item: unknown,
     serverName: string,
   ): LspFileDiagnostics | null {
-    if (!item || typeof item !== 'object') {
+    if (!this.isRecord(item)) {
       return null;
     }
 
-    const itemObj = item as Record<string, unknown>;
-    const uri = typeof itemObj['uri'] === 'string' ? itemObj['uri'] : '';
+    const uri = this.isString(item['uri']) ? item['uri'] : '';
     if (!uri) {
       return null;
     }
 
-    const items = itemObj['items'];
+    const items = item['items'];
     if (!Array.isArray(items)) {
       return null;
     }
@@ -214,51 +229,43 @@ export class LspResponseNormalizer {
    * Normalize code action result
    */
   normalizeCodeAction(item: unknown, serverName: string): LspCodeAction | null {
-    if (!item || typeof item !== 'object') {
+    if (!this.isRecord(item)) {
       return null;
     }
 
-    const itemObj = item as Record<string, unknown>;
-
     // Check if this is a Command instead of CodeAction
-    if (
-      itemObj['command'] &&
-      typeof itemObj['title'] === 'string' &&
-      !itemObj['kind']
-    ) {
+    if (item['command'] && this.isString(item['title']) && !item['kind']) {
       // This is a raw Command, wrap it
       return {
-        title: itemObj['title'],
+        title: item['title'],
         command: {
-          title: itemObj['title'],
-          command: (itemObj['command'] as string) ?? '',
-          arguments: itemObj['arguments'] as unknown[] | undefined,
+          title: item['title'],
+          command: (item['command'] as string) ?? '',
+          arguments: item['arguments'] as unknown[] | undefined,
         },
         serverName,
       };
     }
 
-    const title = typeof itemObj['title'] === 'string' ? itemObj['title'] : '';
+    const title = this.isString(item['title']) ? item['title'] : '';
     if (!title) {
       return null;
     }
 
-    const kind =
-      typeof itemObj['kind'] === 'string'
-        ? (CODE_ACTION_KIND_LABELS[itemObj['kind']] ?? itemObj['kind'])
-        : undefined;
+    const kind = this.isString(item['kind'])
+      ? (CODE_ACTION_KIND_LABELS[item['kind']] ?? item['kind'])
+      : undefined;
 
-    const isPreferred =
-      typeof itemObj['isPreferred'] === 'boolean'
-        ? itemObj['isPreferred']
-        : undefined;
+    const isPreferred = this.isBoolean(item['isPreferred'])
+      ? item['isPreferred']
+      : undefined;
 
-    const edit = this.normalizeWorkspaceEdit(itemObj['edit']);
-    const command = this.normalizeCommand(itemObj['command']);
+    const edit = this.normalizeWorkspaceEdit(item['edit']);
+    const command = this.normalizeCommand(item['command']);
 
     const diagnostics: LspDiagnostic[] = [];
-    if (Array.isArray(itemObj['diagnostics'])) {
-      for (const diag of itemObj['diagnostics']) {
+    if (Array.isArray(item['diagnostics'])) {
+      for (const diag of item['diagnostics']) {
         const normalized = this.normalizeDiagnostic(diag, serverName);
         if (normalized) {
           diagnostics.push(normalized);
@@ -273,7 +280,7 @@ export class LspResponseNormalizer {
       isPreferred,
       edit: edit ?? undefined,
       command: command ?? undefined,
-      data: itemObj['data'],
+      data: item['data'],
       serverName,
     };
   }
@@ -286,16 +293,15 @@ export class LspResponseNormalizer {
    * Normalize workspace edit
    */
   normalizeWorkspaceEdit(edit: unknown): LspWorkspaceEdit | null {
-    if (!edit || typeof edit !== 'object') {
+    if (!this.isRecord(edit)) {
       return null;
     }
 
-    const editObj = edit as Record<string, unknown>;
     const result: LspWorkspaceEdit = {};
 
     // Handle changes (map of URI to TextEdit[])
-    if (editObj['changes'] && typeof editObj['changes'] === 'object') {
-      const changes = editObj['changes'] as Record<string, unknown>;
+    if (edit['changes'] && this.isRecord(edit['changes'])) {
+      const changes = edit['changes'];
       result.changes = {};
       for (const [uri, edits] of Object.entries(changes)) {
         if (Array.isArray(edits)) {
@@ -314,9 +320,9 @@ export class LspResponseNormalizer {
     }
 
     // Handle documentChanges
-    if (Array.isArray(editObj['documentChanges'])) {
+    if (Array.isArray(edit['documentChanges'])) {
       result.documentChanges = [];
-      for (const docChange of editObj['documentChanges']) {
+      for (const docChange of edit['documentChanges']) {
         const normalized = this.normalizeTextDocumentEdit(docChange);
         if (normalized) {
           result.documentChanges.push(normalized);
@@ -338,18 +344,16 @@ export class LspResponseNormalizer {
    * Normalize text edit
    */
   normalizeTextEdit(edit: unknown): LspTextEdit | null {
-    if (!edit || typeof edit !== 'object') {
+    if (!this.isRecord(edit)) {
       return null;
     }
 
-    const editObj = edit as Record<string, unknown>;
-    const range = this.normalizeRange(editObj['range']);
+    const range = this.normalizeRange(edit['range']);
     if (!range) {
       return null;
     }
 
-    const newText =
-      typeof editObj['newText'] === 'string' ? editObj['newText'] : '';
+    const newText = this.isString(edit['newText']) ? edit['newText'] : '';
 
     return { range, newText };
   }
@@ -361,26 +365,25 @@ export class LspResponseNormalizer {
     textDocument: { uri: string; version?: number | null };
     edits: LspTextEdit[];
   } | null {
-    if (!docEdit || typeof docEdit !== 'object') {
+    if (!this.isRecord(docEdit)) {
       return null;
     }
 
-    const docEditObj = docEdit as Record<string, unknown>;
-    const textDocument = docEditObj['textDocument'];
-    if (!textDocument || typeof textDocument !== 'object') {
+    const textDocument = docEdit['textDocument'];
+    if (!this.isRecord(textDocument)) {
       return null;
     }
 
-    const textDocObj = textDocument as Record<string, unknown>;
-    const uri = typeof textDocObj['uri'] === 'string' ? textDocObj['uri'] : '';
+    const uri = this.isString(textDocument['uri']) ? textDocument['uri'] : '';
     if (!uri) {
       return null;
     }
 
-    const version =
-      typeof textDocObj['version'] === 'number' ? textDocObj['version'] : null;
+    const version = this.isNumber(textDocument['version'])
+      ? textDocument['version']
+      : null;
 
-    const edits = docEditObj['edits'];
+    const edits = docEdit['edits'];
     if (!Array.isArray(edits)) {
       return null;
     }
@@ -409,21 +412,19 @@ export class LspResponseNormalizer {
   normalizeCommand(
     cmd: unknown,
   ): { title: string; command: string; arguments?: unknown[] } | null {
-    if (!cmd || typeof cmd !== 'object') {
+    if (!this.isRecord(cmd)) {
       return null;
     }
 
-    const cmdObj = cmd as Record<string, unknown>;
-    const title = typeof cmdObj['title'] === 'string' ? cmdObj['title'] : '';
-    const command =
-      typeof cmdObj['command'] === 'string' ? cmdObj['command'] : '';
+    const title = this.isString(cmd['title']) ? cmd['title'] : '';
+    const command = this.isString(cmd['command']) ? cmd['command'] : '';
 
     if (!command) {
       return null;
     }
 
-    const args = Array.isArray(cmdObj['arguments'])
-      ? (cmdObj['arguments'] as unknown[])
+    const args = Array.isArray(cmd['arguments'])
+      ? (cmd['arguments'] as unknown[])
       : undefined;
 
     return { title, command, arguments: args };
@@ -440,21 +441,20 @@ export class LspResponseNormalizer {
     item: unknown,
     serverName: string,
   ): LspReference | null {
-    if (!item || typeof item !== 'object') {
+    if (!this.isRecord(item)) {
       return null;
     }
 
-    const itemObj = item as Record<string, unknown>;
-    const uri = (itemObj['uri'] ??
-      itemObj['targetUri'] ??
-      (itemObj['target'] as Record<string, unknown>)?.['uri']) as
+    const uri = (item['uri'] ??
+      item['targetUri'] ??
+      (item['target'] as Record<string, unknown>)?.['uri']) as
       | string
       | undefined;
 
-    const range = (itemObj['range'] ??
-      itemObj['targetSelectionRange'] ??
-      itemObj['targetRange'] ??
-      (itemObj['target'] as Record<string, unknown>)?.['range']) as
+    const range = (item['range'] ??
+      item['targetSelectionRange'] ??
+      item['targetRange'] ??
+      (item['target'] as Record<string, unknown>)?.['range']) as
       | { start?: unknown; end?: unknown }
       | undefined;
 
@@ -488,17 +488,17 @@ export class LspResponseNormalizer {
     item: unknown,
     serverName: string,
   ): LspSymbolInformation | null {
-    if (!item || typeof item !== 'object') {
+    if (!this.isRecord(item)) {
       return null;
     }
 
-    const itemObj = item as Record<string, unknown>;
+    const itemObj = item;
     const location = itemObj['location'] ?? itemObj['target'] ?? item;
-    if (!location || typeof location !== 'object') {
+    if (!this.isRecord(location)) {
       return null;
     }
 
-    const locationObj = location as Record<string, unknown>;
+    const locationObj = location;
     const range = (locationObj['range'] ??
       locationObj['targetRange'] ??
       itemObj['range'] ??
@@ -542,25 +542,19 @@ export class LspResponseNormalizer {
    * Normalize a single range
    */
   normalizeRange(range: unknown): LspRange | null {
-    if (!range || typeof range !== 'object') {
+    if (!this.isRecord(range)) {
       return null;
     }
 
-    const rangeObj = range as Record<string, unknown>;
-    const start = rangeObj['start'];
-    const end = rangeObj['end'];
+    const start = range['start'];
+    const end = range['end'];
 
-    if (
-      !start ||
-      typeof start !== 'object' ||
-      !end ||
-      typeof end !== 'object'
-    ) {
+    if (!this.isRecord(start) || !this.isRecord(end)) {
       return null;
     }
 
-    const startObj = start as Record<string, unknown>;
-    const endObj = end as Record<string, unknown>;
+    const startObj = start;
+    const endObj = end;
 
     return {
       start: {
@@ -625,7 +619,7 @@ export class LspResponseNormalizer {
     if (!contents) {
       return '';
     }
-    if (typeof contents === 'string') {
+    if (this.isString(contents)) {
       return contents;
     }
     if (Array.isArray(contents)) {
@@ -635,12 +629,11 @@ export class LspResponseNormalizer {
         .filter((item) => item.length > 0);
       return parts.join('\n');
     }
-    if (typeof contents === 'object') {
-      const contentsObj = contents as Record<string, unknown>;
-      const value = contentsObj['value'];
-      if (typeof value === 'string') {
-        const language = contentsObj['language'];
-        if (typeof language === 'string' && language.trim() !== '') {
+    if (this.isRecord(contents)) {
+      const value = contents['value'];
+      if (this.isString(value)) {
+        const language = contents['language'];
+        if (this.isString(language) && language.trim() !== '') {
           return `\`\`\`${language}\n${value}\n\`\`\``;
         }
         return value;
@@ -659,7 +652,7 @@ export class LspResponseNormalizer {
     if (!response) {
       return null;
     }
-    if (typeof response !== 'object') {
+    if (!this.isRecord(response)) {
       const contents = this.normalizeHoverContents(response);
       if (!contents.trim()) {
         return null;
@@ -670,13 +663,12 @@ export class LspResponseNormalizer {
       };
     }
 
-    const responseObj = response as Record<string, unknown>;
-    const contents = this.normalizeHoverContents(responseObj['contents']);
+    const contents = this.normalizeHoverContents(response['contents']);
     if (!contents.trim()) {
       return null;
     }
 
-    const range = this.normalizeRange(responseObj['range']);
+    const range = this.normalizeRange(response['range']);
     return {
       contents,
       range: range ?? undefined,
@@ -695,41 +687,37 @@ export class LspResponseNormalizer {
     item: unknown,
     serverName: string,
   ): LspCallHierarchyItem | null {
-    if (!item || typeof item !== 'object') {
+    if (!this.isRecord(item)) {
       return null;
     }
 
-    const itemObj = item as Record<string, unknown>;
-    const nameValue = itemObj['name'] ?? itemObj['label'] ?? 'symbol';
-    const name =
-      typeof nameValue === 'string' ? nameValue : String(nameValue ?? '');
-    const uri = itemObj['uri'];
+    const nameValue = item['name'] ?? item['label'] ?? 'symbol';
+    const name = this.isString(nameValue) ? nameValue : String(nameValue ?? '');
+    const uri = item['uri'];
 
-    if (!name || typeof uri !== 'string') {
+    if (!name || !this.isString(uri)) {
       return null;
     }
 
-    const range = this.normalizeRange(itemObj['range']);
-    const selectionRange =
-      this.normalizeRange(itemObj['selectionRange']) ?? range;
+    const range = this.normalizeRange(item['range']);
+    const selectionRange = this.normalizeRange(item['selectionRange']) ?? range;
 
     if (!range || !selectionRange) {
       return null;
     }
 
-    const serverOverride =
-      typeof itemObj['serverName'] === 'string'
-        ? itemObj['serverName']
-        : undefined;
+    const serverOverride = this.isString(item['serverName'])
+      ? item['serverName']
+      : undefined;
 
     // Preserve raw numeric kind for server communication
     let rawKind: number | undefined;
-    if (typeof itemObj['rawKind'] === 'number') {
-      rawKind = itemObj['rawKind'];
-    } else if (typeof itemObj['kind'] === 'number') {
-      rawKind = itemObj['kind'];
-    } else if (typeof itemObj['kind'] === 'string') {
-      const parsed = Number(itemObj['kind']);
+    if (this.isNumber(item['rawKind'])) {
+      rawKind = item['rawKind'];
+    } else if (this.isNumber(item['kind'])) {
+      rawKind = item['kind'];
+    } else if (this.isString(item['kind'])) {
+      const parsed = Number(item['kind']);
       if (Number.isFinite(parsed)) {
         rawKind = parsed;
       }
@@ -737,14 +725,13 @@ export class LspResponseNormalizer {
 
     return {
       name,
-      kind: this.normalizeSymbolKind(itemObj['kind']),
+      kind: this.normalizeSymbolKind(item['kind']),
       rawKind,
-      detail:
-        typeof itemObj['detail'] === 'string' ? itemObj['detail'] : undefined,
+      detail: this.isString(item['detail']) ? item['detail'] : undefined,
       uri,
       range,
       selectionRange,
-      data: itemObj['data'],
+      data: item['data'],
       serverName: serverOverride ?? serverName,
     };
   }
@@ -756,17 +743,16 @@ export class LspResponseNormalizer {
     item: unknown,
     serverName: string,
   ): LspCallHierarchyIncomingCall | null {
-    if (!item || typeof item !== 'object') {
+    if (!this.isRecord(item)) {
       return null;
     }
-    const itemObj = item as Record<string, unknown>;
-    const from = this.normalizeCallHierarchyItem(itemObj['from'], serverName);
+    const from = this.normalizeCallHierarchyItem(item['from'], serverName);
     if (!from) {
       return null;
     }
     return {
       from,
-      fromRanges: this.normalizeRanges(itemObj['fromRanges']),
+      fromRanges: this.normalizeRanges(item['fromRanges']),
     };
   }
 
@@ -777,17 +763,16 @@ export class LspResponseNormalizer {
     item: unknown,
     serverName: string,
   ): LspCallHierarchyOutgoingCall | null {
-    if (!item || typeof item !== 'object') {
+    if (!this.isRecord(item)) {
       return null;
     }
-    const itemObj = item as Record<string, unknown>;
-    const to = this.normalizeCallHierarchyItem(itemObj['to'], serverName);
+    const to = this.normalizeCallHierarchyItem(item['to'], serverName);
     if (!to) {
       return null;
     }
     return {
       to,
-      fromRanges: this.normalizeRanges(itemObj['fromRanges']),
+      fromRanges: this.normalizeRanges(item['fromRanges']),
     };
   }
 
@@ -827,12 +812,7 @@ export class LspResponseNormalizer {
   isDocumentSymbol(item: Record<string, unknown>): boolean {
     const range = item['range'];
     const selectionRange = item['selectionRange'];
-    return (
-      typeof range === 'object' &&
-      range !== null &&
-      typeof selectionRange === 'object' &&
-      selectionRange !== null
-    );
+    return this.isRecord(range) && this.isRecord(selectionRange);
   }
 
   /**
@@ -851,7 +831,7 @@ export class LspResponseNormalizer {
     }
 
     const nameValue = item['name'] ?? item['label'] ?? 'symbol';
-    const name = typeof nameValue === 'string' ? nameValue : String(nameValue);
+    const name = this.isString(nameValue) ? nameValue : String(nameValue);
     const selectionRange =
       this.normalizeRange(item['selectionRange']) ??
       this.normalizeRange(item['range']);
@@ -881,9 +861,9 @@ export class LspResponseNormalizer {
         if (results.length >= limit) {
           break;
         }
-        if (child && typeof child === 'object') {
+        if (this.isRecord(child)) {
           this.collectDocumentSymbol(
-            child as Record<string, unknown>,
+            child,
             uri,
             serverName,
             results,

@@ -272,7 +272,7 @@ export class LspConfigLoader {
 
       // In basic format: key is language name, server name comes from command.
       const languages = [key];
-      const name = typeof spec['command'] === 'string' ? spec['command'] : key;
+      const name = this.isString(spec['command']) ? spec['command'] : key;
 
       const config = this.buildServerConfig(name, languages, spec, origin);
       if (config) {
@@ -313,8 +313,9 @@ export class LspConfigLoader {
     origin: string,
   ): LspServerConfig | null {
     const transport = this.normalizeTransport(spec['transport']);
-    const command =
-      typeof spec['command'] === 'string' ? spec['command'] : undefined;
+    const command = this.isString(spec['command'])
+      ? spec['command']
+      : undefined;
     const args = this.normalizeStringArray(spec['args']) ?? [];
     const env = this.normalizeEnv(spec['env']);
     const initializationOptions = this.isRecord(spec['initializationOptions'])
@@ -332,13 +333,13 @@ export class LspConfigLoader {
     const rootUri = pathToFileURL(workspaceFolder).toString();
     const startupTimeout = this.normalizeTimeout(spec['startupTimeout']);
     const shutdownTimeout = this.normalizeTimeout(spec['shutdownTimeout']);
-    const restartOnCrash =
-      typeof spec['restartOnCrash'] === 'boolean'
-        ? spec['restartOnCrash']
-        : undefined;
+    const restartOnCrash = this.isBoolean(spec['restartOnCrash'])
+      ? spec['restartOnCrash']
+      : undefined;
     const maxRestarts = this.normalizeMaxRestarts(spec['maxRestarts']);
-    const trustRequired =
-      typeof spec['trustRequired'] === 'boolean' ? spec['trustRequired'] : true;
+    const trustRequired = this.isBoolean(spec['trustRequired'])
+      ? spec['trustRequired']
+      : true;
     const socket = this.normalizeSocketOptions(spec);
 
     if (transport === 'stdio' && !command) {
@@ -378,6 +379,18 @@ export class LspConfigLoader {
 
   private isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
+  }
+
+  private isString(value: unknown): value is string {
+    return typeof value === 'string';
+  }
+
+  private isNumber(value: unknown): value is number {
+    return typeof value === 'number';
+  }
+
+  private isBoolean(value: unknown): value is boolean {
+    return typeof value === 'boolean';
   }
 
   private normalizeStringArray(value: unknown): string[] | undefined {
@@ -459,26 +472,23 @@ export class LspConfigLoader {
     value: Record<string, unknown>,
   ): LspSocketOptions | undefined {
     const socketValue = value['socket'];
-    if (typeof socketValue === 'string') {
+    if (this.isString(socketValue)) {
       return { path: socketValue };
     }
 
     const source = this.isRecord(socketValue) ? socketValue : value;
-    const host =
-      typeof source['host'] === 'string' ? source['host'] : undefined;
-    const pathValue =
-      typeof source['path'] === 'string'
-        ? source['path']
-        : typeof source['socketPath'] === 'string'
-          ? source['socketPath']
-          : undefined;
+    const host = this.isString(source['host']) ? source['host'] : undefined;
+    const pathValue = this.isString(source['path'])
+      ? source['path']
+      : this.isString(source['socketPath'])
+        ? source['socketPath']
+        : undefined;
     const portValue = source['port'];
-    const port =
-      typeof portValue === 'number'
-        ? portValue
-        : typeof portValue === 'string'
-          ? Number(portValue)
-          : undefined;
+    const port = this.isNumber(portValue)
+      ? portValue
+      : this.isString(portValue)
+        ? Number(portValue)
+        : undefined;
 
     const socket: LspSocketOptions = {};
     if (host) {
