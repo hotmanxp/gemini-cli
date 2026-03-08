@@ -149,6 +149,10 @@ export interface SlashCommandConflict {
   renamedTo: string;
   loserExtensionName?: string;
   winnerExtensionName?: string;
+  loserMcpServerName?: string;
+  winnerMcpServerName?: string;
+  loserKind?: string;
+  winnerKind?: string;
 }
 
 export interface SlashCommandConflictsPayload {
@@ -232,88 +236,13 @@ type EventBacklogItem = {
 
 export class CoreEventEmitter extends EventEmitter<CoreEvents> {
   private _eventBacklog: EventBacklogItem[] = [];
-  // Memory protection: reduced from 10000 to prevent OOM in long-running sessions
-  private static readonly MAX_BACKLOG_SIZE = 1000;
-  // Warning threshold for listener leaks
-  private static readonly MAX_LISTENER_WARNING = 50;
-  // Backlog items older than this are pruned (5 minutes)
-  private static readonly BACKLOG_TTL_MS = 5 * 60 * 1000;
-  private _lastBacklogPruneTime: number = Date.now();
-  // Periodic cleanup interval
-  private _cleanupInterval: NodeJS.Timeout | null = null;
+  private _backlogHead = 0;
+  private static readonly MAX_BACKLOG_SIZE = 10000;
 
   constructor() {
     super();
     // Set reasonable listener limit
     this.setMaxListeners(100);
-    // Start periodic cleanup
-    this._startPeriodicCleanup();
-  }
-
-  /**
-   * Start periodic cleanup of old backlog items and stale listeners
-   */
-  private _startPeriodicCleanup() {
-    this._cleanupInterval = setInterval(() => {
-      this._pruneOldBacklogItems();
-      this._checkListenerLeaks();
-    }, 60000); // Run every minute
-    this._cleanupInterval.unref();
-  }
-
-  /**
-   * Remove backlog items older than TTL
-   */
-  private _pruneOldBacklogItems() {
-    const now = Date.now();
-    if (now - this._lastBacklogPruneTime < CoreEventEmitter.BACKLOG_TTL_MS) {
-      return;
-    }
-
-    this._lastBacklogPruneTime = now;
-    const initialLength = this._eventBacklog.length;
-
-    // Enforce max size
-    if (this._eventBacklog.length > CoreEventEmitter.MAX_BACKLOG_SIZE) {
-      this._eventBacklog = this._eventBacklog.slice(
-        this._eventBacklog.length - CoreEventEmitter.MAX_BACKLOG_SIZE,
-      );
-    }
-
-    const removed = initialLength - this._eventBacklog.length;
-    if (removed > 0) {
-      debugLogger.debug(`Pruned ${removed} old backlog items`);
-    }
-  }
-
-  /**
-   * Stop the periodic cleanup timer.
-   * Should be called when disposing of the emitter.
-   */
-  dispose() {
-    if (this._cleanupInterval) {
-      clearInterval(this._cleanupInterval);
-      this._cleanupInterval = null;
-    }
-    this.removeAllListeners();
-    this._eventBacklog = [];
-  }
-
-  /**
-   * Check for listener leaks and warn if thresholds exceeded
-   */
-  private _checkListenerLeaks() {
-    const eventNames = this.eventNames();
-    for (const eventName of eventNames) {
-      const listenerCount = this.listenerCount(eventName);
-      if (listenerCount > CoreEventEmitter.MAX_LISTENER_WARNING) {
-        debugLogger.warn(
-          `High listener count for ${String(eventName)}: ${listenerCount}. ` +
-            'This may indicate a memory leak. ' +
-            'Please check that all coreEvents.on() calls have matching off() calls.',
-        );
-      }
-    }
   }
 
   private _emitOrQueue<K extends keyof CoreEvents>(
@@ -321,8 +250,17 @@ export class CoreEventEmitter extends EventEmitter<CoreEvents> {
     ...args: CoreEvents[K]
   ): void {
     if (this.listenerCount(event) === 0) {
-      if (this._eventBacklog.length >= CoreEventEmitter.MAX_BACKLOG_SIZE) {
-        this._eventBacklog.shift();
+      const backlogSize = this._eventBacklog.length - this._backlogHead;
+      if (backlogSize >= CoreEventEmitter.MAX_BACKLOG_SIZE) {
+        // Evict oldest entry. Use a head pointer instead of shift() to avoid
+        // O(n) array reindexing on every eviction at capacity.
+        (this._eventBacklog as unknown[])[this._backlogHead] = undefined;
+        this._backlogHead++;
+        // Compact once dead entries exceed half capacity to bound memory
+        if (this._backlogHead >= CoreEventEmitter.MAX_BACKLOG_SIZE / 2) {
+          this._eventBacklog = this._eventBacklog.slice(this._backlogHead);
+          this._backlogHead = 0;
+        }
       }
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
       this._eventBacklog.push({ event, args } as EventBacklogItem);
@@ -469,9 +407,13 @@ export class CoreEventEmitter extends EventEmitter<CoreEvents> {
    * subscribes.
    */
   drainBacklogs(): void {
-    const backlog = [...this._eventBacklog];
-    this._eventBacklog.length = 0; // Clear in-place
-    for (const item of backlog) {
+    const backlog = this._eventBacklog;
+    const head = this._backlogHead;
+    this._eventBacklog = [];
+    this._backlogHead = 0;
+    for (let i = head; i < backlog.length; i++) {
+      const item = backlog[i];
+      if (item === undefined) continue;
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
       (this.emit as (event: keyof CoreEvents, ...args: unknown[]) => boolean)(
         item.event,

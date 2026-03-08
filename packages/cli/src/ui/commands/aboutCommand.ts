@@ -13,6 +13,7 @@ import {
   UserAccountManager,
   debugLogger,
   getVersion,
+  getDisplayString,
 } from '@google/gemini-cli-core';
 
 export const aboutCommand: SlashCommand = {
@@ -30,7 +31,9 @@ export const aboutCommand: SlashCommand = {
         process.env['SEATBELT_PROFILE'] || 'unknown'
       })`;
     }
-    const modelVersion = context.services.config?.getModel() || 'Unknown';
+    const modelVersion = getDisplayString(
+      context.services.config?.getModel() || 'Unknown',
+    );
     const cliVersion = await getVersion();
     const selectedAuthType =
       context.services.settings.merged.security.auth.selectedType || '';

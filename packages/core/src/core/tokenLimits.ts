@@ -10,6 +10,7 @@ import {
   DEFAULT_GEMINI_MODEL,
   PREVIEW_GEMINI_FLASH_MODEL,
   PREVIEW_GEMINI_MODEL,
+  QWEN_MODEL_AUTO,
 } from '../config/models.js';
 
 type Model = string;
@@ -27,6 +28,11 @@ export function tokenLimit(model: Model): TokenCount {
     case DEFAULT_GEMINI_FLASH_MODEL:
     case DEFAULT_GEMINI_FLASH_LITE_MODEL:
       return 1_048_576;
+    // Qwen coder-model series
+    case QWEN_MODEL_AUTO:
+    case 'coder-model':
+    case 'coder-model-lite':
+      return 1_000_000;
     default:
       return DEFAULT_TOKEN_LIMIT;
   }

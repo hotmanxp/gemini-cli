@@ -25,6 +25,7 @@ export const VALID_GEMINI_MODELS = new Set([
 
 export const PREVIEW_GEMINI_MODEL_AUTO = 'auto-gemini-3';
 export const DEFAULT_GEMINI_MODEL_AUTO = 'auto-gemini-2.5';
+export const QWEN_MODEL_AUTO = 'auto-qwen';
 
 // Model aliases for user convenience.
 export const GEMINI_MODEL_ALIAS_AUTO = 'auto';
@@ -43,12 +44,14 @@ export const DEFAULT_THINKING_MODE = 8192;
  *
  * @param requestedModel The model alias or concrete model name requested by the user.
  * @param useGemini3_1 Whether to use Gemini 3.1 Pro Preview for auto/pro aliases.
+ * @param hasAccessToPreview Whether the user has access to preview models.
  * @returns The resolved concrete model name.
  */
 export function resolveModel(
   requestedModel: string,
   useGemini3_1: boolean = false,
   useCustomToolModel: boolean = false,
+  hasAccessToPreview: boolean = true,
 ): string {
   // Handle provider/model format (e.g., "qwen/qwen-plus")
   if (requestedModel.includes('/')) {
@@ -57,31 +60,61 @@ export function resolveModel(
     return requestedModel;
   }
 
+  let resolved: string;
   switch (requestedModel) {
     case PREVIEW_GEMINI_MODEL:
     case PREVIEW_GEMINI_MODEL_AUTO:
     case GEMINI_MODEL_ALIAS_AUTO:
     case GEMINI_MODEL_ALIAS_PRO: {
       if (useGemini3_1) {
-        return useCustomToolModel
+        resolved = useCustomToolModel
           ? PREVIEW_GEMINI_3_1_CUSTOM_TOOLS_MODEL
           : PREVIEW_GEMINI_3_1_MODEL;
+      } else {
+        resolved = PREVIEW_GEMINI_MODEL;
       }
-      return PREVIEW_GEMINI_MODEL;
+      break;
     }
     case DEFAULT_GEMINI_MODEL_AUTO: {
-      return DEFAULT_GEMINI_MODEL;
+      resolved = DEFAULT_GEMINI_MODEL;
+      break;
     }
     case GEMINI_MODEL_ALIAS_FLASH: {
-      return PREVIEW_GEMINI_FLASH_MODEL;
+      resolved = PREVIEW_GEMINI_FLASH_MODEL;
+      break;
     }
     case GEMINI_MODEL_ALIAS_FLASH_LITE: {
-      return DEFAULT_GEMINI_FLASH_LITE_MODEL;
+      resolved = DEFAULT_GEMINI_FLASH_LITE_MODEL;
+      break;
     }
     default: {
-      return requestedModel;
+      resolved = requestedModel;
+      break;
     }
   }
+
+  if (!hasAccessToPreview && isPreviewModel(resolved)) {
+    // Downgrade to stable models if user lacks preview access.
+    switch (resolved) {
+      case PREVIEW_GEMINI_FLASH_MODEL:
+        return DEFAULT_GEMINI_FLASH_MODEL;
+      case PREVIEW_GEMINI_MODEL:
+      case PREVIEW_GEMINI_3_1_MODEL:
+      case PREVIEW_GEMINI_3_1_CUSTOM_TOOLS_MODEL:
+        return DEFAULT_GEMINI_MODEL;
+      default:
+        // Fallback for unknown preview models, preserving original logic.
+        if (resolved.includes('flash-lite')) {
+          return DEFAULT_GEMINI_FLASH_LITE_MODEL;
+        }
+        if (resolved.includes('flash')) {
+          return DEFAULT_GEMINI_FLASH_MODEL;
+        }
+        return DEFAULT_GEMINI_MODEL;
+    }
+  }
+
+  return resolved;
 }
 
 /**
@@ -112,9 +145,11 @@ export function resolveClassifierModel(
 
   if (isQwenOAuth) {
     // Qwen uses 'coder-model' as the default/pro model
-    // For now, we use the same model for both flash and pro
-    // In the future, we could have different Qwen models for different complexities
-    return 'coder-model';
+    if (modelAlias === GEMINI_MODEL_ALIAS_FLASH) {
+      return 'coder-model-lite';
+    }
+    // Return the auto constant for Qwen so UI can display it properly
+    return QWEN_MODEL_AUTO;
   }
 
   if (modelAlias === GEMINI_MODEL_ALIAS_FLASH) {
@@ -136,6 +171,8 @@ export function resolveClassifierModel(
 }
 export function getDisplayString(model: string) {
   switch (model) {
+    case QWEN_MODEL_AUTO:
+      return 'Auto (Qwen)';
     case PREVIEW_GEMINI_MODEL_AUTO:
       return 'Auto (Gemini 3)';
     case DEFAULT_GEMINI_MODEL_AUTO:
@@ -146,7 +183,23 @@ export function getDisplayString(model: string) {
       return PREVIEW_GEMINI_FLASH_MODEL;
     case PREVIEW_GEMINI_3_1_CUSTOM_TOOLS_MODEL:
       return PREVIEW_GEMINI_3_1_MODEL;
+    case 'coder-model':
+      return 'Qwen Coder Model';
+    case 'coder-model-lite':
+      return 'Qwen Coder Model Lite';
     default:
+      // Handle provider/model format (e.g., "qwen/qwen-plus")
+      if (model.includes('/')) {
+        const parts = model.split('/');
+        const provider = parts[0];
+        const modelName = parts.slice(1).join('/');
+        // Capitalize provider and model for better display
+        const capitalizedProvider =
+          provider.charAt(0).toUpperCase() + provider.slice(1);
+        const capitalizedModel =
+          modelName.charAt(0).toUpperCase() + modelName.slice(1);
+        return `${capitalizedProvider} ${capitalizedModel}`;
+      }
       return model;
   }
 }

@@ -20,19 +20,17 @@ import {
   DEFAULT_FILE_FILTERING_OPTIONS,
   DEFAULT_MEMORY_FILE_FILTERING_OPTIONS,
   FileDiscoveryService,
-  WRITE_FILE_TOOL_NAME,
-  SHELL_TOOL_NAMES,
-  SHELL_TOOL_NAME,
+  AuthType,
+  getAuthTypeFromEnv,
   resolveTelemetrySettings,
   FatalConfigError,
   getPty,
-  EDIT_TOOL_NAME,
   debugLogger,
   loadServerHierarchicalMemory,
-  WEB_FETCH_TOOL_NAME,
   ASK_USER_TOOL_NAME,
   getVersion,
   PREVIEW_GEMINI_MODEL_AUTO,
+  QWEN_MODEL_AUTO,
   type HierarchicalMemory,
   coreEvents,
   GEMINI_MODEL_ALIAS_AUTO,
@@ -83,7 +81,8 @@ export interface CliArgs {
   policy: string[] | undefined;
   allowedMcpServerNames: string[] | undefined;
   allowedTools: string[] | undefined;
-  experimentalAcp: boolean | undefined;
+  acp?: boolean;
+  experimentalAcp?: boolean;
   extensions: string[] | undefined;
   listExtensions: boolean | undefined;
   resume: string | typeof RESUME_LATEST | undefined;
@@ -179,9 +178,14 @@ export async function parseArguments(
                 .filter(Boolean),
             ),
         })
-        .option('experimental-acp', {
+        .option('acp', {
           type: 'boolean',
           description: 'Starts the agent in ACP mode',
+        })
+        .option('experimental-acp', {
+          type: 'boolean',
+          description:
+            'Starts the agent in ACP mode (deprecated, use --acp instead)',
         })
         .option('allowed-mcp-server-names', {
           type: 'array',
@@ -400,36 +404,6 @@ export async function parseArguments(
   return result as unknown as CliArgs;
 }
 
-/**
- * Creates a filter function to determine if a tool should be excluded.
- *
- * In non-interactive mode, we want to disable tools that require user
- * interaction to prevent the CLI from hanging. This function creates a predicate
- * that returns `true` if a tool should be excluded.
- *
- * A tool is excluded if it's not in the `allowedToolsSet`. The shell tool
- * has a special case: it's not excluded if any of its subcommands
- * are in the `allowedTools` list.
- *
- * @param allowedTools A list of explicitly allowed tool names.
- * @param allowedToolsSet A set of explicitly allowed tool names for quick lookups.
- * @returns A function that takes a tool name and returns `true` if it should be excluded.
- */
-function createToolExclusionFilter(
-  allowedTools: string[],
-  allowedToolsSet: Set<string>,
-) {
-  return (tool: string): boolean => {
-    if (tool === SHELL_TOOL_NAME) {
-      // If any of the allowed tools is ShellTool (even with subcommands), don't exclude it.
-      return !allowedTools.some((allowed) =>
-        SHELL_TOOL_NAMES.some((shellName) => allowed.startsWith(shellName)),
-      );
-    }
-    return !allowedToolsSet.has(tool);
-  };
-}
-
 export function isDebugMode(argv: CliArgs): boolean {
   return (
     argv.debug ||
@@ -519,6 +493,10 @@ export async function loadCliConfig(
   });
   await extensionManager.loadExtensions();
 
+  const extensionPlanSettings = extensionManager
+    .getExtensions()
+    .find((ext) => ext.isActive && ext.plan?.directory)?.plan;
+
   const experimentalJitContext = settings.experimental?.jitContext ?? false;
 
   let memoryContent: string | HierarchicalMemory = '';
@@ -532,7 +510,6 @@ export async function loadCliConfig(
       settings.context?.loadMemoryFromIncludeDirectories || false
         ? includeDirectories
         : [],
-      debugMode,
       fileService,
       extensionManager,
       trustedFolder,
@@ -634,54 +611,20 @@ export async function loadCliConfig(
   // -i/--prompt-interactive forces interactive mode with an initial prompt
   const interactive =
     !!argv.promptInteractive ||
+    !!argv.acp ||
     !!argv.experimentalAcp ||
     (!isHeadlessMode({ prompt: argv.prompt, query: argv.query }) &&
       !argv.isCommand);
 
   const allowedTools = argv.allowedTools || settings.tools?.allowed || [];
-  const allowedToolsSet = new Set(allowedTools);
 
   // In non-interactive mode, exclude tools that require a prompt.
   const extraExcludes: string[] = [];
   if (!interactive) {
-    // ask_user requires user interaction and must be excluded in all
-    // non-interactive modes, regardless of the approval mode.
+    // The Policy Engine natively handles headless safety by translating ASK_USER
+    // decisions to DENY. However, we explicitly block ask_user here to guarantee
+    // it can never be allowed via a high-priority policy rule when no human is present.
     extraExcludes.push(ASK_USER_TOOL_NAME);
-
-    const defaultExcludes = [
-      SHELL_TOOL_NAME,
-      EDIT_TOOL_NAME,
-      WRITE_FILE_TOOL_NAME,
-      WEB_FETCH_TOOL_NAME,
-    ];
-    const autoEditExcludes = [SHELL_TOOL_NAME];
-
-    const toolExclusionFilter = createToolExclusionFilter(
-      allowedTools,
-      allowedToolsSet,
-    );
-
-    switch (approvalMode) {
-      case ApprovalMode.PLAN:
-        // In plan non-interactive mode, all tools that require approval are excluded.
-        // TODO(#16625): Replace this default exclusion logic with specific rules for plan mode.
-        extraExcludes.push(...defaultExcludes.filter(toolExclusionFilter));
-        break;
-      case ApprovalMode.DEFAULT:
-        // In default non-interactive mode, all tools that require approval are excluded.
-        extraExcludes.push(...defaultExcludes.filter(toolExclusionFilter));
-        break;
-      case ApprovalMode.AUTO_EDIT:
-        // In auto-edit non-interactive mode, only tools that still require a prompt are excluded.
-        extraExcludes.push(...autoEditExcludes.filter(toolExclusionFilter));
-        break;
-      case ApprovalMode.YOLO:
-        // No extra excludes for YOLO mode.
-        break;
-      default:
-        // This should never happen due to validation earlier, but satisfies the linter
-        break;
-    }
   }
 
   const excludeTools = mergeExcludeTools(settings, extraExcludes);
@@ -715,7 +658,18 @@ export async function loadCliConfig(
   );
   policyEngineConfig.nonInteractive = !interactive;
 
-  const defaultModel = PREVIEW_GEMINI_MODEL_AUTO;
+  const selectedAuthType =
+    settings.security?.auth?.selectedType ||
+    getAuthTypeFromEnv() ||
+    AuthType.LOGIN_WITH_GOOGLE;
+
+  // Determine default model based on auth type
+  const defaultModel =
+    selectedAuthType === AuthType.USE_QWEN ||
+    process.env['USE_QWEN_OAUTH'] === 'true'
+      ? QWEN_MODEL_AUTO
+      : PREVIEW_GEMINI_MODEL_AUTO;
+
   const specifiedModel =
     argv.model || process.env['GEMINI_MODEL'] || settings.model?.name;
 
@@ -760,6 +714,7 @@ export async function loadCliConfig(
   }
 
   const config = new Config({
+    acpMode: !!argv.acp || !!argv.experimentalAcp,
     sessionId,
     clientVersion: await getVersion(),
     embeddingModel: DEFAULT_GEMINI_EMBEDDING_MODEL,
@@ -823,7 +778,7 @@ export async function loadCliConfig(
     bugCommand: settings.advanced?.bugCommand,
     model: resolvedModel,
     maxSessionTurns: settings.model?.maxSessionTurns,
-    experimentalZedIntegration: argv.experimentalAcp || false,
+
     listExtensions: argv.listExtensions || false,
     listSessions: argv.listSessions || false,
     deleteSession: argv.deleteSession,
@@ -832,8 +787,11 @@ export async function loadCliConfig(
     enableExtensionReloading: settings.experimental?.extensionReloading,
     enableAgents: settings.experimental?.enableAgents,
     plan: settings.experimental?.plan,
+    tracker: settings.experimental?.taskTracker,
     directWebFetch: settings.experimental?.directWebFetch,
-    planSettings: settings.general?.plan,
+    planSettings: settings.general?.plan?.directory
+      ? settings.general.plan
+      : (extensionPlanSettings ?? settings.general?.plan),
     enableEventDrivenScheduler: true,
     skillsSupport: settings.skills?.enabled ?? true,
     disabledSkills: settings.skills?.disabled,
@@ -918,7 +876,10 @@ export async function loadCliConfig(
         'LSP service initialized successfully (lazy loading enabled)',
       );
     } catch (err) {
-      debugLogger.warn('Failed to initialize native LSP service:', err);
+      debugLogger.warn(
+        'Failed to initialize native LSP service:',
+        err instanceof Error ? err.message : String(err),
+      );
     }
   }
 

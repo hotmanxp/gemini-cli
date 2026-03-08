@@ -39,6 +39,15 @@ export interface ExtensionConfig {
    * lower than user/workspace settings but higher than system settings.
    */
   userSettings?: Record<string, unknown>;
+  /**
+   * Planning features configuration contributed by this extension.
+   */
+  plan?: {
+    /**
+     * The directory where planning artifacts are stored.
+     */
+    directory?: string;
+  };
 }
 
 export interface ExtensionUpdateInfo {
