@@ -67,10 +67,10 @@ import { shouldAttemptBrowserLaunch } from '../utils/browser.js';
 import type { MCPOAuthConfig } from '../mcp/oauth-provider.js';
 import { ideContextStore } from '../ide/ideContext.js';
 import { WriteTodosTool } from '../tools/write-todos.js';
-import {
-  StandardFileSystemService,
-  type FileSystemService,
-} from '../services/fileSystemService.js';
+import { StartLoopTool } from '../tools/start-loop.js';
+import { CheckLoopTool } from '../tools/check-loop.js';
+import { CancelLoopTool } from '../tools/cancel-loop.js';
+import { OracleVerifyTool } from '../tools/oracle-verify.js';
 import {
   TrackerCreateTaskTool,
   TrackerUpdateTaskTool,
@@ -107,6 +107,8 @@ import {
 import { DEFAULT_MODEL_CONFIGS } from './defaultModelConfigs.js';
 import { ContextManager } from '../services/contextManager.js';
 import { TrackerService } from '../services/trackerService.js';
+import type { FileSystemService } from '../services/fileSystemService.js';
+import { StandardFileSystemService } from '../services/fileSystemService.js';
 import type { GenerateContentParameters } from '@google/genai';
 import { ProviderRegistry } from '../services/providerRegistry.js';
 
@@ -115,6 +117,7 @@ export type { MCPOAuthConfig, AnyToolInvocation, AnyDeclarativeTool };
 import type { AnyToolInvocation, AnyDeclarativeTool } from '../tools/tools.js';
 import { WorkspaceContext } from '../utils/workspaceContext.js';
 import { Storage } from './storage.js';
+import { LoopMonitorService } from '../services/loopMonitorService.js';
 import type { ShellExecutionConfig } from '../services/shellExecutionService.js';
 import { FileExclusions } from '../utils/ignorePatterns.js';
 import { MessageBus } from '../confirmation-bus/message-bus.js';
@@ -127,6 +130,7 @@ import {
   type SafetyCheckerRule,
 } from '../policy/types.js';
 import { HookSystem } from '../hooks/index.js';
+import { createGeminiLoopHook } from '../hooks/gemini-loop/gemini-loop-hook.js';
 import type {
   UserTierId,
   GeminiUserTier,
@@ -761,6 +765,7 @@ export class Config implements McpContext {
     | PolicyUpdateConfirmationRequest
     | undefined;
   private readonly outputSettings: OutputSettings;
+  private loopMonitorService?: LoopMonitorService;
 
   private readonly gemmaModelRouter: GemmaModelRouterSettings;
 
@@ -1221,7 +1226,18 @@ export class Config implements McpContext {
     if (this.getEnableHooks()) {
       this.hookSystem = new HookSystem(this);
       await this.hookSystem.initialize();
+
+      // Initialize Gemini Loop hook and store it in hookSystem
+      const geminiLoopHook = createGeminiLoopHook(this, this.hookSystem);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+      Object.assign(this.hookSystem as Record<string, unknown>, {
+        geminiLoopHook,
+      });
     }
+
+    // Initialize loop monitor service
+    this.loopMonitorService = new LoopMonitorService(this);
+    this.loopMonitorService.startMonitoring();
 
     if (this.experimentalJitContext) {
       this.contextManager = new ContextManager(this);
@@ -2937,6 +2953,20 @@ export class Config implements McpContext {
 
     maybeRegister(LspTool, () =>
       registry.registerTool(new LspTool(this, this.messageBus)),
+    );
+
+    // Register Loop Tools
+    maybeRegister(StartLoopTool, () =>
+      registry.registerTool(new StartLoopTool(this.messageBus)),
+    );
+    maybeRegister(CheckLoopTool, () =>
+      registry.registerTool(new CheckLoopTool(this.messageBus)),
+    );
+    maybeRegister(CancelLoopTool, () =>
+      registry.registerTool(new CancelLoopTool(this.messageBus)),
+    );
+    maybeRegister(OracleVerifyTool, () =>
+      registry.registerTool(new OracleVerifyTool(this.messageBus)),
     );
 
     if (this.isTrackerEnabled()) {

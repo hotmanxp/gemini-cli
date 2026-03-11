@@ -222,6 +222,126 @@ export const ENTER_PLAN_MODE_DEFINITION: ToolDefinition = {
   overrides: (modelId) => getToolSet(modelId).enter_plan_mode,
 };
 
+export const START_LOOP_DEFINITION: ToolDefinition = {
+  get base() {
+    return {
+      name: 'start_loop',
+      description:
+        'Starts a development loop that continues working iteratively until the task is complete.',
+      parametersJsonSchema: {
+        type: 'object',
+        properties: {
+          task: {
+            type: 'string',
+            description: 'The task description to work on iteratively',
+          },
+          ultrawork: {
+            type: 'boolean',
+            description:
+              'Enable ultrawork mode with Oracle verification (default: false)',
+          },
+          maxIterations: {
+            type: 'number',
+            description:
+              'Maximum iterations (0 for unbounded, default: 100 for standard, 0 for ultrawork)',
+          },
+          completionPromise: {
+            type: 'string',
+            description:
+              "Completion signal to look for (default: '<promise>DONE</promise>')",
+          },
+          strategy: {
+            type: 'string',
+            enum: ['continue', 'reset'],
+            description:
+              "Strategy: 'continue' maintains history, 'reset' starts fresh (default: 'continue')",
+          },
+        },
+        required: ['task'],
+      },
+    };
+  },
+  overrides: () => undefined,
+};
+
+export const CHECK_LOOP_DEFINITION: ToolDefinition = {
+  get base() {
+    return {
+      name: 'check_loop',
+      description:
+        'Checks the current status of the active Gemini Loop session.',
+      parametersJsonSchema: {
+        type: 'object',
+        properties: {
+          detailed: {
+            type: 'boolean',
+            description:
+              'Show detailed state information including full JSON state (default: false)',
+          },
+        },
+      },
+    };
+  },
+  overrides: () => undefined,
+};
+
+export const CANCEL_LOOP_DEFINITION: ToolDefinition = {
+  get base() {
+    return {
+      name: 'cancel_loop',
+      description:
+        'Cancels the active Gemini Loop session, stopping further iterations.',
+      parametersJsonSchema: {
+        type: 'object',
+        properties: {
+          reason: {
+            type: 'string',
+            description: 'Optional reason for cancelling the loop',
+          },
+        },
+      },
+    };
+  },
+  overrides: () => undefined,
+};
+
+export const ORACLE_VERIFY_DEFINITION: ToolDefinition = {
+  get base() {
+    return {
+      name: 'oracle_verify',
+      description:
+        'Performs Oracle verification for ultrawork loop. Reviews completed work against requirements and emits verification result.',
+      parametersJsonSchema: {
+        type: 'object',
+        properties: {
+          result: {
+            type: 'string',
+            enum: ['verified', 'failed', 'incomplete'],
+            description:
+              'Verification result: verified (pass), failed (missing requirements), or incomplete (partial work)',
+          },
+          explanation: {
+            type: 'string',
+            description: 'Detailed explanation of the verification outcome',
+          },
+          missingItems: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'List of missing requirements or incomplete items',
+          },
+          suggestions: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Suggested next steps to complete the task',
+          },
+        },
+        required: ['result', 'explanation'],
+      },
+    };
+  },
+  overrides: () => undefined,
+};
+
 // ============================================================================
 // DYNAMIC TOOL DEFINITIONS (LEGACY EXPORTS)
 // ============================================================================

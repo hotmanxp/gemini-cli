@@ -38,6 +38,12 @@ import { rewindCommand } from '../ui/commands/rewindCommand.js';
 import { hooksCommand } from '../ui/commands/hooksCommand.js';
 import { ideCommand } from '../ui/commands/ideCommand.js';
 import { initCommand } from '../ui/commands/initCommand.js';
+import {
+  loopCommand,
+  ulwLoopCommand,
+  loopStatusCommand,
+  cancelLoopCommand,
+} from '../ui/commands/loopCommand.js';
 import { mcpCommand } from '../ui/commands/mcpCommand.js';
 import { memoryCommand } from '../ui/commands/memoryCommand.js';
 // import { modelCommand } from '../ui/commands/modelCommand.js';
@@ -99,6 +105,9 @@ export class BuiltinCommandLoader implements ICommandLoader {
       docsCommand,
       directoryCommand,
       editorCommand,
+      ...(this.config?.getEnableHooks()
+        ? [loopCommand, ulwLoopCommand, loopStatusCommand, cancelLoopCommand]
+        : []),
       ...(this.config?.getExtensionsEnabled() === false
         ? [
             {

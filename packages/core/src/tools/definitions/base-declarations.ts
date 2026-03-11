@@ -123,3 +123,9 @@ export const EXIT_PLAN_PARAM_PLAN_PATH = 'plan_path';
 export const ENTER_PLAN_MODE_TOOL_NAME = 'enter_plan_mode';
 export const LSP_TOOL_NAME = 'lsp';
 export const PLAN_MODE_PARAM_REASON = 'reason';
+
+// -- loop tools --
+export const START_LOOP_TOOL_NAME = 'start_loop';
+export const CHECK_LOOP_TOOL_NAME = 'check_loop';
+export const CANCEL_LOOP_TOOL_NAME = 'cancel_loop';
+export const ORACLE_VERIFY_TOOL_NAME = 'oracle_verify';
