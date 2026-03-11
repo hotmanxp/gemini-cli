@@ -66,5 +66,6 @@ gemini-debug.log
 .eslintcache
 evals/logs/
 
-# Agent working directory (auto-generated)
+# Agent working directories (auto-generated)
 .agent_working_dir/
+temp_agents/

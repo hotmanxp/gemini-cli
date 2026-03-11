@@ -48,6 +48,10 @@ export interface ExtensionConfig {
      */
     directory?: string;
   };
+  /**
+   * Used to migrate an extension to a new repository source.
+   */
+  migratedTo?: string;
 }
 
 export interface ExtensionUpdateInfo {

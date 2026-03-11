@@ -6,7 +6,6 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import * as os from 'node:os';
 import { inspect } from 'node:util';
 import process from 'node:process';
 import {
@@ -99,6 +98,7 @@ import type {
 import { ModelAvailabilityService } from '../availability/modelAvailabilityService.js';
 import { ModelRouterService } from '../routing/modelRouterService.js';
 import { OutputFormat } from '../output/types.js';
+//import { type AgentLoopContext } from './agent-loop-context.js';
 import {
   ModelConfigService,
   type ModelConfig,
@@ -149,7 +149,7 @@ import { SkillManager, type SkillDefinition } from '../skills/skillManager.js';
 import { startupProfiler } from '../telemetry/startupProfiler.js';
 import type { AgentDefinition } from '../agents/types.js';
 import { fetchAdminControls } from '../code_assist/admin/admin_controls.js';
-import { isSubpath } from '../utils/paths.js';
+import { isSubpath, resolveToRealPath } from '../utils/paths.js';
 import { UserHintService } from './userHintService.js';
 import { WORKSPACE_POLICY_TIER } from '../policy/config.js';
 import { loadPoliciesFromToml } from '../policy/toml-loader.js';
@@ -158,6 +158,7 @@ import { CheckerRunner } from '../safety/checker-runner.js';
 import { ContextBuilder } from '../safety/context-builder.js';
 import { CheckerRegistry } from '../safety/registry.js';
 import { ConsecaSafetyChecker } from '../safety/conseca/conseca.js';
+import type { AgentLoopContext } from './agent-loop-context.js';
 
 export interface AccessibilitySettings {
   /** @deprecated Use ui.loadingPhrases instead. */
@@ -363,6 +364,10 @@ export interface GeminiCLIExtension {
      */
     directory?: string;
   };
+  /**
+   * Used to migrate an extension to a new repository source.
+   */
+  migratedTo?: string;
 }
 
 export interface ExtensionInstallMetadata {
@@ -549,9 +554,11 @@ export interface ConfigParameters {
   skipNextSpeakerCheck?: boolean;
   shellExecutionConfig?: ShellExecutionConfig;
   extensionManagement?: boolean;
+  extensionRegistryURI?: string;
   truncateToolOutputThreshold?: number;
   eventEmitter?: EventEmitter;
   useWriteTodos?: boolean;
+  workspacePoliciesDir?: string;
   policyEngineConfig?: PolicyEngineConfig;
   directWebFetch?: boolean;
   policyUpdateConfirmationRequest?: PolicyUpdateConfirmationRequest;
@@ -605,8 +612,8 @@ export interface ConfigParameters {
   };
 }
 
-export class Config implements McpContext {
-  private toolRegistry!: ToolRegistry;
+export class Config implements McpContext, AgentLoopContext {
+  private _toolRegistry!: ToolRegistry;
   private mcpClientManager?: McpClientManager;
   private allowedMcpServers: string[];
   private blockedMcpServers: string[];
@@ -618,7 +625,7 @@ export class Config implements McpContext {
   private agentRegistry!: AgentRegistry;
   private readonly acknowledgedAgentsService: AcknowledgedAgentsService;
   private skillManager!: SkillManager;
-  private sessionId: string;
+  private _sessionId: string;
   private clientVersion: string;
   private fileSystemService: FileSystemService;
   private trackerService?: TrackerService;
@@ -655,7 +662,7 @@ export class Config implements McpContext {
   private readonly accessibility: AccessibilitySettings;
   private readonly telemetrySettings: TelemetrySettings;
   private readonly usageStatisticsEnabled: boolean;
-  private geminiClient!: GeminiClient;
+  private _geminiClient!: GeminiClient;
   private baseLlmClient!: BaseLlmClient;
   private localLiteRtLmClient?: LocalLiteRtLmClient;
   private modelRouterService: ModelRouterService;
@@ -746,6 +753,7 @@ export class Config implements McpContext {
   private readonly useAlternateBuffer: boolean;
   private shellExecutionConfig: ShellExecutionConfig;
   private readonly extensionManagement: boolean = true;
+  private readonly extensionRegistryURI: string | undefined;
   private readonly truncateToolOutputThreshold: number;
   private compressionTruncationCounter = 0;
   private initialized = false;
@@ -755,7 +763,8 @@ export class Config implements McpContext {
   private readonly fileExclusions: FileExclusions;
   private readonly eventEmitter?: EventEmitter;
   private readonly useWriteTodos: boolean;
-  private readonly messageBus: MessageBus;
+  private readonly workspacePoliciesDir: string | undefined;
+  private readonly _messageBus: MessageBus;
   private readonly policyEngine: PolicyEngine;
   private policyUpdateConfirmationRequest:
     | PolicyUpdateConfirmationRequest
@@ -824,7 +833,7 @@ export class Config implements McpContext {
   private lastProviderModel: string | undefined;
 
   constructor(params: ConfigParameters) {
-    this.sessionId = params.sessionId;
+    this._sessionId = params.sessionId;
     this.clientVersion = params.clientVersion ?? 'unknown';
     this.approvedPlanPath = undefined;
     this.embeddingModel =
@@ -905,7 +914,7 @@ export class Config implements McpContext {
     this.enableAgents = params.enableAgents ?? false;
     this.agents = params.agents ?? {};
     this.disableLLMCorrection = params.disableLLMCorrection ?? true;
-    this.planEnabled = params.plan ?? false;
+    this.planEnabled = params.plan ?? true;
     this.trackerEnabled = params.tracker ?? false;
     this.planModeRoutingEnabled = params.planSettings?.modelRouting ?? true;
     this.enableEventDrivenScheduler = params.enableEventDrivenScheduler ?? true;
@@ -970,6 +979,7 @@ export class Config implements McpContext {
       DEFAULT_TRUNCATE_TOOL_OUTPUT_THRESHOLD;
     // // TODO(joshualitt): Re-evaluate the todo tool for 3 family.
     this.useWriteTodos = params.useWriteTodos ?? true;
+    this.workspacePoliciesDir = params.workspacePoliciesDir;
     this.enableHooksUI = params.enableHooksUI ?? true;
     this.enableHooks = params.enableHooks ?? true;
     this.disabledHooks = params.disabledHooks ?? [];
@@ -980,8 +990,9 @@ export class Config implements McpContext {
     this.shellToolInactivityTimeout =
       (params.shellToolInactivityTimeout ?? 300) * 1000; // 5 minutes
     this.extensionManagement = params.extensionManagement ?? true;
+    this.extensionRegistryURI = params.extensionRegistryURI;
     this.enableExtensionReloading = params.enableExtensionReloading ?? false;
-    this.storage = new Storage(this.targetDir, this.sessionId);
+    this.storage = new Storage(this.targetDir, this._sessionId);
     this.storage.setCustomPlansDir(params.planSettings?.directory);
 
     this.fakeResponses = params.fakeResponses;
@@ -1017,7 +1028,7 @@ export class Config implements McpContext {
       ConsecaSafetyChecker.getInstance().setConfig(this);
     }
 
-    this.messageBus = new MessageBus(this.policyEngine, this.debugMode);
+    this._messageBus = new MessageBus(this.policyEngine, this.debugMode);
     this.acknowledgedAgentsService = new AcknowledgedAgentsService();
     this.skillManager = new SkillManager();
     this.outputSettings = {
@@ -1032,7 +1043,7 @@ export class Config implements McpContext {
           params.gemmaModelRouter?.classifier?.model ?? 'gemma3-1b-gpu-custom',
       },
     };
-    this.retryFetchErrors = params.retryFetchErrors ?? false;
+    this.retryFetchErrors = params.retryFetchErrors ?? true;
     this.maxAttempts = Math.min(
       params.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
       DEFAULT_MAX_ATTEMPTS,
@@ -1080,7 +1091,7 @@ export class Config implements McpContext {
         );
       }
     }
-    this.geminiClient = new GeminiClient(this);
+    this._geminiClient = new GeminiClient(this);
     this.modelRouterService = new ModelRouterService(this);
 
     // HACK: The settings loading logic doesn't currently merge the default
@@ -1109,6 +1120,10 @@ export class Config implements McpContext {
     this.modelConfigService = new ModelConfigService(
       modelConfigServiceConfig ?? DEFAULT_MODEL_CONFIGS,
     );
+  }
+
+  get config(): Config {
+    return this;
   }
 
   isInitialized(): boolean {
@@ -1172,11 +1187,11 @@ export class Config implements McpContext {
 
     coreEvents.on(CoreEvent.AgentsRefreshed, this.onAgentsRefreshed);
 
-    this.toolRegistry = await this.createToolRegistry();
+    this._toolRegistry = await this.createToolRegistry();
     discoverToolsHandle?.end();
     this.mcpClientManager = new McpClientManager(
       this.clientVersion,
-      this.toolRegistry,
+      this._toolRegistry,
       this,
       this.eventEmitter,
     );
@@ -1228,7 +1243,7 @@ export class Config implements McpContext {
       await this.contextManager.refresh();
     }
 
-    await this.geminiClient.initialize();
+    await this._geminiClient.initialize();
     this.initialized = true;
   }
 
@@ -1252,7 +1267,7 @@ export class Config implements McpContext {
       authMethod !== AuthType.USE_GEMINI
     ) {
       // Restore the conversation history to the new client
-      this.geminiClient.stripThoughtsFromHistory();
+      this._geminiClient.stripThoughtsFromHistory();
     }
 
     // Reset availability status when switching auth (e.g. from limited key to OAuth)
@@ -1373,12 +1388,28 @@ export class Config implements McpContext {
     return this.localLiteRtLmClient;
   }
 
+  get promptId(): string {
+    return this._sessionId;
+  }
+
+  get toolRegistry(): ToolRegistry {
+    return this._toolRegistry;
+  }
+
+  get messageBus(): MessageBus {
+    return this._messageBus;
+  }
+
+  get geminiClient(): GeminiClient {
+    return this._geminiClient;
+  }
+
   getSessionId(): string {
-    return this.sessionId;
+    return this.promptId;
   }
 
   setSessionId(sessionId: string): void {
-    this.sessionId = sessionId;
+    this._sessionId = sessionId;
   }
 
   setTerminalBackground(terminalBackground: string | undefined): void {
@@ -1668,6 +1699,7 @@ export class Config implements McpContext {
     return this.acknowledgedAgentsService;
   }
 
+  /** @deprecated Use toolRegistry getter */
   getToolRegistry(): ToolRegistry {
     return this.toolRegistry;
   }
@@ -1869,6 +1901,10 @@ export class Config implements McpContext {
     return this.extensionsEnabled;
   }
 
+  getExtensionRegistryURI(): string | undefined {
+    return this.extensionRegistryURI;
+  }
+
   getMcpClientManager(): McpClientManager | undefined {
     return this.mcpClientManager;
   }
@@ -1944,9 +1980,9 @@ export class Config implements McpContext {
       );
       await refreshServerHierarchicalMemory(this);
     }
-    if (this.geminiClient?.isInitialized()) {
-      await this.geminiClient.setTools();
-      this.geminiClient.updateSystemInstruction();
+    if (this._geminiClient?.isInitialized()) {
+      await this._geminiClient.setTools();
+      this._geminiClient.updateSystemInstruction();
     }
   }
 
@@ -2031,6 +2067,10 @@ export class Config implements McpContext {
     return this.geminiMdFilePaths;
   }
 
+  getWorkspacePoliciesDir(): string | undefined {
+    return this.workspacePoliciesDir;
+  }
+
   setGeminiMdFilePaths(paths: string[]): void {
     this.geminiMdFilePaths = paths;
   }
@@ -2100,8 +2140,8 @@ export class Config implements McpContext {
       (currentMode === ApprovalMode.YOLO || mode === ApprovalMode.YOLO);
 
     if (isPlanModeTransition || isYoloModeTransition) {
-      if (this.geminiClient?.isInitialized()) {
-        this.geminiClient.setTools().catch((err) => {
+      if (this._geminiClient?.isInitialized()) {
+        this._geminiClient.setTools().catch((err) => {
           debugLogger.error('Failed to update tools', err);
         });
       }
@@ -2197,6 +2237,7 @@ export class Config implements McpContext {
     return this.telemetrySettings.useCliAuth ?? false;
   }
 
+  /** @deprecated Use geminiClient getter */
   getGeminiClient(): GeminiClient {
     return this.geminiClient;
   }
@@ -2452,17 +2493,7 @@ export class Config implements McpContext {
       return true;
     }
 
-    const realpath = (p: string) => {
-      let resolved: string;
-      try {
-        resolved = fs.realpathSync(p);
-      } catch {
-        resolved = path.resolve(p);
-      }
-      return os.platform() === 'win32' ? resolved.toLowerCase() : resolved;
-    };
-
-    const resolvedPath = realpath(absolutePath);
+    const resolvedPath = resolveToRealPath(absolutePath);
 
     const workspaceContext = this.getWorkspaceContext();
     if (workspaceContext.isPathWithinWorkspace(resolvedPath)) {
@@ -2470,7 +2501,7 @@ export class Config implements McpContext {
     }
 
     const projectTempDir = this.storage.getProjectTempDir();
-    const resolvedTempDir = realpath(projectTempDir);
+    const resolvedTempDir = resolveToRealPath(projectTempDir);
 
     return isSubpath(resolvedTempDir, resolvedPath);
   }
@@ -2577,6 +2608,26 @@ export class Config implements McpContext {
   async getGemini31Launched(): Promise<boolean> {
     await this.ensureExperimentsLoaded();
     return this.getGemini31LaunchedSync();
+  }
+
+  /**
+   * Returns whether the custom tool model should be used.
+   */
+  async getUseCustomToolModel(): Promise<boolean> {
+    const useGemini3_1 = await this.getGemini31Launched();
+    const authType = this.contentGeneratorConfig?.authType;
+    return useGemini3_1 && authType === AuthType.USE_GEMINI;
+  }
+
+  /**
+   * Returns whether the custom tool model should be used.
+   *
+   * Note: This method should only be called after startup, once experiments have been loaded.
+   */
+  getUseCustomToolModelSync(): boolean {
+    const useGemini3_1 = this.getGemini31LaunchedSync();
+    const authType = this.contentGeneratorConfig?.authType;
+    return useGemini3_1 && authType === AuthType.USE_GEMINI;
   }
 
   /**
@@ -2777,6 +2828,7 @@ export class Config implements McpContext {
     return this.fileExclusions;
   }
 
+  /** @deprecated Use messageBus getter */
   getMessageBus(): MessageBus {
     return this.messageBus;
   }
@@ -3085,8 +3137,8 @@ export class Config implements McpContext {
   }
 
   private onAgentsRefreshed = async () => {
-    if (this.toolRegistry) {
-      this.registerSubAgentTools(this.toolRegistry);
+    if (this._toolRegistry) {
+      this.registerSubAgentTools(this._toolRegistry);
     }
     // Propagate updates to the active chat session
     const client = this.getGeminiClient();
@@ -3141,7 +3193,7 @@ export class Config implements McpContext {
     this.logCurrentModeDuration(this.getApprovalMode());
     coreEvents.off(CoreEvent.AgentsRefreshed, this.onAgentsRefreshed);
     this.agentRegistry?.dispose();
-    this.geminiClient?.dispose();
+    this._geminiClient?.dispose();
     if (this.mcpClientManager) {
       await this.mcpClientManager.stop();
     }
