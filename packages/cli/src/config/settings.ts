@@ -819,7 +819,6 @@ function _doLoadSettings(workspaceDir: string): LoadedSettings {
     },
     isTrusted,
     settingsErrors,
-    extensionUserSettings,
   );
 
   // Automatically migrate deprecated settings when loading.

@@ -58,7 +58,7 @@ export class ApprovalModeStrategy implements RoutingStrategy {
       const proModel = resolveClassifierModel(
         model,
         GEMINI_MODEL_ALIAS_PRO,
-        useGemini3_1,
+        String(useGemini3_1),
         useCustomToolModel,
       );
       return {
@@ -74,7 +74,7 @@ export class ApprovalModeStrategy implements RoutingStrategy {
       const flashModel = resolveClassifierModel(
         model,
         GEMINI_MODEL_ALIAS_FLASH,
-        useGemini3_1,
+        String(useGemini3_1),
         useCustomToolModel,
       );
       return {

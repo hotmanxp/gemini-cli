@@ -757,7 +757,7 @@ export async function loadCliConfig(
     }
   }
 
-  return new Config({
+  const configParams: ConstructorParameters<typeof Config>[0] = {
     acpMode: isAcpMode,
     clientName,
     sessionId,
@@ -771,7 +771,6 @@ export async function loadCliConfig(
       settings.context?.loadMemoryFromIncludeDirectories || false,
     debugMode,
     question,
-
     coreTools: settings.tools?.core || undefined,
     allowedTools: allowedTools.length > 0 ? allowedTools : undefined,
     policyEngineConfig,
@@ -823,7 +822,6 @@ export async function loadCliConfig(
     bugCommand: settings.advanced?.bugCommand,
     model: resolvedModel,
     maxSessionTurns: settings.model?.maxSessionTurns,
-
     listExtensions: argv.listExtensions || false,
     listSessions: argv.listSessions || false,
     deleteSession: argv.deleteSession,
@@ -896,7 +894,9 @@ export async function loadCliConfig(
     // Pass loadedSettings for accessing lastProviderModel and other settings
     settings: loadedSettings,
     enableConseca: settings.security?.enableConseca,
-  });
+  };
+
+  const config = new Config(configParams);
 
   if (folderTrust) {
     try {
@@ -930,7 +930,7 @@ export async function loadCliConfig(
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+   
   return config;
 }
 
