@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { debugLogger } from '@google/gemini-cli-core';
-import type { Config } from '@google/gemini-cli-core';
+import { debugLogger, type Config } from '@google/gemini-cli-core';
 import WebSocket from 'ws';
 import {
   initActivityLogger,
@@ -62,7 +61,10 @@ async function startOrJoinDevTools(
   defaultPort: number,
 ): Promise<{ host: string; port: number }> {
   const mod = await import('@google/gemini-cli-devtools');
-  const devtools: IDevTools = mod.DevTools.getInstance();
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
+  const DevTools: any = (mod as any).DevTools;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+  const devtools: IDevTools = DevTools.getInstance();
   const url = await devtools.start();
   const actualPort = devtools.getPort();
 
