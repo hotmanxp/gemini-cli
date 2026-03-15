@@ -6,6 +6,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { homedir } from 'node:os';
 import { inspect } from 'node:util';
 import process from 'node:process';
 import { z } from 'zod';
