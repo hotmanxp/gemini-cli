@@ -428,6 +428,11 @@ export interface LoadCliConfigOptions {
   projectHooks?: { [K in HookEventName]?: HookDefinition[] } & {
     disabled?: string[];
   };
+  /**
+   * Skip LSP service initialization. Defaults to true for faster startup.
+   * Set GEMINI_SKIP_LSP=false or pass skipLsp: false to enable LSP.
+   */
+  skipLsp?: boolean;
 }
 
 export async function loadCliConfig(
@@ -898,7 +903,12 @@ export async function loadCliConfig(
 
   const config = new Config(configParams);
 
-  if (folderTrust) {
+  // Only initialize LSP service if not skipped and not disabled
+  const skipLspInit =
+    options.skipLsp || process.env['GEMINI_DISABLE_LSP'] === 'true';
+  // Warmup is disabled by default for faster startup (can be enabled via GEMINI_ENABLE_LSP_WARMUP=true)
+  const skipLspWarmup = process.env['GEMINI_ENABLE_LSP_WARMUP'] !== 'true';
+  if (folderTrust && !skipLspInit) {
     try {
       debugLogger.log('Initializing LSP service...');
       const lspService = new NativeLspService(
@@ -908,29 +918,34 @@ export async function loadCliConfig(
         fileService,
         {
           requireTrustedWorkspace: folderTrust,
+          skipWarmup: skipLspWarmup,
         },
       );
 
-      debugLogger.log('Calling discoverAndPrepare (lazy loading enabled)...');
+      // Skip warmup/preview - only discover servers, don't start them
+      // Servers will be started on-demand when first requested
+      if (skipLspWarmup) {
+        debugLogger.log('LSP warmup disabled (servers start on-demand)');
+      } else {
+        debugLogger.log('LSP discovery + warmup enabled...');
+      }
       await lspService.discoverAndPrepare();
-      // Don't call start() - servers will be started on-demand
-      // debugLogger.log('Calling start...');
-      // await lspService.start();
 
       const lspClient = new NativeLspClient(lspService);
       config.setLspClient(lspClient);
-      debugLogger.log(
-        'LSP service initialized successfully (lazy loading enabled)',
-      );
+      debugLogger.log('LSP service initialized (on-demand start enabled)');
     } catch (err) {
       debugLogger.warn(
         'Failed to initialize native LSP service:',
         err instanceof Error ? err.message : String(err),
       );
     }
+  } else if (skipLspInit) {
+    debugLogger.log(
+      'LSP initialization skipped (GEMINI_DISABLE_LSP or partial config)',
+    );
   }
 
-   
   return config;
 }
 

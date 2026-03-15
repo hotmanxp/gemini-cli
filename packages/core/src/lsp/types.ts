@@ -552,6 +552,8 @@ export interface NativeLspServiceOptions {
   requireTrustedWorkspace?: boolean;
   /** Override workspace root path */
   workspaceRoot?: string;
+  /** Skip LSP warmup for faster startup (servers start on-demand) */
+  skipWarmup?: boolean;
 }
 
 /**

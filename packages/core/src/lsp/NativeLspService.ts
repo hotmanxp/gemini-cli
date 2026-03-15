@@ -51,6 +51,7 @@ export class NativeLspService {
   private serverManager: LspServerManager;
   private languageDetector: LspLanguageDetector;
   private normalizer: LspResponseNormalizer;
+  private skipWarmup: boolean;
 
   private isString(value: unknown): value is string {
     return typeof value === 'string';
@@ -81,6 +82,7 @@ export class NativeLspService {
       this.fileDiscoveryService,
     );
     this.normalizer = new LspResponseNormalizer();
+    this.skipWarmup = options.skipWarmup ?? false;
     this.serverManager = new LspServerManager(
       this.config,
       this.workspaceContext,
@@ -129,6 +131,12 @@ export class NativeLspService {
 
     // Only configure servers, don't start them yet (lazy loading)
     this.serverManager.setServerConfigs(serverConfigs);
+
+    // Skip warmup if disabled via options (for faster startup)
+    if (this.skipWarmup) {
+      debugLogger.log('LSP warmup skipped (skipWarmup option enabled)');
+      return;
+    }
 
     // Lightweight check for TypeScript/Python project detection (no full file scan)
     // Only check for project marker files, not individual source files

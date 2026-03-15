@@ -520,40 +520,45 @@ export class McpClientManager {
   private isRefreshingMcpContext: boolean = false;
   private pendingMcpContextRefresh: boolean = false;
 
+  /**
+   * Schedules an MCP context refresh with debouncing to avoid redundant work.
+   * During startup, this is typically called multiple times in quick succession
+   * (from startConfiguredMcpServers, startExtension, etc.), so we coalesce
+   * these requests into a single execution.
+   */
   private async scheduleMcpContextRefresh(): Promise<void> {
     this.pendingMcpContextRefresh = true;
 
+    // If already refreshing, mark that we need another refresh after
     if (this.isRefreshingMcpContext) {
-      debugLogger.log(
-        'MCP context refresh already in progress, queuing trailing execution.',
+      debugLogger.debug(
+        'MCP context refresh in progress, scheduling follow-up.',
       );
       return this.pendingRefreshPromise ?? Promise.resolve();
     }
 
+    // If already scheduled but not started, reuse the pending promise
     if (this.pendingRefreshPromise) {
-      debugLogger.log(
-        'MCP context refresh already scheduled, coalescing with existing request.',
-      );
+      debugLogger.debug('MCP context refresh already scheduled.');
       return this.pendingRefreshPromise;
     }
 
-    debugLogger.log('Scheduling MCP context refresh...');
+    debugLogger.debug('Scheduling MCP context refresh...');
     this.pendingRefreshPromise = (async () => {
       this.isRefreshingMcpContext = true;
       try {
         do {
           this.pendingMcpContextRefresh = false;
-          debugLogger.log('Executing MCP context refresh...');
+          debugLogger.debug('Executing MCP context refresh...');
           await this.cliConfig.refreshMcpContext();
-          debugLogger.log('MCP context refresh complete.');
+          debugLogger.debug('MCP context refresh complete.');
 
-          // If more refresh requests came in during the execution, wait a bit
-          // to coalesce them before the next iteration.
+          // If more refresh requests came in during execution, do one more
+          // iteration (no delay - we want fast startup, not batching)
           if (this.pendingMcpContextRefresh) {
-            debugLogger.log(
-              'Coalescing burst refresh requests (300ms delay)...',
+            debugLogger.debug(
+              'Additional refresh requests received, refreshing again...',
             );
-            await new Promise((resolve) => setTimeout(resolve, 300));
           }
         } while (this.pendingMcpContextRefresh);
       } catch (error) {

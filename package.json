@@ -39,6 +39,8 @@
     "build:sandbox": "node scripts/build_sandbox.js",
     "build:binary": "node scripts/build_binary.js",
     "bundle": "npm run generate && npm run build --workspace=@google/gemini-cli-devtools && node esbuild.config.js && node scripts/copy_bundle_assets.js",
+    "bundle:single": "cross-env SINGLE_FILE_BUNDLE=true npm run bundle",
+    "bundle:multi": "cross-env SINGLE_FILE_BUNDLE=false npm run bundle",
     "test": "npm run test --workspaces --if-present && npm run test:sea-launch",
     "test:ci": "npm run test:ci --workspaces --if-present && npm run test:scripts && npm run test:sea-launch",
     "test:scripts": "vitest run --config ./scripts/tests/vitest.config.ts",

@@ -346,8 +346,11 @@ export async function main() {
     }
   }
 
+  // Pass skipLsp: true to skip LSP during partial config load.
+  // The full config will also skip LSP by default (GEMINI_SKIP_LSP=true by default).
   const partialConfig = await loadCliConfig(settings.merged, sessionId, argv, {
     projectHooks: settings.workspace.settings.hooks,
+    skipLsp: true,
   });
   adminControlsListner.setConfig(partialConfig);
 
