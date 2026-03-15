@@ -2036,7 +2036,19 @@ export class Config implements McpContext, AgentLoopContext {
    * Refreshes the MCP context, including memory, tools, and system instructions.
    */
   async refreshMcpContext(): Promise<void> {
-    if (this.experimentalJitContext && this.contextManager) {
+    // Skip expensive memory discovery when in home directory with includeDirectories disabled
+    // This prevents scanning the entire home directory which causes slow startup
+    const isHomeDir = this.getWorkingDir() === homedir();
+    const shouldSkipMemoryRefresh =
+      isHomeDir &&
+      !this.shouldLoadMemoryFromIncludeDirectories() &&
+      !this.experimentalJitContext;
+
+    if (shouldSkipMemoryRefresh) {
+      debugLogger.debug(
+        '[DEBUG] Skipping MCP memory refresh in home directory with includeDirectories disabled',
+      );
+    } else if (this.experimentalJitContext && this.contextManager) {
       await this.contextManager.refresh();
     } else {
       const { refreshServerHierarchicalMemory } = await import(
