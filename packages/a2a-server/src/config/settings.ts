@@ -49,6 +49,9 @@ export interface Settings {
     customIgnoreFilePaths?: string[];
     allowOperationsOnIgnoredFiles?: boolean;
   };
+  experimental?: {
+    enableAgents?: boolean;
+  };
 }
 
 export interface SettingsError {

@@ -103,4 +103,12 @@ if (existsSync(devtoolsDistSrc)) {
   }
 }
 
+// 6. Copy bundled chrome-devtools-mcp
+const bundleMcpSrc = join(root, 'packages/core/dist/bundled');
+const bundleMcpDest = join(bundleDir, 'bundled');
+if (existsSync(bundleMcpSrc)) {
+  cpSync(bundleMcpSrc, bundleMcpDest, { recursive: true, dereference: true });
+  console.log('Copied bundled chrome-devtools-mcp to bundle/bundled/');
+}
+
 console.log('Assets copied to bundle/');

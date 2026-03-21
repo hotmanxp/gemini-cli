@@ -17,8 +17,8 @@ export const customModelsCommand: SlashCommand = {
   kind: CommandKind.BUILT_IN,
   autoExecute: true,
   action: async (context: CommandContext): Promise<OpenDialogActionReturn> => {
-    if (context.services.config) {
-      await context.services.config.refreshUserQuota();
+    if (context.services.agentContext?.config) {
+      await context.services.agentContext.config.refreshUserQuota();
     }
 
     return {

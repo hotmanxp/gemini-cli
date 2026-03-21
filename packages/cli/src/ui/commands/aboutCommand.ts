@@ -36,7 +36,7 @@ export const aboutCommand: SlashCommand = {
       })`;
     }
     const modelVersion = getDisplayString(
-      context.services.config?.getModel() || 'Unknown',
+      context.services.agentContext?.config.getModel() || 'Unknown',
     );
     const cliVersion = await getVersion();
     const selectedAuthType =
@@ -51,7 +51,7 @@ export const aboutCommand: SlashCommand = {
     });
     const userEmail = cachedAccount ?? undefined;
 
-    const tier = context.services.config?.getUserTierName();
+    const tier = context.services.agentContext?.config.getUserTierName();
 
     const aboutItem: Omit<HistoryItemAbout, 'id'> = {
       type: MessageType.ABOUT,
@@ -71,7 +71,7 @@ export const aboutCommand: SlashCommand = {
 };
 
 async function getIdeClientName(context: CommandContext) {
-  if (!context.services.config?.getIdeMode()) {
+  if (!context.services.agentContext?.config.getIdeMode()) {
     return '';
   }
   const ideClient = await IdeClient.getInstance();
