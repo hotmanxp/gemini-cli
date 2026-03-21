@@ -91,7 +91,6 @@ import { isAlternateBufferEnabled } from './ui/hooks/useAlternateBuffer.js';
 import { setupTerminalAndTheme } from './utils/terminalTheme.js';
 import { runDeferredCommand } from './deferred.js';
 import { cleanupBackgroundLogs } from './utils/logCleanup.js';
-import { SlashCommandConflictHandler } from './services/SlashCommandConflictHandler.js';
 
 export function validateDnsResolutionOrder(
   order: string | undefined,
@@ -183,30 +182,41 @@ export async function startInteractiveUI(
   );
 }
 
+export async function startInteractiveUIWithProgress(
+  config: Config,
+  settings: LoadedSettings,
+  startupWarnings: StartupWarning[],
+  workspaceRoot: string = process.cwd(),
+  resumedSessionData: ResumedSessionData | undefined,
+) {
+  // Dynamically import the heavy UI module so React/Ink are only parsed when needed
+  const { startInteractiveUIWithProgress: doStartUI } = await import(
+    './interactiveCli.js'
+  );
+  await doStartUI(
+    config,
+    settings,
+    startupWarnings,
+    workspaceRoot,
+    resumedSessionData,
+  );
+}
+
 export async function main() {
   const cliStartupHandle = startupProfiler.start('cli_startup');
 
-  // Listen for admin controls from parent process (IPC) in non-sandbox mode. In
-  // sandbox mode, we re-fetch the admin controls from the server once we enter
-  // the sandbox.
-  // TODO: Cache settings in sandbox mode as well.
+  // Listen for admin controls from parent process (IPC) in non-sandbox mode.
   const adminControlsListner = setupAdminControlsListener();
   registerCleanup(adminControlsListner.cleanup);
 
   const cleanupStdio = patchStdio();
   registerSyncCleanup(() => {
-    // This is needed to ensure we don't lose any buffered output.
     initializeOutputListenersAndFlush();
     cleanupStdio();
   });
 
   setupUnhandledRejectionHandler();
-
   setupSignalHandlers();
-
-  const slashCommandConflictHandler = new SlashCommandConflictHandler();
-  slashCommandConflictHandler.start();
-  registerCleanup(() => slashCommandConflictHandler.stop());
 
   const loadSettingsHandle = startupProfiler.start('load_settings');
   const settings = loadSettings();
@@ -219,11 +229,29 @@ export async function main() {
     worktreeInfo = await setupWorktree(requestedWorktree || undefined);
   }
 
+  // Override selectedType with environment variable if USE_QWEN_OAUTH is set
+  if (process.env['USE_QWEN_OAUTH'] === 'true') {
+    settings.setValue(
+      SettingScope.User,
+      'security.auth.selectedType',
+      'qwen-oauth',
+    );
+    // Also set default model for Qwen OAuth if not already set
+    if (!settings.merged.model?.model) {
+      settings.setValue(SettingScope.User, 'model.model', 'coder-model');
+    }
+  }
+
+  const slashCommandConflictHandler = new SlashCommandConflictHandler();
+  slashCommandConflictHandler.start();
+  registerCleanup(() => slashCommandConflictHandler.stop());
+
   // Report settings errors once during startup
-  settings.errors.forEach((error) => {
-    coreEvents.emitFeedback('warning', error.message);
+  settings.errors.forEach((err) => {
+    coreEvents.emitFeedback('warning', err.message);
   });
 
+  // Load trusted folders immediately (needed for security)
   const trustedFolders = loadTrustedFolders();
   trustedFolders.errors.forEach((error: TrustedFoldersError) => {
     coreEvents.emitFeedback(
@@ -232,11 +260,15 @@ export async function main() {
     );
   });
 
-  await Promise.all([
-    cleanupCheckpoints(),
-    cleanupToolOutputFiles(settings.merged),
-    cleanupBackgroundLogs(),
-  ]);
+  // Defer non-critical cleanup to background
+  const backgroundCleanup = async () => {
+    await Promise.all([
+      cleanupCheckpoints(),
+      cleanupToolOutputFiles(settings.merged),
+      cleanupBackgroundLogs(),
+    ]);
+  };
+  void backgroundCleanup();
 
   const parseArgsHandle = startupProfiler.start('parse_arguments');
   const argv = await parseArguments(settings.merged);
@@ -524,41 +556,9 @@ export async function main() {
       });
     }
 
-    await setupTerminalAndTheme(config, settings);
-
-    const initAppHandle = startupProfiler.start('initialize_app');
-    const initializationResult = await initializeApp(config, settings);
-    initAppHandle?.end();
-
-    if (
-      settings.merged.security.auth.selectedType ===
-        AuthType.LOGIN_WITH_GOOGLE &&
-      config.isBrowserLaunchSuppressed()
-    ) {
-      // Do oauth before app renders to make copying the link possible.
-      await getOauthClient(settings.merged.security.auth.selectedType, config);
-    }
-
     if (config.getAcpMode()) {
       return runAcpClient(config, settings, argv);
     }
-
-    let input = config.getQuestion();
-    const useAlternateBuffer = shouldEnterAlternateScreen(
-      isAlternateBufferEnabled(config),
-      config.getScreenReader(),
-    );
-    const rawStartupWarnings = await getStartupWarnings();
-    const startupWarnings: StartupWarning[] = [
-      ...rawStartupWarnings.map((message) => ({
-        id: `startup-${createHash('sha256').update(message).digest('hex').substring(0, 16)}`,
-        message,
-        priority: WarningPriority.High,
-      })),
-      ...(await getUserStartupWarnings(settings.merged, undefined, {
-        isAlternateBuffer: useAlternateBuffer,
-      })),
-    ];
 
     // Handle --resume flag
     let resumedSessionData: ResumedSessionData | undefined = undefined;
@@ -573,17 +573,15 @@ export async function main() {
         // Use the existing session ID to continue recording to the same session
         config.setSessionId(resumedSessionData.conversation.sessionId);
       } catch (error) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         if (
           error instanceof SessionError &&
           error.code === 'NO_SESSIONS_FOUND'
         ) {
-          // No sessions to resume — start a fresh session with a warning
-          startupWarnings.push({
-            id: 'resume-no-sessions',
-            message: error.message,
-            priority: WarningPriority.High,
-          });
+          await runExitCleanup();
+          process.exit(ExitCodes.SUCCESS);
         } else {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-return
           coreEvents.emitFeedback(
             'error',
             `Error resuming session: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -595,21 +593,92 @@ export async function main() {
     }
 
     cliStartupHandle?.end();
-    // Render UI, passing necessary config values. Check that there is no command line question.
+
+    // FAST PATH: Render UI immediately with minimal initialization
     if (config.isInteractive()) {
+      // Perform only critical auth check synchronously
+      const initAppHandle = startupProfiler.start('initialize_app_minimal');
+      const { initializeAppMinimal } = await import('./core/initializer.js');
+      const minimalResult = await initializeAppMinimal(config, settings);
+      initAppHandle?.end();
+
+      // Start UI immediately with empty startup warnings
+      const emptyStartupWarnings: StartupWarning[] = [];
+      
       await startInteractiveUI(
         config,
         settings,
-        startupWarnings,
+        emptyStartupWarnings,
         process.cwd(),
         resumedSessionData,
-        initializationResult,
+        {
+          authError: minimalResult.authError,
+          accountSuspensionInfo: minimalResult.accountSuspensionInfo,
+          themeError: null,
+          shouldOpenAuthDialog: minimalResult.shouldOpenAuthDialog,
+          geminiMdFileCount: 0,
+        },
       );
+
+      // Background initialization - runs AFTER UI is rendered
+      const backgroundInit = async () => {
+        try {
+          // 1. Setup terminal and theme (can be done asynchronously)
+          await setupTerminalAndTheme(config, settings);
+
+          // 2. Get startup warnings (non-critical, can show as toasts later)
+          const useAlternateBuffer = shouldEnterAlternateScreen(
+            isAlternateBufferEnabled(config),
+            config.getScreenReader(),
+          );
+          const rawStartupWarnings = await getStartupWarnings();
+          const warnings: StartupWarning[] = [
+            ...rawStartupWarnings.map((message) => ({
+              id: `startup-${createHash('sha256').update(message).digest('hex').substring(0, 16)}`,
+              message,
+              priority: WarningPriority.High,
+            })),
+            ...(await getUserStartupWarnings(settings.merged, undefined, {
+              isAlternateBuffer: useAlternateBuffer,
+            })),
+          ];
+
+          // Emit warnings as feedback (will appear as toasts in UI)
+          warnings.forEach((w) => {
+            coreEvents.emitFeedback('warning', w.message);
+          });
+
+          // 3. Full app initialization (session logging, IDE connection)
+          const fullInitHandle = startupProfiler.start('initialize_app_full');
+          await initializeApp(config, settings);
+          fullInitHandle?.end();
+
+          // 4. OAuth if needed
+          if (
+            settings.merged.security.auth.selectedType ===
+              AuthType.LOGIN_WITH_GOOGLE &&
+            config.isBrowserLaunchSuppressed()
+          ) {
+            await getOauthClient(settings.merged.security.auth.selectedType, config);
+          }
+        } catch (error) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          debugLogger.error('Background initialization failed:', error);
+          // Errors are already handled by individual init functions
+        }
+      };
+
+      // Fire and forget - don't await
+      void backgroundInit();
       return;
     }
 
+    // Non-interactive mode - continue with full initialization
     await config.initialize();
     startupProfiler.flush(config);
+
+    // Get input for non-interactive mode
+    let input = config.getQuestion();
 
     // If not a TTY, read from stdin
     // This is for cases where the user pipes input directly into the command

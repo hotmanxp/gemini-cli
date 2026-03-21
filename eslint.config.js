@@ -52,6 +52,8 @@ export default tseslint.config(
       'packages/test-utils/**',
       '.gemini/**',
       '**/*.d.ts',
+      'profile_startup.js',
+      'test_startup.js',
     ],
   },
   eslint.configs.recommended,
