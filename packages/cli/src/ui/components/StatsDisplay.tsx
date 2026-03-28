@@ -92,7 +92,7 @@ const buildModelRows = (
   config: Config,
   quotas?: RetrieveUserQuotaResponse,
   useGemini3_1 = false,
-  useGemini3_1FlashLite = false,
+  _useGemini3_1FlashLite = false,
   useCustomToolModel = false,
 ) => {
   const getBaseModelName = (name: string) => name.replace('-001', '');
@@ -125,12 +125,7 @@ const buildModelRows = (
       ?.filter(
         (b) =>
           b.modelId &&
-          isActiveModel(
-            b.modelId,
-            useGemini3_1,
-            useGemini3_1FlashLite,
-            useCustomToolModel,
-          ) &&
+          isActiveModel(b.modelId, useGemini3_1, useCustomToolModel) &&
           !usedModelNames.has(getDisplayString(b.modelId, config)),
       )
       .map((bucket) => ({

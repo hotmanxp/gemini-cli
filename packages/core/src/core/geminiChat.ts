@@ -524,8 +524,6 @@ export class GeminiChat {
     const apiCall = async () => {
       const useGemini3_1 =
         (await this.context.config.getGemini31Launched?.()) ?? false;
-      const useGemini3_1FlashLite =
-        (await this.context.config.getGemini31FlashLiteLaunched?.()) ?? false;
       const hasAccessToPreview =
         this.context.config.getHasAccessToPreviewModel?.() ?? true;
 
@@ -533,7 +531,6 @@ export class GeminiChat {
       let modelToUse = resolveModel(
         lastModelToUse,
         useGemini3_1,
-        useGemini3_1FlashLite,
         false,
         hasAccessToPreview,
         this.context.config,
@@ -545,7 +542,6 @@ export class GeminiChat {
         modelToUse = resolveModel(
           this.context.config.getActiveModel(),
           useGemini3_1,
-          useGemini3_1FlashLite,
           false,
           hasAccessToPreview,
           this.context.config,

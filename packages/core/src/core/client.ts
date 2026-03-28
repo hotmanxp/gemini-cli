@@ -587,7 +587,6 @@ export class GeminiClient {
     return resolveModel(
       this.config.getActiveModel(),
       this.config.getGemini31LaunchedSync?.() ?? false,
-      this.config.getGemini31FlashLiteLaunchedSync?.() ?? false,
       false,
       this.config.getHasAccessToPreviewModel?.() ?? true,
       this.config,

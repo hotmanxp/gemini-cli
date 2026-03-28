@@ -891,4 +891,11 @@ export class PolicyEngine {
 
     return excludedTools;
   }
+
+  /**
+   * Get the sandbox manager instance
+   */
+  getSandboxManager(): SandboxManager {
+    return this.sandboxManager;
+  }
 }

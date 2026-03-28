@@ -48,6 +48,7 @@ import {
   NoopSandboxManager,
 } from '../services/sandboxManager.js';
 import { createSandboxManager } from '../services/sandboxManagerFactory.js';
+import { SandboxPolicyManager } from '../policy/sandboxPolicyManager.js';
 import { SandboxedFileSystemService } from '../services/sandboxedFileSystemService.js';
 import {
   initializeTelemetry,
@@ -335,6 +336,8 @@ export interface BrowserAgentCustomConfig {
   allowedDomains?: string[];
   /** Disable user input on the browser window during automation. Default: true in non-headless mode */
   disableUserInput?: boolean;
+  /** Maximum number of actions (tool calls) allowed per task. Default: 100 */
+  maxActionsPerTask?: number;
   /** Whether to confirm sensitive actions (e.g., fill_form, evaluate_script). */
   confirmSensitiveActions?: boolean;
   /** Whether to block file uploads. */
@@ -761,6 +764,8 @@ export class Config implements McpContext, AgentLoopContext {
   // LSP-related fields
   private lspClient: LspClient | null = null;
   private lspEnabled: boolean = true;
+  // Sandbox policy manager for persistent approvals
+  private readonly _sandboxPolicyManager: import('../policy/sandboxPolicyManager.js').SandboxPolicyManager;
 
   private readonly checkpointing: boolean;
   private readonly proxy: string | undefined;
@@ -939,7 +944,12 @@ export class Config implements McpContext, AgentLoopContext {
           networkAccess: false,
         };
 
-    this._sandboxManager = createSandboxManager(this.sandbox, params.targetDir);
+    this._sandboxManager = createSandboxManager(this.sandbox, {
+      workspace: params.targetDir,
+    });
+
+    // Initialize sandbox policy manager for persistent approvals
+    this._sandboxPolicyManager = new SandboxPolicyManager();
 
     if (
       !(this._sandboxManager instanceof NoopSandboxManager) &&
@@ -3566,6 +3576,77 @@ export class Config implements McpContext, AgentLoopContext {
   disableLsp(): void {
     this.lspEnabled = false;
     this.lspClient = null;
+  }
+
+  // ============================================================================
+  // Compatibility methods for local customizations
+  // ============================================================================
+
+  /**
+   * Compatibility method for getGemini31FlashLiteLaunchedSync
+   * Maps to getGemini31LaunchedSync
+   */
+  getGemini31FlashLiteLaunchedSync(): boolean {
+    return this.getGemini31LaunchedSync();
+  }
+
+  /**
+   * Compatibility method for getGemini31FlashLiteLaunched
+   * Maps to getGemini31Launched
+   */
+  async getGemini31FlashLiteLaunched(): Promise<boolean> {
+    return this.getGemini31Launched();
+  }
+
+  /**
+   * Compatibility method for isPlanMode
+   * Returns false by default (plan mode not enabled in upstream)
+   */
+  isPlanMode(): boolean {
+    return this.planEnabled ?? false;
+  }
+
+  /**
+   * Compatibility method for sandboxPolicyManager
+   * Returns the sandbox policy manager instance
+   */
+  get sandboxPolicyManager(): SandboxPolicyManager {
+    return this._sandboxPolicyManager;
+  }
+
+  /**
+   * Experimental agent history truncation enabled
+   */
+  isExperimentalAgentHistoryTruncationEnabled(): boolean {
+    return false;
+  }
+
+  /**
+   * Experimental agent history truncation threshold
+   */
+  getExperimentalAgentHistoryTruncationThreshold(): number {
+    return 0;
+  }
+
+  /**
+   * Experimental agent history retained messages
+   */
+  getExperimentalAgentHistoryRetainedMessages(): number {
+    return 0;
+  }
+
+  /**
+   * Experimental agent history summarization enabled
+   */
+  isExperimentalAgentHistorySummarizationEnabled(): boolean {
+    return false;
+  }
+
+  /**
+   * Get memory boundary markers
+   */
+  getMemoryBoundaryMarkers(): readonly string[] {
+    return [];
   }
 
   /**

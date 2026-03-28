@@ -53,7 +53,6 @@ export function resolvePolicyChain(
   const resolvedModel = resolveModel(
     modelFromConfig,
     useGemini31,
-    useGemini31FlashLite,
     useCustomToolModel,
     hasAccessToPreview,
     config,
