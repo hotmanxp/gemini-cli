@@ -13,6 +13,8 @@ import {
   qwenOAuth2Events,
   QwenOAuth2Event,
   clearQwenCredentials,
+  readQwenCredentials,
+  areCredentialsExpired,
 } from '@google/gemini-cli-core';
 
 export const qwenAuthCommand: CommandModule = {
@@ -43,9 +45,7 @@ export const qwenAuthCommand: CommandModule = {
 
     try {
       // Try to get existing credentials first
-      const { readQwenCredentials, areCredentialsExpired } = await import(
-        '@google/gemini-cli-core'
-      );
+      // readQwenCredentials and areCredentialsExpired are now statically imported
       const existingCreds = await readQwenCredentials();
 
       if (

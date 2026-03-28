@@ -4,12 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import OpenAI from 'openai';
-import { OpenAIContentGenerator } from './openaiContentGenerator/index.js';
-import { type Config } from '../config/config.js';
+import { OpenAIContentGenerator } from './openaiContentGenerator/openaiContentGenerator.js';
 import { AuthType } from './contentGenerator.js';
+import type { Config } from '../config/config.js';
 import type { OpenAIContentGeneratorConfig } from './openaiContentGenerator/types.js';
 import { debugLogger } from '../utils/debugLogger.js';
 import type { Provider, ProviderModel } from '../services/providerRegistry.js';
@@ -31,7 +30,7 @@ export class ProviderContentGenerator extends OpenAIContentGenerator {
   ) {
     // Create OpenAI-compatible config from provider settings
     const contentGeneratorConfig: OpenAIContentGeneratorConfig = {
-      authType: AuthType.PROVIDER,
+      authType: AuthType.CONFIG_LOGIN,
       apiKey: extractApiKey(providerConfig, providerId),
       baseUrl: extractBaseUrl(providerConfig),
       model: initialModelId,
@@ -111,9 +110,8 @@ export class ProviderContentGenerator extends OpenAIContentGenerator {
  * Extract API key from provider options
  */
 function extractApiKey(providerConfig: Provider, providerId: string): string {
-  const options: Record<string, unknown> = providerConfig.options || {};
-  const envValue = process.env[providerConfig.env?.[0] || ''];
-  let apiKey = (options['apiKey'] as string) ?? (envValue as string) ?? '';
+  const options = providerConfig.options || {};
+  let apiKey = options.apiKey || process.env[providerConfig.env?.[0] || ''];
 
   if (!apiKey) {
     debugLogger.warn(
@@ -141,11 +139,9 @@ function extractApiKey(providerConfig: Provider, providerId: string): string {
  * Extract base URL from provider options
  */
 function extractBaseUrl(providerConfig: Provider): string {
-  const options: Record<string, unknown> = providerConfig.options || {};
+  const options = providerConfig.options || {};
   return (
-    (options['baseURL'] as string) ||
-    (options['enterpriseUrl'] as string) ||
-    'https://api.openai.com/v1'
+    options.baseURL || options.enterpriseUrl || 'https://api.openai.com/v1'
   );
 }
 
@@ -153,13 +149,13 @@ function extractBaseUrl(providerConfig: Provider): string {
  * Extract timeout from provider options
  */
 function extractTimeout(providerConfig: Provider): number | undefined {
-  const options: Record<string, unknown> = providerConfig.options || {};
-  const timeout = options['timeout'];
+  const options = providerConfig.options || {};
+  const timeout = options.timeout;
   // Convert false to undefined, return number or undefined
   if (timeout === false) {
     return undefined;
   }
-  return (timeout as number) ?? 120000; // Default 2 minutes
+  return timeout ?? 120000; // Default 2 minutes
 }
 
 /**
@@ -168,8 +164,8 @@ function extractTimeout(providerConfig: Provider): number | undefined {
 function extractCustomHeaders(
   providerConfig: Provider,
 ): Record<string, string> {
-  const options: Record<string, unknown> = providerConfig.options || {};
-  return (options['headers'] as Record<string, string>) || {};
+  const options = providerConfig.options || {};
+  return options.headers || {};
 }
 
 /**
@@ -211,7 +207,7 @@ export class GenericOpenAICompatibleProvider {
     return { ...defaultHeaders, ...customHeaders };
   }
 
-  buildClient(): OpenAI {
+  buildClient(): any {
     const {
       apiKey,
       baseUrl = 'https://api.openai.com/v1',
@@ -231,10 +227,7 @@ export class GenericOpenAICompatibleProvider {
     });
   }
 
-  buildRequest(
-    request: OpenAI.Chat.ChatCompletionCreateParams,
-    userPromptId: string,
-  ): OpenAI.Chat.ChatCompletionCreateParams {
+  buildRequest(request: any, userPromptId: string): any {
     // Generic request builder - pass through most parameters
     const sessionId = this.cliConfig.getSessionId();
 
@@ -247,7 +240,7 @@ export class GenericOpenAICompatibleProvider {
     };
   }
 
-  getDefaultGenerationConfig(): { temperature: number } {
+  getDefaultGenerationConfig(): any {
     return {
       temperature: 0.3,
     };
@@ -260,7 +253,7 @@ export class GenericOpenAICompatibleProvider {
 export async function createProviderContentGenerator(
   providerId: string,
   initialModelId: string,
-  providerConfig: Provider,
+  providerConfig: any,
   cliConfig: Config,
 ): Promise<ProviderContentGenerator> {
   return new ProviderContentGenerator(

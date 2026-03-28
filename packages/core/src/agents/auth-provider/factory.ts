@@ -10,6 +10,7 @@ import type {
   A2AAuthProvider,
   AuthValidationResult,
 } from './types.js';
+import { OAuth2AuthProvider } from './oauth2-provider.js';
 import { ApiKeyAuthProvider } from './api-key-provider.js';
 import { HttpAuthProvider } from './http-provider.js';
 import { GoogleCredentialsAuthProvider } from './google-credentials-provider.js';
@@ -71,7 +72,7 @@ export class A2AAuthProviderFactory {
         // Dynamic import to avoid pulling MCPOAuthTokenStorage into the
         // factory's static module graph, which causes initialization
         // conflicts with code_assist/oauth-credential-storage.ts.
-        const { OAuth2AuthProvider } = await import('./oauth2-provider.js');
+        // OAuth2AuthProvider is now statically imported
         const provider = new OAuth2AuthProvider(
           authConfig,
           options.agentName ?? 'unknown',

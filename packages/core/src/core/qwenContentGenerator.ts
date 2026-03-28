@@ -6,12 +6,14 @@
  * @license
  */
 
-import { OpenAIContentGenerator } from './openaiContentGenerator/index.js';
+ 
+
+import { OpenAIContentGenerator } from './openaiContentGenerator/openaiContentGenerator.js';
+import { AuthType } from './contentGenerator.js';
 import { DashScopeOpenAICompatibleProvider } from './openaiContentGenerator/provider/dashscope.js';
 import type { IQwenOAuth2Client } from '../qwen/qwenOAuth2.js';
 import { SharedTokenManager } from '../qwen/sharedTokenManager.js';
 import type { Config } from '../config/config.js';
-import { AuthType } from './contentGenerator.js';
 import type {
   GenerateContentParameters,
   GenerateContentResponse,
