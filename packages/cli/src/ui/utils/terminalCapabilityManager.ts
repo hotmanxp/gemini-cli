@@ -49,6 +49,7 @@ export class TerminalCapabilityManager {
   private static readonly HIDDEN_MODE = '\x1b[8m';
   private static readonly CLEAR_LINE_AND_RETURN = '\x1b[2K\r';
   private static readonly RESET_ATTRIBUTES = '\x1b[0m';
+  private static readonly CURSOR_UP_AND_CLEAR = '\x1b[1A\x1b[2K';
 
   /**
    * Triggers a terminal background color query.
@@ -139,6 +140,16 @@ export class TerminalCapabilityManager {
         process.stdin.removeListener('data', onData);
         if (!originalRawMode) {
           process.stdin.setRawMode(false);
+        }
+        // Clear any terminal response data that may have been displayed
+        try {
+          fs.writeSync(
+            process.stdout.fd,
+            TerminalCapabilityManager.CURSOR_UP_AND_CLEAR +
+              TerminalCapabilityManager.RESET_ATTRIBUTES,
+          );
+        } catch (_e) {
+          // Ignore errors during cleanup
         }
         this.detectionComplete = true;
         resolve();
