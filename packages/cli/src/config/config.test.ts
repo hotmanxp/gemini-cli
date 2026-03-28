@@ -143,12 +143,17 @@ vi.mock('@google/gemini-cli-core', async () => {
       respectGeminiIgnore: true,
       customIgnoreFilePaths: [],
     },
-    createPolicyEngineConfig: vi.fn(async () => ({
-      rules: [],
-      checkers: [],
-      defaultDecision: ServerConfig.PolicyDecision.ASK_USER,
-      approvalMode: ServerConfig.ApprovalMode.DEFAULT,
-    })),
+    createPolicyEngineConfig: vi.fn(
+      async (_settings, approvalMode, _workspacePoliciesDir, interactive) => ({
+        rules: [],
+        checkers: [],
+        defaultDecision: interactive
+          ? ServerConfig.PolicyDecision.ASK_USER
+          : ServerConfig.PolicyDecision.DENY,
+        approvalMode: approvalMode ?? ServerConfig.ApprovalMode.DEFAULT,
+        nonInteractive: !interactive,
+      }),
+    ),
     getAdminErrorMessage: vi.fn(
       (_feature) =>
         `YOLO mode is disabled by your administrator. To enable it, please request an update to the settings at: https://goo.gle/manage-gemini-cli`,
@@ -321,6 +326,41 @@ describe('parseArguments', () => {
       mockConsoleError.mockRestore();
     },
   );
+
+  describe('isCommand middleware', () => {
+    it.each([
+      { cmd: 'mcp list', expected: true },
+      { cmd: 'extensions list', expected: true },
+      { cmd: 'extension list', expected: true },
+      { cmd: 'skills list', expected: true },
+      { cmd: 'skill list', expected: true },
+      { cmd: 'hooks migrate', expected: true },
+      { cmd: 'hook migrate', expected: true },
+      { cmd: 'some query', expected: undefined },
+      { cmd: 'hello world', expected: undefined },
+    ])(
+      'should set isCommand to $expected for "$cmd"',
+      async ({ cmd, expected }) => {
+        process.argv = ['node', 'script.js', ...cmd.split(' ')];
+        const settings = createTestMergedSettings({
+          admin: {
+            mcp: { enabled: true },
+          },
+          experimental: {
+            extensionManagement: true,
+          },
+          skills: {
+            enabled: true,
+          },
+          hooksConfig: {
+            enabled: true,
+          },
+        });
+        const parsedArgs = await parseArguments(settings);
+        expect(parsedArgs.isCommand).toBe(expected);
+      },
+    );
+  });
 
   it.each([
     {
@@ -949,6 +989,7 @@ describe('Hierarchical Memory Loading (config.ts) - Placeholder Suite', () => {
         respectGeminiIgnore: true,
       }),
       200, // maxDirs
+      ['.git'], // boundaryMarkers
     );
   });
 
@@ -978,6 +1019,7 @@ describe('Hierarchical Memory Loading (config.ts) - Placeholder Suite', () => {
         respectGeminiIgnore: true,
       }),
       200,
+      ['.git'], // boundaryMarkers
     );
   });
 
@@ -1006,6 +1048,7 @@ describe('Hierarchical Memory Loading (config.ts) - Placeholder Suite', () => {
         respectGeminiIgnore: true,
       }),
       200,
+      ['.git'], // boundaryMarkers
     );
   });
 });
@@ -3432,6 +3475,8 @@ describe('Policy Engine Integration in loadCliConfig', () => {
         }),
       }),
       expect.anything(),
+      undefined,
+      expect.anything(),
     );
   });
 
@@ -3456,6 +3501,8 @@ describe('Policy Engine Integration in loadCliConfig', () => {
         }),
       }),
       expect.anything(),
+      undefined,
+      expect.anything(),
     );
   });
 
@@ -3478,6 +3525,8 @@ describe('Policy Engine Integration in loadCliConfig', () => {
           path.normalize('/path/to/policy2.toml'),
         ],
       }),
+      expect.anything(),
+      undefined,
       expect.anything(),
     );
   });
