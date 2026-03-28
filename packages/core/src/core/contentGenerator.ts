@@ -28,6 +28,9 @@ import { determineSurface } from '../utils/surface.js';
 import { RecordingContentGenerator } from './recordingContentGenerator.js';
 import { getVersion, resolveModel, debugLogger } from '../../index.js';
 import type { LlmRole } from '../telemetry/llmRole.js';
+// Static imports to avoid circular dependency and dynamic import issues
+import { createQwenContentGenerator } from './qwenContentGenerator.js';
+import { createProviderContentGenerator } from './providerContentGenerator.js';
 
 /**
  * Interface abstracting the core functionalities for generating content and counting tokens.
@@ -298,18 +301,12 @@ export async function createContentGenerator(
 
     // Qwen OAuth authentication
     if (config.authType === AuthType.USE_QWEN) {
-      const { createQwenContentGenerator } = await import(
-        './qwenContentGenerator.js'
-      );
       const model = gcConfig.getModel() || 'qwen-plus';
       return createQwenContentGenerator(gcConfig, model);
     }
 
     // Config Login - use provider/model from configuration
     if (config.authType === AuthType.CONFIG_LOGIN) {
-      const { createProviderContentGenerator } = await import(
-        './providerContentGenerator.js'
-      );
       const model = gcConfig.getModel() || 'qwen/coder-model';
 
       // Parse provider/model format
