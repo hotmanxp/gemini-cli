@@ -87,7 +87,7 @@ const cliConfig = {
   },
   entryPoints: { gemini: 'packages/cli/index.ts' },
   outdir: 'bundle',
-  splitting: true,
+  splitting: false,
   define: {
     __filename: '__chunk_filename',
     __dirname: '__chunk_dirname',
