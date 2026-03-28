@@ -223,6 +223,15 @@ export class TerminalCapabilityManager {
           );
           if (match) {
             deviceAttributesReceived = true;
+            // Immediately clear the line to remove the terminal response
+            try {
+              fs.writeSync(
+                process.stdout.fd,
+                TerminalCapabilityManager.CLEAR_LINE_AND_RETURN,
+              );
+            } catch (_e) {
+              // Ignore errors
+            }
             cleanup();
           }
         }
