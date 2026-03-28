@@ -49,7 +49,8 @@ export class TerminalCapabilityManager {
   private static readonly HIDDEN_MODE = '\x1b[8m';
   private static readonly CLEAR_LINE_AND_RETURN = '\x1b[2K\r';
   private static readonly RESET_ATTRIBUTES = '\x1b[0m';
-  private static readonly CURSOR_UP_AND_CLEAR = '\x1b[1A\x1b[2K';
+  private static readonly SAVE_CURSOR = '\x1b[s';
+  private static readonly RESTORE_CURSOR = '\x1b[u';
 
   /**
    * Triggers a terminal background color query.
@@ -141,11 +142,12 @@ export class TerminalCapabilityManager {
         if (!originalRawMode) {
           process.stdin.setRawMode(false);
         }
-        // Clear any terminal response data that may have been displayed
+        // Restore cursor position and clear any terminal response data
         try {
           fs.writeSync(
             process.stdout.fd,
-            TerminalCapabilityManager.CURSOR_UP_AND_CLEAR +
+            TerminalCapabilityManager.RESTORE_CURSOR +
+              TerminalCapabilityManager.CLEAR_LINE_AND_RETURN +
               TerminalCapabilityManager.RESET_ATTRIBUTES,
           );
         } catch (_e) {
@@ -240,14 +242,11 @@ export class TerminalCapabilityManager {
       process.stdin.on('data', onData);
 
       try {
+        // Save cursor position before sending queries
         fs.writeSync(
           process.stdout.fd,
-          // Use hidden mode to prevent potential "m" character from being printed
-          // to the terminal during startup when querying for modifyOtherKeys.
-          // This can happen on some terminals that might echo the query or
-          // malform the response. We hide the output, send queries, then
-          // immediately clear the line and reset attributes.
-          TerminalCapabilityManager.HIDDEN_MODE +
+          TerminalCapabilityManager.SAVE_CURSOR +
+            TerminalCapabilityManager.HIDDEN_MODE +
             TerminalCapabilityManager.KITTY_QUERY +
             TerminalCapabilityManager.OSC_11_QUERY +
             TerminalCapabilityManager.TERMINAL_NAME_QUERY +
