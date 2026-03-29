@@ -22,9 +22,13 @@ export class GeminiCliAgent {
     this.options = options;
   }
 
-  session(options?: { sessionId?: string }): GeminiCliSession {
+  session(options?: { sessionId?: string; cwd?: string }): GeminiCliSession {
     const sessionId = options?.sessionId || createSessionId();
-    return new GeminiCliSession(this.options, sessionId, this);
+    const sessionOptions = {
+      ...this.options,
+      cwd: options?.cwd || this.options.cwd,
+    };
+    return new GeminiCliSession(sessionOptions, sessionId, this);
   }
 
   async resumeSession(sessionId: string): Promise<GeminiCliSession> {

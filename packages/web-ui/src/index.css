@@ -1,0 +1,115 @@
+@import 'tailwindcss';
+
+/* Gemini CLI darkTheme colors */
+@theme {
+  --color-gemini-background: #0a0a0f;
+  --color-gemini-foreground: #ffffff;
+  --color-gemini-light-blue: #afd7d7;
+  --color-gemini-accent: #d7afff;
+  --color-gemini-accent-blue: #87afff;
+  --color-gemini-accent-purple: #d7afff;
+  --color-gemini-accent-cyan: #87d7d7;
+  --color-gemini-accent-green: #d7ffd7;
+  --color-gemini-accent-yellow: #ffffaf;
+  --color-gemini-accent-red: #ff87af;
+  --color-gemini-comment: #a0a0b0;
+  --color-gemini-gray: #c0c0d0;
+  --color-gemini-dark-gray: #404055;
+  --color-gemini-input-bg: #1a1a25;
+  --color-gemini-msg-bg: #151520;
+}
+
+.markdown {
+  @apply text-gemini-foreground leading-relaxed;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+  @apply text-gemini-foreground font-semibold mt-4 mb-2;
+}
+
+.markdown h1 {
+  @apply text-lg;
+}
+
+.markdown h2 {
+  @apply text-base;
+}
+
+.markdown h3 {
+  @apply text-sm;
+}
+
+.markdown p {
+  @apply my-2;
+}
+
+.markdown a {
+  @apply text-gemini-accent hover:text-gemini-accent-purple underline;
+}
+
+.markdown strong {
+  @apply text-gemini-foreground font-semibold;
+}
+
+.markdown em {
+  @apply italic;
+}
+
+.markdown code:not(pre code) {
+  @apply bg-gemini-dark-gray px-1.5 py-0.5 rounded text-sm text-gemini-accent-red;
+}
+
+.markdown pre {
+  @apply bg-gemini-input-bg rounded-lg p-4 my-4 overflow-x-auto;
+}
+
+.markdown pre code {
+  @apply bg-transparent p-0 text-sm;
+}
+
+.markdown ul,
+.markdown ol {
+  @apply my-3 pl-6;
+}
+
+.markdown ul {
+  @apply list-disc;
+}
+
+.markdown ol {
+  @apply list-decimal;
+}
+
+.markdown li {
+  @apply my-1;
+}
+
+.markdown blockquote {
+  @apply border-l-4 border-gemini-dark-gray pl-4 my-4 text-gemini-comment italic;
+}
+
+.markdown hr {
+  @apply border-gemini-dark-gray my-6;
+}
+
+.markdown table {
+  @apply w-full my-4 border-collapse;
+}
+
+.markdown th,
+.markdown td {
+  @apply border border-gemini-dark-gray px-3 py-2 text-left;
+}
+
+.markdown th {
+  @apply bg-gemini-input-bg font-semibold;
+}
+
+.markdown img {
+  @apply max-w-full h-auto rounded-lg my-4;
+}
