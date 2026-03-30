@@ -86,7 +86,7 @@ export const Home: Component = () => {
         <h2 className="text-lg font-bold">Sessions</h2>
         <button
           onClick={handleNewSession}
-          className="px-3 py-1.5 bg-gemini-accent hover:bg-gemini-accent rounded-lg font-medium transition-colors text-gemini-background text-sm"
+          className="px-3 py-1.5 bg-gemini-accent hover:bg-gemini-accent rounded-lg font-medium transition-colors text-gemini-background text-sm cursor-pointer"
         >
           New Session
         </button>

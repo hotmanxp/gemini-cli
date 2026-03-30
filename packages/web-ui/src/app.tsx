@@ -31,7 +31,7 @@ const Layout: Component<{ children?: any }> = (props) => {
       <header className="fixed top-0 left-0 right-0 z-20 bg-gemini-msg-bg border-b border-gemini-dark-gray px-4 py-2 flex items-center gap-2">
         <button
           onClick={() => setLeftSidebarOpen(!leftSidebarOpen())}
-          className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+          className={`px-2 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${
             leftSidebarOpen()
               ? 'bg-gemini-accent text-gemini-background'
               : 'bg-gemini-dark-gray text-gemini-comment hover:text-gemini-foreground'
@@ -50,7 +50,7 @@ const Layout: Component<{ children?: any }> = (props) => {
         >
           <button
             onClick={() => navigate('/')}
-            className="px-2 py-1 bg-gemini-dark-gray hover:bg-gemini-dark-gray rounded text-xs font-medium transition-colors text-gemini-comment"
+            className="px-2 py-1 bg-gemini-dark-gray hover:bg-gemini-dark-gray rounded text-xs font-medium transition-colors text-gemini-comment cursor-pointer"
           >
             Home
           </button>
@@ -61,7 +61,7 @@ const Layout: Component<{ children?: any }> = (props) => {
         <div className="ml-auto flex items-center gap-2">
           <button
             onClick={() => setRightPanelOpen(!rightPanelOpen())}
-            className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+            className={`px-2 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${
               rightPanelOpen()
                 ? 'bg-gemini-accent text-gemini-background'
                 : 'bg-gemini-dark-gray text-gemini-comment hover:text-gemini-foreground'
@@ -93,20 +93,20 @@ const SessionPageWithContext: Component<{ id?: string }> = (props) => {
 };
 
 export const App: Component = () => (
-    <SettingsProvider>
-      <SdkProvider>
-        <SyncProvider>
-          <Router root={Layout}>
-            <Route path="/" component={HomePage} />
-            <Route
-              path="/session/:id"
-              component={(props) => (
-                <SessionPageWithContext id={props.params.id} />
-              )}
-            />
-          </Router>
-          <SettingsDialog />
-        </SyncProvider>
-      </SdkProvider>
-    </SettingsProvider>
-  );
+  <SettingsProvider>
+    <SdkProvider>
+      <SyncProvider>
+        <Router root={Layout}>
+          <Route path="/" component={HomePage} />
+          <Route
+            path="/session/:id"
+            component={(props) => (
+              <SessionPageWithContext id={props.params.id} />
+            )}
+          />
+        </Router>
+        <SettingsDialog />
+      </SyncProvider>
+    </SdkProvider>
+  </SettingsProvider>
+);

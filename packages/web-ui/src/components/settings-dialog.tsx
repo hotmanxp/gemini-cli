@@ -92,7 +92,9 @@ const SettingsDialog: Component = () => {
                 }`}
               />
               <Show when={urlError()}>
-                <p className="mt-1 text-xs text-gemini-accent-red">{urlError()}</p>
+                <p className="mt-1 text-xs text-gemini-accent-red">
+                  {urlError()}
+                </p>
               </Show>
             </div>
 
@@ -138,7 +140,7 @@ export const SettingsButton: Component = () => {
   return (
     <button
       onClick={openSettings}
-      className="p-2 text-gemini-comment hover:text-gemini-foreground hover:bg-gemini-dark-gray rounded-md transition-colors"
+      className="p-2 text-gemini-comment hover:text-gemini-foreground hover:bg-gemini-dark-gray rounded-md transition-colors cursor-pointer"
       title="Settings"
     >
       <svg

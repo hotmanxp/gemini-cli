@@ -30,6 +30,7 @@ interface SyncContextValue {
     workspace?: string,
     workspaceName?: string,
   ) => Promise<string>;
+  deleteSession: (sessionId: string) => Promise<void>;
   sendPrompt: (sessionId: string, prompt: string) => Promise<void>;
   addMessage: (sessionId: string, message: SessionMessage) => void;
   clearMessages: (sessionId: string) => void;
@@ -221,6 +222,17 @@ export function SyncProvider(props: ParentProps) {
     return session.id;
   };
 
+  const deleteSession = async (sessionId: string) => {
+    await sdk.client().deleteSession(sessionId);
+    setState(
+      produce((s) => {
+        s.sessions = s.sessions.filter((se) => se.id !== sessionId);
+        delete s.messages[sessionId];
+        delete s.status[sessionId];
+      }),
+    );
+  };
+
   const sendPrompt = async (sessionId: string, prompt: string) => {
     await sdk.client().sendPrompt(sessionId, prompt);
   };
@@ -288,6 +300,7 @@ export function SyncProvider(props: ParentProps) {
         loadMessages,
         selectSession,
         createSession,
+        deleteSession,
         sendPrompt,
         addMessage,
         clearMessages,

@@ -206,6 +206,20 @@ class StorageManager {
   setMessages(sessionId: string, messages: SessionMessage[]): void {
     this.messagesCache.set(sessionId, messages);
   }
+
+  async deleteSession(sessionId: string): Promise<boolean> {
+    try {
+      const sessionFile = this.sessionFilePath(sessionId);
+      const messagesFile = this.messagesFilePath(sessionId);
+      await fs.unlink(sessionFile).catch(() => {});
+      await fs.unlink(messagesFile).catch(() => {});
+      this.sessionsCache.delete(sessionId);
+      this.messagesCache.delete(sessionId);
+      return true;
+    } catch {
+      return false;
+    }
+  }
 }
 
 const storageManager = new StorageManager();
@@ -584,6 +598,17 @@ router.get('/directories', async (req: Request, res: Response) => {
   } catch {
     res.json({ directories: [], parent: null, homeDir: os.homedir() });
   }
+});
+
+router.delete('/:id', async (req: Request, res: Response) => {
+  const sessionId = req.params['id'];
+  const session = storageManager.getSession(sessionId);
+  if (!session) {
+    res.status(404).json({ error: 'Session not found' });
+    return;
+  }
+  await storageManager.deleteSession(sessionId);
+  res.json({ success: true });
 });
 
 router.get('/:id', (req: Request, res: Response) => {

@@ -75,6 +75,7 @@ export const Session: Component = () => {
   const [suggestions, setSuggestions] = createSignal<Suggestion[]>([]);
   const [selectedIndex, setSelectedIndex] = createSignal(0);
   const [prompt, setPrompt] = createSignal('');
+  const [deleteConfirm, setDeleteConfirm] = createSignal<string | null>(null);
   let textareaRef: HTMLTextAreaElement | undefined;
   let messagesContainerRef: HTMLDivElement | undefined;
 
@@ -155,6 +156,16 @@ export const Session: Component = () => {
   const handleSelectSession = (id: string) => {
     sync.selectSession(id);
     navigate(`/session/${id}`);
+  };
+
+  const handleDeleteSession = async (id: string) => {
+    await sync.deleteSession(id);
+    setDeleteConfirm(null);
+    if (sync.state.currentSessionId === id) {
+      navigate('/');
+    } else {
+      await loadGroupedSessions();
+    }
   };
 
   const handleNewSession = () => {
@@ -497,7 +508,7 @@ export const Session: Component = () => {
             </span>
             <button
               onClick={handleNewSession}
-              className="px-2 py-0.5 bg-gemini-accent hover:bg-gemini-accent rounded text-xs font-medium text-gemini-background"
+              className="px-2 py-0.5 bg-gemini-accent hover:bg-gemini-accent rounded text-xs font-medium text-gemini-background cursor-pointer"
             >
               +
             </button>
@@ -540,25 +551,38 @@ export const Session: Component = () => {
                     <div className="bg-gemini-background/50">
                       <For each={group.sessions}>
                         {(session) => (
-                          <button
-                            onClick={() => handleSelectSession(session.id)}
-                            className={`w-full px-4 py-1.5 text-left text-xs flex items-center gap-2 transition-colors ${
+                          <div
+                            className={`w-full px-4 py-1.5 text-left text-xs flex items-center gap-2 transition-colors group ${
                               sync.state.currentSessionId === session.id
                                 ? 'bg-gemini-accent text-gemini-background'
                                 : 'hover:bg-gemini-dark-gray text-gemini-comment'
                             }`}
                           >
                             <span
-                              className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                                session.status === 'busy'
-                                  ? 'bg-gemini-accent-yellow'
-                                  : 'bg-gemini-accent-green'
-                              }`}
-                            />
-                            <span className="truncate font-mono">
-                              {session.preview || session.slug}
+                              onClick={() => handleSelectSession(session.id)}
+                              className="flex items-center gap-2 flex-1 cursor-pointer"
+                            >
+                              <span
+                                className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                                  session.status === 'busy'
+                                    ? 'bg-gemini-accent-yellow'
+                                    : 'bg-gemini-accent-green'
+                                }`}
+                              />
+                              <span className="truncate font-mono">
+                                {session.preview || session.slug}
+                              </span>
                             </span>
-                          </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteConfirm(session.id);
+                              }}
+                              className="opacity-0 group-hover:opacity-100 px-1 py-0.5 hover:bg-red-500/50 rounded text-xs text-red-400 cursor-pointer"
+                            >
+                              x
+                            </button>
+                          </div>
                         )}
                       </For>
                     </div>
@@ -862,6 +886,30 @@ export const Session: Component = () => {
           </div>
         </div>
       </div>
+
+      <Show when={deleteConfirm()}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-gemini-msg-bg border border-gemini-dark-gray rounded-lg p-4 max-w-sm">
+            <p className="text-sm text-gemini-foreground mb-4">
+              Delete this session?
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="px-3 py-1.5 text-xs rounded bg-gemini-dark-gray hover:bg-gemini-gray text-gemini-foreground cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDeleteSession(deleteConfirm()!)}
+                className="px-3 py-1.5 text-xs rounded bg-red-600 hover:bg-red-700 text-white cursor-pointer"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      </Show>
     </div>
   );
 };

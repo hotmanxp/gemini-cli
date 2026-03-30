@@ -128,6 +128,13 @@ export class GeminiWebClient {
     return res.json();
   }
 
+  async deleteSession(id: string): Promise<void> {
+    const res = await fetch(`${this.baseUrl}/sessions/${id}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) throw new Error(`Failed to delete session: ${res.statusText}`);
+  }
+
   async createSession(
     workspace?: string,
     workspaceName?: string,
