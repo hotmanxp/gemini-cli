@@ -62,6 +62,7 @@ export default tseslint.config(
       '**/*.d.ts',
       'profile_startup.js',
       'test_startup.js',
+      'packages/web-ui/**',
     ],
   },
   eslint.configs.recommended,
