@@ -18,6 +18,7 @@ interface WorkspaceGroup {
     createdAt: number;
     updatedAt: number;
     status: 'idle' | 'busy';
+    preview?: string;
   }>;
 }
 
@@ -131,7 +132,7 @@ export const Home: Component = () => {
                               className={`w-2 h-2 rounded-full ${session.status === 'busy' ? 'bg-gemini-accent-yellow' : 'bg-gemini-accent-green'}`}
                             />
                             <span className="font-mono text-sm">
-                              {session.slug}
+                              {session.preview || session.slug}
                             </span>
                           </div>
                           <div className="flex items-center gap-3">

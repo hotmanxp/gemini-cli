@@ -332,27 +332,47 @@ async function loadMessagesFromSdkStorage(
   return [];
 }
 
-router.get('/', (_req: Request, res: Response) => {
-  const sessionList = storageManager.getAllSessions().map((s) => ({
-    id: s.id,
-    slug: s.slug,
-    createdAt: s.createdAt,
-    updatedAt: s.updatedAt,
-    status: s.status,
-    workspace: s.workspace,
-    workspaceName: s.workspaceName,
-  }));
+async function getSessionPreview(
+  sessionId: string,
+  cwd?: string,
+): Promise<string> {
+  const messages = await loadMessagesFromSdkStorage(sessionId, cwd);
+  const firstUserMessage = messages.find((m) => m.role === 'user');
+  if (!firstUserMessage) return 'New conversation';
+
+  const textPart = firstUserMessage.parts.find((p) => p.type === 'text');
+  if (!textPart || !textPart.text) return 'New conversation';
+
+  const MAX_LENGTH = 50;
+  if (textPart.text.length <= MAX_LENGTH) return textPart.text;
+  return textPart.text.slice(0, MAX_LENGTH) + '...';
+}
+
+router.get('/', async (_req: Request, res: Response) => {
+  const sessions = storageManager.getAllSessions();
+  const sessionList = await Promise.all(
+    sessions.map(async (s) => ({
+      id: s.id,
+      slug: s.slug,
+      createdAt: s.createdAt,
+      updatedAt: s.updatedAt,
+      status: s.status,
+      workspace: s.workspace,
+      workspaceName: s.workspaceName,
+      preview: await getSessionPreview(s.id, s.workspace),
+    })),
+  );
   res.json(sessionList);
 });
 
-router.get('/grouped', (_req: Request, res: Response) => {
+router.get('/grouped', async (_req: Request, res: Response) => {
   const sessions = storageManager.getAllSessions();
   const grouped: Record<
     string,
     {
       workspace: string;
       name: string;
-      sessions: ReturnType<typeof storageManager.getAllSessions>;
+      sessions: Array<Session & { preview: string }>;
     }
   > = {};
 
@@ -366,11 +386,8 @@ router.get('/grouped', (_req: Request, res: Response) => {
       };
     }
     grouped[ws].sessions.push({
-      id: s.id,
-      slug: s.slug,
-      createdAt: s.createdAt,
-      updatedAt: s.updatedAt,
-      status: s.status,
+      ...s,
+      preview: await getSessionPreview(s.id, s.workspace),
     });
   }
 

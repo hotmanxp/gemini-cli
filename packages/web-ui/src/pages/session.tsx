@@ -64,6 +64,7 @@ export const Session: Component = () => {
         id: string;
         slug: string;
         status: 'idle' | 'busy';
+        preview?: string;
       }>;
     }>
   >([]);
@@ -93,7 +94,7 @@ export const Session: Component = () => {
       onCleanup(unsub);
     }
     await loadCommands();
-    await loadGroupedSessions();
+    await loadGroupedSessions(params.id);
   });
 
   let observer: MutationObserver | undefined;
@@ -110,11 +111,30 @@ export const Session: Component = () => {
   });
   onCleanup(() => observer?.disconnect());
 
-  const loadGroupedSessions = async () => {
+  createEffect(() => {
+    const sessionId = params.id;
+    if (sessionId) {
+      sync.selectSession(sessionId);
+      sync.loadMessages(sessionId);
+      const unsub = sync.subscribeToSession(sessionId);
+      onCleanup(unsub);
+    }
+  });
+
+  const loadGroupedSessions = async (currentSessionId?: string) => {
     try {
       const data = await sdk.client().getGroupedSessions();
       setGroupedSessions(data);
       if (data.length > 0) {
+        if (currentSessionId) {
+          const targetWorkspace = data.find((g) =>
+            g.sessions.some((s) => s.id === currentSessionId),
+          );
+          if (targetWorkspace) {
+            setExpandedWorkspaces(new Set([targetWorkspace.workspace]));
+            return;
+          }
+        }
         setExpandedWorkspaces(new Set([data[0].workspace]));
       }
     } catch (e) {
@@ -371,8 +391,22 @@ export const Session: Component = () => {
     }
     const sessionId = sync.state.currentSessionId;
     if (!sessionId || !prompt().trim()) return;
-    await sync.sendPrompt(sessionId, prompt());
+    const currentPrompt = prompt();
+    await sync.sendPrompt(sessionId, currentPrompt);
     setPrompt('');
+
+    const newPreview =
+      currentPrompt.length > 50
+        ? currentPrompt.slice(0, 50) + '...'
+        : currentPrompt;
+    setGroupedSessions((prev) =>
+      prev.map((group) => ({
+        ...group,
+        sessions: group.sessions.map((s) =>
+          s.id === sessionId ? { ...s, preview: newPreview } : s,
+        ),
+      })),
+    );
   };
 
   const messages = () => {
@@ -405,7 +439,8 @@ export const Session: Component = () => {
 
   const getMessageText = (msg: {
     parts: Array<{ type: string; text?: string }>;
-  }) => msg.parts
+  }) =>
+    msg.parts
       .filter((p) => p.type === 'text' && p.text)
       .map((p) => p.text)
       .join('');
@@ -471,11 +506,11 @@ export const Session: Component = () => {
             <For each={groupedSessions()}>
               {(group) => (
                 <div className="border-b border-gemini-dark-gray">
-                  <button
-                    onClick={() => toggleWorkspace(group.workspace)}
-                    className="w-full px-3 py-2 text-left text-xs flex items-center gap-2 text-gemini-gray hover:bg-gemini-dark-gray transition-colors"
-                  >
-                    <span className="text-gemini-dark-gray">
+                  <div className="w-full px-3 py-2 text-left text-xs flex items-center gap-2 text-gemini-gray hover:bg-gemini-dark-gray transition-colors">
+                    <span
+                      onClick={() => toggleWorkspace(group.workspace)}
+                      className="cursor-pointer"
+                    >
                       {expandedWorkspaces().has(group.workspace) ? '▼' : '▶'}
                     </span>
                     <span className="flex-1 truncate font-medium">
@@ -484,7 +519,23 @@ export const Session: Component = () => {
                     <span className="text-gemini-dark-gray text-xs">
                       {group.sessions.length}
                     </span>
-                  </button>
+                    <Show when={expandedWorkspaces().has(group.workspace)}>
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          const id = await sync.createSession(
+                            group.workspace,
+                            group.name,
+                          );
+                          await loadGroupedSessions(id);
+                          navigate(`/session/${id}`);
+                        }}
+                        className="px-1.5 py-0.5 bg-gemini-accent hover:bg-gemini-accent rounded text-xs font-medium text-gemini-background"
+                      >
+                        +
+                      </button>
+                    </Show>
+                  </div>
                   <Show when={expandedWorkspaces().has(group.workspace)}>
                     <div className="bg-gemini-background/50">
                       <For each={group.sessions}>
@@ -505,7 +556,7 @@ export const Session: Component = () => {
                               }`}
                             />
                             <span className="truncate font-mono">
-                              {session.slug}
+                              {session.preview || session.slug}
                             </span>
                           </button>
                         )}
@@ -543,7 +594,9 @@ export const Session: Component = () => {
                 >
                   <Switch>
                     <Match when={msg.role === 'user'}>
-                      <p className="whitespace-pre-wrap">{getMessageText(msg)}</p>
+                      <p className="whitespace-pre-wrap">
+                        {getMessageText(msg)}
+                      </p>
                     </Match>
                     <Match when={msg.role === 'assistant'}>
                       <div className="space-y-2">
@@ -781,7 +834,9 @@ export const Session: Component = () => {
       >
         <div className="w-60 h-full flex flex-col p-3 space-y-3">
           <div>
-            <h3 className="text-xs font-medium text-gemini-comment mb-2">Tools</h3>
+            <h3 className="text-xs font-medium text-gemini-comment mb-2">
+              Tools
+            </h3>
             <div className="space-y-1">
               <For each={messages()}>
                 {(msg) =>
@@ -798,7 +853,9 @@ export const Session: Component = () => {
             </div>
           </div>
           <div>
-            <h3 className="text-xs font-medium text-gemini-comment mb-2">Info</h3>
+            <h3 className="text-xs font-medium text-gemini-comment mb-2">
+              Info
+            </h3>
             <div className="text-xs text-gemini-dark-gray">
               <p>Session: {sync.state.currentSessionId?.slice(0, 8)}</p>
             </div>
