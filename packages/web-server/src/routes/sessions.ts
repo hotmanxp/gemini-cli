@@ -230,16 +230,106 @@ async function getCommandService(): Promise<CommandService> {
   return commandService;
 }
 
-let agent: GeminiCliAgent | null = null;
+const agentCache = new Map<string, GeminiCliAgent>();
 
-function getAgent(): GeminiCliAgent {
-  if (!agent) {
+function getAgent(cwd?: string): GeminiCliAgent {
+  const key = cwd || 'default';
+  if (!agentCache.has(key)) {
     process.env['USE_QWEN_OAUTH'] = 'true';
-    agent = new GeminiCliAgent({
+    const agent = new GeminiCliAgent({
       instructions: 'You are a helpful AI assistant.',
+      cwd: cwd,
     });
+    agentCache.set(key, agent);
   }
-  return agent;
+  return agentCache.get(key)!;
+}
+
+async function loadMessagesFromSdkStorage(
+  sessionId: string,
+  cwd?: string,
+): Promise<SessionMessage[]> {
+  const { Storage } = await import('@google/gemini-cli-core');
+  const storage = new Storage(cwd || process.cwd());
+  await storage.initialize();
+
+  const files = await storage.listProjectChatFiles();
+  const truncatedId = sessionId.slice(0, 8);
+  const candidates = files.filter((f) => f.filePath.includes(truncatedId));
+
+  for (const file of candidates) {
+    const loaded = await storage.loadProjectTempFile<{
+      sessionId: string;
+      messages: Array<{
+        id: string;
+        timestamp: string;
+        content: unknown;
+        type: string;
+        toolCalls?: Array<{
+          id: string;
+          name: string;
+          args: Record<string, unknown>;
+          result?: unknown;
+          status: string;
+          timestamp: string;
+        }>;
+      }>;
+    }>(file.filePath);
+    if (loaded && loaded.sessionId === sessionId) {
+      return loaded.messages.map((m) => {
+        const role = m.type === 'gemini' ? 'assistant' : 'user';
+        const parts: Part[] = [];
+
+        if (Array.isArray(m.content)) {
+          const textParts = (m.content as Array<{ text?: string }>).map(
+            (c) => ({
+              type: 'text' as const,
+              text: c.text || '',
+            }),
+          );
+          parts.push(...textParts);
+        } else if (m.content) {
+          parts.push({ type: 'text', text: String(m.content) });
+        }
+
+        if (m.toolCalls && m.type === 'gemini') {
+          for (const tc of m.toolCalls) {
+            let output: string | undefined;
+            if (tc.result) {
+              if (typeof tc.result === 'string') {
+                output = tc.result;
+              } else if (typeof tc.result === 'object') {
+                output = JSON.stringify(tc.result);
+              }
+            }
+            parts.push({
+              type: 'tool',
+              tool: tc.name,
+              callId: tc.id,
+              state: {
+                status: tc.status,
+                input: tc.args,
+                output,
+                time: {
+                  start: new Date(tc.timestamp).getTime(),
+                  end: Date.now(),
+                },
+              },
+            });
+          }
+        }
+
+        return {
+          id: m.id,
+          sessionID: sessionId,
+          role: role as 'user' | 'assistant',
+          parts,
+          createdAt: new Date(m.timestamp).getTime(),
+        };
+      });
+    }
+  }
+  return [];
 }
 
 router.get('/', (_req: Request, res: Response) => {
@@ -494,7 +584,10 @@ router.get('/:id/messages', async (req: Request, res: Response) => {
     res.status(404).json({ error: 'Session not found' });
     return;
   }
-  const messages = await storageManager.loadMessages(req.params['id']);
+  const messages = await loadMessagesFromSdkStorage(
+    req.params['id'],
+    session.workspace,
+  );
   res.json({ messages });
 });
 
@@ -539,10 +632,8 @@ router.post('/:id/prompt', async (req: Request, res: Response) => {
     createdAt: Date.now(),
   };
 
-  const messages = storageManager.getMessages(session.id) || [];
+  const messages = await storageManager.loadMessages(session.id);
   messages.push(userMessage);
-  storageManager.setMessages(session.id, messages);
-  await storageManager.saveMessages(session.id, messages);
 
   eventBus.publish({
     type: 'message.added',
@@ -556,11 +647,16 @@ router.post('/:id/prompt', async (req: Request, res: Response) => {
   const assistantParts: Part[] = [];
 
   try {
-    const geminiAgent = getAgent();
-    const geminiSession = geminiAgent.session({
-      sessionId: session.id,
-      cwd: session.workspace || undefined,
-    });
+    const geminiAgent = getAgent(session.workspace);
+    let geminiSession;
+    try {
+      geminiSession = await geminiAgent.resumeSession(session.id);
+    } catch {
+      geminiSession = geminiAgent.session({
+        sessionId: session.id,
+        cwd: session.workspace || undefined,
+      });
+    }
 
     const stream = geminiSession.sendStream(prompt);
 
@@ -591,8 +687,6 @@ router.post('/:id/prompt', async (req: Request, res: Response) => {
       createdAt: Date.now(),
     };
     messages.push(assistantMessage);
-    storageManager.setMessages(session.id, messages);
-    await storageManager.saveMessages(session.id, messages);
 
     sendEvent('message.added', { message: assistantMessage });
     eventBus.publish({
