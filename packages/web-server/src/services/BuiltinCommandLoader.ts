@@ -6,7 +6,7 @@
 
 import type { ICommandLoader, SlashCommand } from './types.js';
 import { CommandKind } from './types.js';
-import { createWebCommand, webCommandActions } from './WebCommandExecutor.js';
+import { createWebCommand } from './WebCommandExecutor.js';
 
 const COMMAND_DEFINITIONS: Array<{
   name: string;

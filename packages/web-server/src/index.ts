@@ -1,3 +1,8 @@
+/**
+ * @license
+ * Copyright 2026 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
+ */
 import express from 'express';
 import cors from 'cors';
 import sessionEventsRouter from './routes/session-events.js';
@@ -22,5 +27,6 @@ app.use(sessionEventsRouter);
 app.use('/sessions', sessionsRouter);
 
 app.listen(PORT, () => {
+  // eslint-disable-next-line no-console
   console.log(`Web server running on http://localhost:${PORT}`);
 });

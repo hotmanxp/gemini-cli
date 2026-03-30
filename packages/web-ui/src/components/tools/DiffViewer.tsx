@@ -1,3 +1,8 @@
+/**
+ * @license
+ * Copyright 2026 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
+ */
 import { type Component, createMemo, Show } from 'solid-js';
 import type { ToolState, ToolPart } from './ReadTool.js';
 import { ContentDiff } from './ContentDiff.js';
@@ -26,19 +31,19 @@ export const DiffViewer: Component<{ part: ToolPart }> = (props) => {
   const error = createMemo(() => state().metadata?.error as string | undefined);
 
   return (
-    <div class="space-y-2">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2 text-sm">
-          <span class="text-blue-400 font-medium">Diff</span>
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-blue-400 font-medium">Diff</span>
           <Show when={filePath()}>
-            <span class="text-gemini-comment">·</span>
-            <span class="text-gemini-gray font-mono text-xs" title={filePath()}>
+            <span className="text-gemini-comment">·</span>
+            <span className="text-gemini-gray font-mono text-xs" title={filePath()}>
               {getFileName(filePath())}
             </span>
           </Show>
         </div>
         <span
-          class={`text-xs px-2 py-0.5 rounded ${
+          className={`text-xs px-2 py-0.5 rounded ${
             state().status === 'completed'
               ? 'bg-green-900/50 text-green-400'
               : state().status === 'error'
@@ -52,7 +57,7 @@ export const DiffViewer: Component<{ part: ToolPart }> = (props) => {
         </span>
       </div>
       <Show when={error()}>
-        <div class="text-red-400 text-sm font-mono bg-red-900/20 rounded px-3 py-2">
+        <div className="text-red-400 text-sm font-mono bg-red-900/20 rounded px-3 py-2">
           {error()}
         </div>
       </Show>

@@ -1,3 +1,8 @@
+/**
+ * @license
+ * Copyright 2026 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
+ */
 import { type Component, createSignal, For, Show, onMount } from 'solid-js';
 import { useNavigate } from '@solidjs/router';
 import { useSync } from '../context/sync.js';
@@ -75,12 +80,12 @@ export const Home: Component = () => {
   };
 
   return (
-    <div class="max-w-3xl mx-auto text-sm">
-      <header class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-bold">Sessions</h2>
+    <div className="max-w-3xl mx-auto text-sm">
+      <header className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-bold">Sessions</h2>
         <button
           onClick={handleNewSession}
-          class="px-3 py-1.5 bg-gemini-accent hover:bg-gemini-accent rounded-lg font-medium transition-colors text-gemini-background text-sm"
+          className="px-3 py-1.5 bg-gemini-accent hover:bg-gemini-accent rounded-lg font-medium transition-colors text-gemini-background text-sm"
         >
           New Session
         </button>
@@ -88,52 +93,52 @@ export const Home: Component = () => {
 
       <Show
         when={!loading()}
-        fallback={<p class="text-gemini-comment text-xs">Loading...</p>}
+        fallback={<p className="text-gemini-comment text-xs">Loading...</p>}
       >
         <Show
           when={groupedSessions().length > 0}
           fallback={
-            <div class="text-center py-8">
-              <p class="text-gemini-comment mb-4">No sessions yet</p>
-              <p class="text-gemini-dark-gray text-sm">
+            <div className="text-center py-8">
+              <p className="text-gemini-comment mb-4">No sessions yet</p>
+              <p className="text-gemini-dark-gray text-sm">
                 Start a new session to begin chatting
               </p>
             </div>
           }
         >
-          <div class="space-y-6">
+          <div className="space-y-6">
             <For each={groupedSessions()}>
               {(group) => (
-                <div class="workspace-group">
-                  <div class="flex items-center gap-2 mb-3">
-                    <span class="text-lg font-semibold text-gemini-gray">
+                <div className="workspace-group">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-lg font-semibold text-gemini-gray">
                       {group.name}
                     </span>
-                    <span class="text-xs text-gemini-comment bg-gemini-msg-bg px-2 py-1 rounded">
+                    <span className="text-xs text-gemini-comment bg-gemini-msg-bg px-2 py-1 rounded">
                       {group.sessions.length} session
                       {group.sessions.length !== 1 ? 's' : ''}
                     </span>
                   </div>
-                  <div class="space-y-2">
+                  <div className="space-y-2">
                     <For each={group.sessions.slice(0, 5)}>
                       {(session) => (
                         <div
-                          class="p-3 bg-gemini-msg-bg rounded-lg hover:bg-gemini-dark-gray cursor-pointer transition-colors flex items-center justify-between group"
+                          className="p-3 bg-gemini-msg-bg rounded-lg hover:bg-gemini-dark-gray cursor-pointer transition-colors flex items-center justify-between group"
                           onClick={() => handleSelectSession(session.id)}
                         >
-                          <div class="flex items-center gap-3">
+                          <div className="flex items-center gap-3">
                             <span
-                              class={`w-2 h-2 rounded-full ${session.status === 'busy' ? 'bg-gemini-accent-yellow' : 'bg-gemini-accent-green'}`}
+                              className={`w-2 h-2 rounded-full ${session.status === 'busy' ? 'bg-gemini-accent-yellow' : 'bg-gemini-accent-green'}`}
                             />
-                            <span class="font-mono text-sm">
+                            <span className="font-mono text-sm">
                               {session.slug}
                             </span>
                           </div>
-                          <div class="flex items-center gap-3">
-                            <span class="text-xs text-gemini-comment">
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs text-gemini-comment">
                               {formatTime(session.updatedAt)}
                             </span>
-                            <span class="text-xs text-gemini-dark-gray group-hover:text-gemini-comment">
+                            <span className="text-xs text-gemini-dark-gray group-hover:text-gemini-comment">
                               {session.status === 'busy' ? 'busy' : 'idle'}
                             </span>
                           </div>
@@ -141,7 +146,7 @@ export const Home: Component = () => {
                       )}
                     </For>
                     <Show when={group.sessions.length > 5}>
-                      <p class="text-xs text-gemini-comment pl-3">
+                      <p className="text-xs text-gemini-comment pl-3">
                         +{group.sessions.length - 5} more
                       </p>
                     </Show>

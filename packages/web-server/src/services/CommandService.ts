@@ -5,8 +5,7 @@
  */
 
 import { debugLogger } from '@google/gemini-cli-core';
-import type { SlashCommand } from './types.js';
-import type { ICommandLoader, CommandConflict } from './types.js';
+import type { SlashCommand , ICommandLoader, CommandConflict } from './types.js';
 
 class CommandRegistry {
   readonly commandMap = new Map<string, SlashCommand>();

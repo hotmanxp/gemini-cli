@@ -1,3 +1,8 @@
+/**
+ * @license
+ * Copyright 2026 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
+ */
 import {
   type ParentProps,
   createContext,
@@ -18,9 +23,7 @@ export function SdkProvider(props: ParentProps) {
   const { settings } = useSettings();
   const client = createMemo(() => new GeminiWebClient(settings().apiEndpoint));
 
-  const subscribe = (handler: (event: SessionEvent) => void) => {
-    return client().subscribe(handler);
-  };
+  const subscribe = (handler: (event: SessionEvent) => void) => client().subscribe(handler);
 
   return (
     <SdkContext.Provider value={{ client, subscribe }}>

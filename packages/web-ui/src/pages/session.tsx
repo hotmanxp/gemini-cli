@@ -1,3 +1,8 @@
+/**
+ * @license
+ * Copyright 2026 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
+ */
 import {
   type Component,
   createSignal,
@@ -400,12 +405,10 @@ export const Session: Component = () => {
 
   const getMessageText = (msg: {
     parts: Array<{ type: string; text?: string }>;
-  }) => {
-    return msg.parts
+  }) => msg.parts
       .filter((p) => p.type === 'text' && p.text)
       .map((p) => p.text)
       .join('');
-  };
 
   const sessionStats = createMemo(() => {
     const msgs = messages();
@@ -446,62 +449,62 @@ export const Session: Component = () => {
   });
 
   return (
-    <div class="flex h-screen bg-gemini-background text-gemini-foreground text-sm overflow-hidden">
+    <div className="flex h-screen bg-gemini-background text-gemini-foreground text-sm overflow-hidden">
       <div
-        class={`fixed left-0 top-12 bottom-16 bg-gemini-msg-bg border-r border-gemini-dark-gray transition-all duration-200 z-10 overflow-hidden ${
+        className={`fixed left-0 top-12 bottom-16 bg-gemini-msg-bg border-r border-gemini-dark-gray transition-all duration-200 z-10 overflow-hidden ${
           leftSidebarOpen() ? 'w-60' : 'w-0'
         }`}
       >
-        <div class="w-60 h-full flex flex-col">
-          <div class="p-2 border-b border-gemini-dark-gray flex items-center justify-between">
-            <span class="text-xs font-medium text-gemini-comment px-2">
+        <div className="w-60 h-full flex flex-col">
+          <div className="p-2 border-b border-gemini-dark-gray flex items-center justify-between">
+            <span className="text-xs font-medium text-gemini-comment px-2">
               Sessions
             </span>
             <button
               onClick={handleNewSession}
-              class="px-2 py-0.5 bg-gemini-accent hover:bg-gemini-accent rounded text-xs font-medium text-gemini-background"
+              className="px-2 py-0.5 bg-gemini-accent hover:bg-gemini-accent rounded text-xs font-medium text-gemini-background"
             >
               +
             </button>
           </div>
-          <div class="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto">
             <For each={groupedSessions()}>
               {(group) => (
-                <div class="border-b border-gemini-dark-gray">
+                <div className="border-b border-gemini-dark-gray">
                   <button
                     onClick={() => toggleWorkspace(group.workspace)}
-                    class="w-full px-3 py-2 text-left text-xs flex items-center gap-2 text-gemini-gray hover:bg-gemini-dark-gray transition-colors"
+                    className="w-full px-3 py-2 text-left text-xs flex items-center gap-2 text-gemini-gray hover:bg-gemini-dark-gray transition-colors"
                   >
-                    <span class="text-gemini-dark-gray">
+                    <span className="text-gemini-dark-gray">
                       {expandedWorkspaces().has(group.workspace) ? '▼' : '▶'}
                     </span>
-                    <span class="flex-1 truncate font-medium">
+                    <span className="flex-1 truncate font-medium">
                       {group.name}
                     </span>
-                    <span class="text-gemini-dark-gray text-xs">
+                    <span className="text-gemini-dark-gray text-xs">
                       {group.sessions.length}
                     </span>
                   </button>
                   <Show when={expandedWorkspaces().has(group.workspace)}>
-                    <div class="bg-gemini-background/50">
+                    <div className="bg-gemini-background/50">
                       <For each={group.sessions}>
                         {(session) => (
                           <button
                             onClick={() => handleSelectSession(session.id)}
-                            class={`w-full px-4 py-1.5 text-left text-xs flex items-center gap-2 transition-colors ${
+                            className={`w-full px-4 py-1.5 text-left text-xs flex items-center gap-2 transition-colors ${
                               sync.state.currentSessionId === session.id
                                 ? 'bg-gemini-accent text-gemini-background'
                                 : 'hover:bg-gemini-dark-gray text-gemini-comment'
                             }`}
                           >
                             <span
-                              class={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                              className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
                                 session.status === 'busy'
                                   ? 'bg-gemini-accent-yellow'
                                   : 'bg-gemini-accent-green'
                               }`}
                             />
-                            <span class="truncate font-mono">
+                            <span className="truncate font-mono">
                               {session.slug}
                             </span>
                           </button>
@@ -517,22 +520,22 @@ export const Session: Component = () => {
       </div>
 
       <div
-        class={`flex-1 flex flex-col transition-all duration-200 pt-12 pb-16 ${
+        className={`flex-1 flex flex-col transition-all duration-200 pt-12 pb-16 ${
           leftSidebarOpen() ? 'ml-60' : 'ml-0'
         } ${rightPanelOpen() ? 'mr-60' : 'mr-0'}`}
       >
         <div
           ref={messagesContainerRef}
-          class="flex-1 overflow-y-auto px-4 py-3 space-y-3"
+          className="flex-1 overflow-y-auto px-4 py-3 space-y-3"
         >
           <For each={messages()}>
             {(msg, index) => (
               <div
                 id={`message-${index()}`}
-                class={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  class={`max-w-[85%] px-3 py-2 rounded-xl ${
+                  className={`max-w-[85%] px-3 py-2 rounded-xl ${
                     msg.role === 'user'
                       ? 'bg-gemini-accent text-gemini-background'
                       : 'bg-gemini-msg-bg text-gemini-foreground'
@@ -540,13 +543,13 @@ export const Session: Component = () => {
                 >
                   <Switch>
                     <Match when={msg.role === 'user'}>
-                      <p class="whitespace-pre-wrap">{getMessageText(msg)}</p>
+                      <p className="whitespace-pre-wrap">{getMessageText(msg)}</p>
                     </Match>
                     <Match when={msg.role === 'assistant'}>
-                      <div class="space-y-2">
+                      <div className="space-y-2">
                         <For each={msg.parts.filter((p) => p.type === 'tool')}>
                           {(part) => (
-                            <div class="pt-2 border-t border-gemini-dark-gray">
+                            <div className="pt-2 border-t border-gemini-dark-gray">
                               <Switch>
                                 <Match
                                   when={
@@ -630,8 +633,8 @@ export const Session: Component = () => {
                                   />
                                 </Match>
                                 <Match when={true}>
-                                  <div class="text-xs">
-                                    <div class="flex items-center gap-2 text-gemini-accent font-medium">
+                                  <div className="text-xs">
+                                    <div className="flex items-center gap-2 text-gemini-accent font-medium">
                                       <span>
                                         {(part as unknown as ToolPart).tool}
                                       </span>
@@ -642,7 +645,7 @@ export const Session: Component = () => {
                                           ?.input
                                       }
                                     >
-                                      <pre class="text-gemini-comment font-mono mt-1 bg-gemini-background rounded p-2 overflow-x-auto">
+                                      <pre className="text-gemini-comment font-mono mt-1 bg-gemini-background rounded p-2 overflow-x-auto">
                                         {JSON.stringify(
                                           (part as unknown as ToolPart).state
                                             ?.input,
@@ -657,7 +660,7 @@ export const Session: Component = () => {
                                           ?.output
                                       }
                                     >
-                                      <pre class="text-gemini-gray font-mono mt-1 bg-gemini-background rounded p-2 overflow-x-auto">
+                                      <pre className="text-gemini-gray font-mono mt-1 bg-gemini-background rounded p-2 overflow-x-auto">
                                         {
                                           (part as unknown as ToolPart).state
                                             ?.output
@@ -671,7 +674,7 @@ export const Session: Component = () => {
                                       }
                                     >
                                       <span
-                                        class={`text-xs px-2 py-0.5 rounded mt-1 inline-block ${
+                                        className={`text-xs px-2 py-0.5 rounded mt-1 inline-block ${
                                           (part as unknown as ToolPart).state
                                             ?.status === 'completed'
                                             ? 'bg-green-900/50 text-green-400'
@@ -704,15 +707,15 @@ export const Session: Component = () => {
             )}
           </For>
         </div>
-        <div class="fixed bottom-0 left-0 right-0 px-4 py-2 bg-gemini-msg-bg border-t border-gemini-dark-gray z-20">
-          <div class="flex gap-2 max-w-3xl mx-auto items-center">
+        <div className="fixed bottom-0 left-0 right-0 px-4 py-2 bg-gemini-msg-bg border-t border-gemini-dark-gray z-20">
+          <div className="flex gap-2 max-w-3xl mx-auto items-center">
             <Show
               when={
                 sync.state.status[sync.state.currentSessionId || ''] === 'busy'
               }
             >
-              <div class="flex items-center gap-1 px-2 py-2 text-xs text-gemini-accent">
-                <span class="animate-pulse">●</span>
+              <div className="flex items-center gap-1 px-2 py-2 text-xs text-gemini-accent">
+                <span className="animate-pulse">●</span>
                 <span>AI</span>
               </div>
             </Show>
@@ -722,7 +725,7 @@ export const Session: Component = () => {
               onInput={handleInput}
               onKeyDown={handleKeyDown}
               placeholder="/ for commands, @ for files"
-              class="flex-1 px-3 py-2 bg-gemini-background border border-gemini-dark-gray rounded-lg text-gemini-foreground placeholder-gemini-comment resize-none focus:outline-none focus:ring-1 focus:ring-gemini-accent focus:border-transparent text-sm"
+              className="flex-1 px-3 py-2 bg-gemini-background border border-gemini-dark-gray rounded-lg text-gemini-foreground placeholder-gemini-comment resize-none focus:outline-none focus:ring-1 focus:ring-gemini-accent focus:border-transparent text-sm"
               rows={1}
             />
             <button
@@ -730,35 +733,35 @@ export const Session: Component = () => {
               disabled={
                 sync.state.status[sync.state.currentSessionId || ''] === 'busy'
               }
-              class="px-4 py-2 bg-gemini-accent hover:bg-gemini-accent disabled:bg-gemini-dark-gray disabled:cursor-not-allowed rounded-lg font-medium transition-colors text-gemini-background text-sm"
+              className="px-4 py-2 bg-gemini-accent hover:bg-gemini-accent disabled:bg-gemini-dark-gray disabled:cursor-not-allowed rounded-lg font-medium transition-colors text-gemini-background text-sm"
             >
               Send
             </button>
           </div>
 
           <Show when={suggestions().length > 0 && mode()}>
-            <div class="max-w-3xl mx-auto mt-2">
-              <div class="bg-gemini-msg-bg border border-gemini-dark-gray rounded-lg shadow-lg overflow-y-auto max-h-60">
+            <div className="max-w-3xl mx-auto mt-2">
+              <div className="bg-gemini-msg-bg border border-gemini-dark-gray rounded-lg shadow-lg overflow-y-auto max-h-60">
                 <For each={suggestions()}>
                   {(suggestion, index) => (
                     <div
-                      class={`px-3 py-1.5 cursor-pointer flex items-center justify-between text-xs ${
+                      className={`px-3 py-1.5 cursor-pointer flex items-center justify-between text-xs ${
                         index() === selectedIndex()
                           ? 'bg-gemini-accent text-gemini-background'
                           : 'hover:bg-gemini-dark-gray'
                       }`}
                       onClick={() => insertSuggestion(index())}
                     >
-                      <div class="flex items-center gap-2">
-                        <span class="font-mono">{suggestion.label}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono">{suggestion.label}</span>
                         <Show when={suggestion.description}>
-                          <span class="text-gemini-comment">
+                          <span className="text-gemini-comment">
                             {suggestion.description}
                           </span>
                         </Show>
                       </div>
                       <Show when={suggestion.type === 'file'}>
-                        <span class="text-gemini-comment truncate max-w-xs">
+                        <span className="text-gemini-comment truncate max-w-xs">
                           {suggestion.description}
                         </span>
                       </Show>
@@ -772,21 +775,21 @@ export const Session: Component = () => {
       </div>
 
       <div
-        class={`fixed right-0 top-12 bottom-16 bg-gemini-msg-bg border-l border-gemini-dark-gray transition-all duration-200 z-10 overflow-hidden ${
+        className={`fixed right-0 top-12 bottom-16 bg-gemini-msg-bg border-l border-gemini-dark-gray transition-all duration-200 z-10 overflow-hidden ${
           rightPanelOpen() ? 'w-60' : 'w-0'
         }`}
       >
-        <div class="w-60 h-full flex flex-col p-3 space-y-3">
+        <div className="w-60 h-full flex flex-col p-3 space-y-3">
           <div>
-            <h3 class="text-xs font-medium text-gemini-comment mb-2">Tools</h3>
-            <div class="space-y-1">
+            <h3 className="text-xs font-medium text-gemini-comment mb-2">Tools</h3>
+            <div className="space-y-1">
               <For each={messages()}>
                 {(msg) =>
                   msg.parts
                     .filter((p) => p.type === 'tool')
                     .map((part) => (
-                      <div class="text-xs text-gemini-foreground flex items-center gap-1">
-                        <span class="w-1 h-1 rounded-full bg-gemini-accent" />
+                      <div className="text-xs text-gemini-foreground flex items-center gap-1">
+                        <span className="w-1 h-1 rounded-full bg-gemini-accent" />
                         {(part as unknown as ToolPart).tool}
                       </div>
                     ))
@@ -795,8 +798,8 @@ export const Session: Component = () => {
             </div>
           </div>
           <div>
-            <h3 class="text-xs font-medium text-gemini-comment mb-2">Info</h3>
-            <div class="text-xs text-gemini-dark-gray">
+            <h3 className="text-xs font-medium text-gemini-comment mb-2">Info</h3>
+            <div className="text-xs text-gemini-dark-gray">
               <p>Session: {sync.state.currentSessionId?.slice(0, 8)}</p>
             </div>
           </div>

@@ -1,3 +1,8 @@
+/**
+ * @license
+ * Copyright 2026 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
+ */
 import { type Component, createMemo } from 'solid-js';
 import { Marked } from 'marked';
 import { markedHighlight } from 'marked-highlight';
@@ -29,5 +34,5 @@ export const Markdown: Component<MarkdownProps> = (props) => {
     return markedInstance.parse(content) as string;
   });
 
-  return <div class="markdown" innerHTML={html()} />;
+  return <div className="markdown" innerHTML={html()} />;
 };

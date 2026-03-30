@@ -5,10 +5,10 @@
  */
 
 import express, { type Request, type Response } from 'express';
-import { randomUUID } from 'crypto';
-import fs from 'fs/promises';
-import path from 'path';
-import os from 'os';
+import { randomUUID } from 'node:crypto';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import os from 'node:os';
 import { eventBus } from '../event-bus.js';
 import { GeminiCliAgent } from '@google/gemini-cli-sdk';
 import {
@@ -97,6 +97,7 @@ class StorageManager {
     try {
       await fs.mkdir(this.sessionsDir, { recursive: true });
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Failed to create sessions directory:', error);
     }
   }
@@ -116,18 +117,20 @@ class StorageManager {
         const filePath = path.join(this.sessionsDir, file);
         try {
           const content = await fs.readFile(filePath, 'utf-8');
-          const session = JSON.parse(content) as Session;
+          const session = JSON.parse(content) as unknown as Session;
           if (session.id && session.slug) {
             this.sessionsCache.set(session.id, session);
           }
         } catch {
+          // eslint-disable-next-line no-console
           console.warn(`Skipped corrupted session file: ${file}`);
         }
       }
 
       this.initialized = true;
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      if ((error as unknown as NodeJS.ErrnoException).code !== 'ENOENT') {
+        // eslint-disable-next-line no-console
         console.error('Failed to load sessions:', error);
       }
       this.initialized = true;
@@ -141,6 +144,7 @@ class StorageManager {
       await fs.writeFile(filePath, JSON.stringify(session, null, 2), 'utf-8');
       this.sessionsCache.set(session.id, session);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error(`Failed to save session ${session.id}:`, error);
     }
   }
@@ -153,11 +157,12 @@ class StorageManager {
     const filePath = this.messagesFilePath(sessionId);
     try {
       const content = await fs.readFile(filePath, 'utf-8');
-      const messages = JSON.parse(content) as SessionMessage[];
+      const messages = JSON.parse(content) as unknown as SessionMessage[];
       this.messagesCache.set(sessionId, messages);
       return messages;
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      if ((error as unknown as NodeJS.ErrnoException).code !== 'ENOENT') {
+        // eslint-disable-next-line no-console
         console.warn(
           `Failed to load messages for session ${sessionId}:`,
           error,
@@ -177,6 +182,7 @@ class StorageManager {
       await fs.writeFile(filePath, JSON.stringify(messages, null, 2), 'utf-8');
       this.messagesCache.set(sessionId, messages);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error(`Failed to save messages for session ${sessionId}:`, error);
     }
   }
@@ -204,7 +210,7 @@ class StorageManager {
 
 const storageManager = new StorageManager();
 
-storageManager.loadSessions().catch(console.error);
+storageManager.loadSessions().catch(console.error); // eslint-disable-line no-console
 
 let commandService: CommandService | null = null;
 
@@ -286,7 +292,8 @@ router.post('/', async (_req: Request, res: Response) => {
   const slug = `session-${id.slice(0, 8)}`;
   const now = Date.now();
   const { workspace, workspaceName } =
-    (_req.body as { workspace?: string; workspaceName?: string }) || {};
+    (_req.body as unknown as { workspace?: string; workspaceName?: string }) ||
+    {};
 
   const session: Session = {
     id,
@@ -328,7 +335,10 @@ router.get('/commands', async (_req: Request, res: Response) => {
 });
 
 router.post('/commands/execute', async (req: Request, res: Response) => {
-  const { command, args } = req.body as { command?: string; args?: string };
+  const { command, args } = req.body as unknown as {
+    command?: string;
+    args?: string;
+  };
 
   if (!command || typeof command !== 'string') {
     res.status(400).json({ error: 'Missing or invalid command' });
@@ -412,8 +422,8 @@ router.post('/commands/execute', async (req: Request, res: Response) => {
 });
 
 router.get('/files', async (req: Request, res: Response) => {
-  const query = (req.query['q'] as string) || '';
-  const baseDir = (req.query['cwd'] as string) || process.cwd();
+  const query = (req.query['q'] as unknown as string) || '';
+  const baseDir = (req.query['cwd'] as unknown as string) || process.cwd();
 
   if (!query || query.length < 2) {
     res.json({ files: [] });
@@ -440,7 +450,9 @@ router.get('/files', async (req: Request, res: Response) => {
             results.push(fullPath);
           }
         }
-      } catch {}
+      } catch {
+        // Ignore permission errors during file search
+      }
     }
 
     await search(baseDir);
@@ -493,7 +505,7 @@ router.post('/:id/prompt', async (req: Request, res: Response) => {
     return;
   }
 
-  const { prompt } = req.body as { prompt?: string };
+  const { prompt } = req.body as unknown as { prompt?: string };
   if (!prompt || typeof prompt !== 'string') {
     res.status(400).json({ error: 'Missing or invalid prompt' });
     return;
@@ -602,6 +614,7 @@ router.post('/:id/prompt', async (req: Request, res: Response) => {
 
     res.end();
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('SDK error:', error);
     session.status = 'idle';
     session.updatedAt = Date.now();
@@ -615,7 +628,7 @@ router.post('/:id/prompt', async (req: Request, res: Response) => {
     if (session.status === 'busy') {
       session.status = 'idle';
       session.updatedAt = Date.now();
-      storageManager.saveSession(session).catch(console.error);
+      storageManager.saveSession(session).catch(console.error); // eslint-disable-line no-console
       eventBus.publish({
         type: 'session.status',
         properties: { sessionId: session.id, status: 'idle' },
@@ -636,7 +649,7 @@ function convertSdkEventToMessage(
 } | null {
   switch (event.type) {
     case GeminiEventType.Content: {
-      let text = event.value as string;
+      const text = event.value;
       if (
         text &&
         !text.startsWith('{') &&

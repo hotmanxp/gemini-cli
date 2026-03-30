@@ -1,3 +1,8 @@
+/**
+ * @license
+ * Copyright 2026 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
+ */
 export interface Session {
   id: string;
   slug: string;
@@ -109,7 +114,9 @@ export class GeminiWebClient {
         for (const handler of this.handlers) {
           handler(data);
         }
-      } catch {}
+      } catch {
+        // Ignore parse errors
+      }
     };
 
     this.eventSource.onerror = () => {

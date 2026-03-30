@@ -1,3 +1,8 @@
+/**
+ * @license
+ * Copyright 2026 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
+ */
 import { type Component, createMemo, Show } from 'solid-js';
 import type { ToolState, ToolPart } from './ReadTool.js';
 
@@ -26,7 +31,7 @@ export const BashTool: Component<{ part: ToolPart }> = (props) => {
   const output = createMemo(
     () =>
       (state().metadata?.stdout as string) ||
-      (state().output as string | undefined),
+      (state().output),
   );
   const error = createMemo(() => state().metadata?.error as string | undefined);
   const exitCode = createMemo(
@@ -38,26 +43,26 @@ export const BashTool: Component<{ part: ToolPart }> = (props) => {
   });
 
   return (
-    <div class="space-y-2">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2 text-sm">
-          <span class="text-purple-400 font-medium">Bash</span>
-          <span class="text-gemini-comment">·</span>
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-purple-400 font-medium">Bash</span>
+          <span className="text-gemini-comment">·</span>
           <span
-            class="text-gemini-gray font-mono text-xs truncate max-w-xs"
+            className="text-gemini-gray font-mono text-xs truncate max-w-xs"
             title={command()}
           >
             {command() || '...'}
           </span>
         </div>
-        <div class="flex items-center gap-2">
+        <div className="flex items-center gap-2">
           <Show when={duration() > 0}>
-            <span class="text-xs text-gemini-comment">
+            <span className="text-xs text-gemini-comment">
               {formatDuration(duration())}
             </span>
           </Show>
           <span
-            class={`text-xs px-2 py-0.5 rounded ${
+            className={`text-xs px-2 py-0.5 rounded ${
               state().status === 'completed'
                 ? exitCode() === 0
                   ? 'bg-green-900/50 text-green-400'
@@ -73,12 +78,12 @@ export const BashTool: Component<{ part: ToolPart }> = (props) => {
         </div>
       </div>
       <Show when={error()}>
-        <pre class="text-red-400 text-xs font-mono bg-red-900/20 rounded px-3 py-2 overflow-x-auto">
+        <pre className="text-red-400 text-xs font-mono bg-red-900/20 rounded px-3 py-2 overflow-x-auto">
           {error()}
         </pre>
       </Show>
       <Show when={output()}>
-        <pre class="text-gemini-gray text-xs font-mono bg-gemini-background rounded px-3 py-2 overflow-x-auto max-h-48">
+        <pre className="text-gemini-gray text-xs font-mono bg-gemini-background rounded px-3 py-2 overflow-x-auto max-h-48">
           {output()}
         </pre>
       </Show>

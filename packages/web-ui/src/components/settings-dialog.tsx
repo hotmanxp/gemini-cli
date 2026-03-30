@@ -1,3 +1,8 @@
+/**
+ * @license
+ * Copyright 2026 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
+ */
 import { type Component, createSignal, Show } from 'solid-js';
 import { useSettings } from '../context/settings.js';
 
@@ -56,19 +61,19 @@ const SettingsDialog: Component = () => {
   return (
     <Show when={isSettingsOpen()}>
       <div
-        class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50"
+        className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50"
         onClick={handleBackdropClick}
       >
-        <div class="bg-gemini-msg-bg rounded-lg shadow-xl w-full max-w-lg mx-4 border border-gemini-dark-gray">
-          <div class="px-4 py-3 border-b border-gemini-dark-gray">
-            <h2 class="text-base font-semibold text-gemini-foreground">
+        <div className="bg-gemini-msg-bg rounded-lg shadow-xl w-full max-w-lg mx-4 border border-gemini-dark-gray">
+          <div className="px-4 py-3 border-b border-gemini-dark-gray">
+            <h2 className="text-base font-semibold text-gemini-foreground">
               Settings
             </h2>
           </div>
 
-          <div class="p-4 space-y-3">
+          <div className="p-4 space-y-3">
             <div>
-              <label class="block text-xs font-medium text-gemini-gray mb-1">
+              <label className="block text-xs font-medium text-gemini-gray mb-1">
                 API Endpoint URL
               </label>
               <input
@@ -80,25 +85,25 @@ const SettingsDialog: Component = () => {
                 }}
                 onBlur={() => validateUrl(urlValue())}
                 placeholder="http://localhost:4097"
-                class={`w-full px-3 py-2 bg-gemini-dark-gray border rounded text-gemini-foreground placeholder-gemini-comment focus:outline-none focus:ring-1 focus:ring-gemini-accent text-sm ${
+                className={`w-full px-3 py-2 bg-gemini-dark-gray border rounded text-gemini-foreground placeholder-gemini-comment focus:outline-none focus:ring-1 focus:ring-gemini-accent text-sm ${
                   urlError()
                     ? 'border-gemini-accent-red'
                     : 'border-gemini-dark-gray'
                 }`}
               />
               <Show when={urlError()}>
-                <p class="mt-1 text-xs text-gemini-accent-red">{urlError()}</p>
+                <p className="mt-1 text-xs text-gemini-accent-red">{urlError()}</p>
               </Show>
             </div>
 
             <div>
-              <label class="block text-xs font-medium text-gemini-gray mb-1">
+              <label className="block text-xs font-medium text-gemini-gray mb-1">
                 Provider Type
               </label>
               <select
                 value={providerValue()}
                 onChange={(e) => setProviderValue(e.currentTarget.value)}
-                class="w-full px-3 py-2 bg-gemini-dark-gray border border-gemini-dark-gray rounded text-gemini-foreground focus:outline-none focus:ring-1 focus:ring-gemini-accent text-sm"
+                className="w-full px-3 py-2 bg-gemini-dark-gray border border-gemini-dark-gray rounded text-gemini-foreground focus:outline-none focus:ring-1 focus:ring-gemini-accent text-sm"
               >
                 {PROVIDER_TYPES.map((type) => (
                   <option value={type.value}>{type.label}</option>
@@ -107,16 +112,16 @@ const SettingsDialog: Component = () => {
             </div>
           </div>
 
-          <div class="px-4 py-3 border-t border-gemini-dark-gray flex justify-end gap-2">
+          <div className="px-4 py-3 border-t border-gemini-dark-gray flex justify-end gap-2">
             <button
               onClick={handleCancel}
-              class="px-3 py-1.5 text-xs font-medium text-gemini-gray hover:text-gemini-foreground hover:bg-gemini-dark-gray rounded transition-colors"
+              className="px-3 py-1.5 text-xs font-medium text-gemini-gray hover:text-gemini-foreground hover:bg-gemini-dark-gray rounded transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
-              class="px-3 py-1.5 text-xs font-medium bg-gemini-accent hover:bg-gemini-accent text-gemini-background rounded transition-colors"
+              className="px-3 py-1.5 text-xs font-medium bg-gemini-accent hover:bg-gemini-accent text-gemini-background rounded transition-colors"
             >
               Save
             </button>
@@ -133,19 +138,19 @@ export const SettingsButton: Component = () => {
   return (
     <button
       onClick={openSettings}
-      class="p-2 text-gemini-comment hover:text-gemini-foreground hover:bg-gemini-dark-gray rounded-md transition-colors"
+      className="p-2 text-gemini-comment hover:text-gemini-foreground hover:bg-gemini-dark-gray rounded-md transition-colors"
       title="Settings"
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        class="h-5 w-5"
+        className="h-5 w-5"
         viewBox="0 0 20 20"
         fill="currentColor"
       >
         <path
-          fill-rule="evenodd"
+          fillRule="evenodd"
           d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
-          clip-rule="evenodd"
+          clipRule="evenodd"
         />
       </svg>
     </button>

@@ -147,7 +147,7 @@ export class TerminalCapabilityManager {
           fs.writeSync(
             process.stdout.fd,
             TerminalCapabilityManager.RESTORE_CURSOR +
-              TerminalCapabilityManager.CLEAR_LINE_AND_RETURN +
+              '\x1b[G\x1b[2K' +
               TerminalCapabilityManager.RESET_ATTRIBUTES,
           );
         } catch (_e) {
@@ -229,7 +229,7 @@ export class TerminalCapabilityManager {
             try {
               fs.writeSync(
                 process.stdout.fd,
-                TerminalCapabilityManager.CLEAR_LINE_AND_RETURN,
+                '\x1b[2K',
               );
             } catch (_e) {
               // Ignore errors

@@ -1,3 +1,8 @@
+/**
+ * @license
+ * Copyright 2026 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
+ */
 import { type Component, For } from 'solid-js';
 import type { SessionMessage } from '../lib/sdk-shim.js';
 
@@ -28,14 +33,14 @@ export const MessageNav: Component<MessageNavProps> = (props) => {
   };
 
   return (
-    <div class="flex items-center gap-2 px-2 py-1 bg-gemini-msg-bg">
-      <span class="text-xs text-gemini-comment font-medium">Msgs:</span>
-      <div class="flex gap-1">
+    <div className="flex items-center gap-2 px-2 py-1 bg-gemini-msg-bg">
+      <span className="text-xs text-gemini-comment font-medium">Msgs:</span>
+      <div className="flex gap-1">
         <For each={userMessageIndices()}>
           {(msgIndex, navIndex) => (
             <button
               onClick={() => props.onMessageSelect(msgIndex)}
-              class={`
+              className={`
                 flex items-center justify-center
                 w-6 h-6 rounded text-xs font-mono
                 transition-colors

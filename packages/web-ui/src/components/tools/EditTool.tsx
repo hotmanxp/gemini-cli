@@ -1,3 +1,8 @@
+/**
+ * @license
+ * Copyright 2026 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
+ */
 import { type Component, createMemo, Show } from 'solid-js';
 import type { ToolState, ToolPart } from './ReadTool.js';
 
@@ -30,17 +35,17 @@ export const EditTool: Component<{ part: ToolPart }> = (props) => {
   const diff = createMemo(() => state().metadata?.diff as string | undefined);
 
   return (
-    <div class="space-y-2">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2 text-sm">
-          <span class="text-yellow-400 font-medium">Edit</span>
-          <span class="text-gemini-comment">·</span>
-          <span class="text-gemini-gray font-mono text-xs" title={filePath()}>
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-yellow-400 font-medium">Edit</span>
+          <span className="text-gemini-comment">·</span>
+          <span className="text-gemini-gray font-mono text-xs" title={filePath()}>
             {getFileName(filePath())}
           </span>
         </div>
         <span
-          class={`text-xs px-2 py-0.5 rounded ${
+          className={`text-xs px-2 py-0.5 rounded ${
             state().status === 'completed'
               ? 'bg-green-900/50 text-green-400'
               : state().status === 'error'
@@ -52,29 +57,29 @@ export const EditTool: Component<{ part: ToolPart }> = (props) => {
         </span>
       </div>
       <Show when={error()}>
-        <div class="text-red-400 text-sm font-mono bg-red-900/20 rounded px-3 py-2">
+        <div className="text-red-400 text-sm font-mono bg-red-900/20 rounded px-3 py-2">
           {error()}
         </div>
       </Show>
       <Show when={diff()}>
-        <pre class="text-gemini-gray text-xs font-mono bg-gemini-background rounded px-3 py-2 overflow-x-auto">
+        <pre className="text-gemini-gray text-xs font-mono bg-gemini-background rounded px-3 py-2 overflow-x-auto">
           {diff()}
         </pre>
       </Show>
       <Show when={!diff() && (oldString() || newString())}>
-        <div class="bg-gemini-background rounded px-3 py-2 space-y-2">
+        <div className="bg-gemini-background rounded px-3 py-2 space-y-2">
           <Show when={oldString()}>
             <div>
-              <span class="text-red-400 text-xs">- </span>
-              <span class="text-gemini-comment text-xs font-mono">
+              <span className="text-red-400 text-xs">- </span>
+              <span className="text-gemini-comment text-xs font-mono">
                 {oldString()}
               </span>
             </div>
           </Show>
           <Show when={newString()}>
             <div>
-              <span class="text-green-400 text-xs">+ </span>
-              <span class="text-gemini-gray text-xs font-mono">
+              <span className="text-green-400 text-xs">+ </span>
+              <span className="text-gemini-gray text-xs font-mono">
                 {newString()}
               </span>
             </div>

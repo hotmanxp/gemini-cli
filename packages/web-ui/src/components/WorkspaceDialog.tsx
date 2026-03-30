@@ -1,3 +1,8 @@
+/**
+ * @license
+ * Copyright 2026 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
+ */
 import { type Component, createSignal, For, Show } from 'solid-js';
 import { useSdk } from '../context/sdk.js';
 
@@ -87,33 +92,33 @@ export const WorkspaceDialog: Component<WorkspaceDialogProps> = (props) => {
 
   return (
     <div
-      class="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
       onClick={handleBackdropClick}
     >
-      <div class="bg-gemini-msg-bg rounded-lg shadow-xl w-full max-w-lg mx-4 border border-gemini-dark-gray">
-        <div class="px-4 py-3 border-b border-gemini-dark-gray flex items-center justify-between">
-          <h2 class="text-base font-semibold text-gemini-foreground">
+      <div className="bg-gemini-msg-bg rounded-lg shadow-xl w-full max-w-lg mx-4 border border-gemini-dark-gray">
+        <div className="px-4 py-3 border-b border-gemini-dark-gray flex items-center justify-between">
+          <h2 className="text-base font-semibold text-gemini-foreground">
             Select Workspace
           </h2>
           <button
             onClick={props.onClose}
-            class="p-1 text-gemini-comment hover:text-gemini-foreground rounded transition-colors"
+            className="p-1 text-gemini-comment hover:text-gemini-foreground rounded transition-colors"
           >
             ✕
           </button>
         </div>
 
-        <div class="p-3">
-          <div class="flex items-center gap-1 text-xs mb-3 overflow-x-auto whitespace-nowrap">
+        <div className="p-3">
+          <div className="flex items-center gap-1 text-xs mb-3 overflow-x-auto whitespace-nowrap">
             <For each={breadcrumbs()}>
               {(crumb, index) => (
                 <>
                   <Show when={index() > 0}>
-                    <span class="text-gemini-dark-gray">/</span>
+                    <span className="text-gemini-dark-gray">/</span>
                   </Show>
                   <button
                     onClick={() => handleBreadcrumbClick(crumb)}
-                    class={`px-1 py-0.5 rounded transition-colors ${
+                    className={`px-1 py-0.5 rounded transition-colors ${
                       index() === breadcrumbs().length - 1
                         ? 'text-gemini-foreground font-medium'
                         : 'text-gemini-comment hover:text-gemini-foreground'
@@ -126,20 +131,20 @@ export const WorkspaceDialog: Component<WorkspaceDialogProps> = (props) => {
             </For>
           </div>
 
-          <div class="bg-gemini-background rounded-lg border border-gemini-dark-gray max-h-72 overflow-y-auto">
+          <div className="bg-gemini-background rounded-lg border border-gemini-dark-gray max-h-72 overflow-y-auto">
             <Show when={parent()}>
               <button
                 onClick={handleBackClick}
-                class="w-full px-3 py-2 text-left text-sm flex items-center gap-2 text-gemini-comment hover:bg-gemini-dark-gray hover:text-gemini-foreground transition-colors"
+                className="w-full px-3 py-2 text-left text-sm flex items-center gap-2 text-gemini-comment hover:bg-gemini-dark-gray hover:text-gemini-foreground transition-colors"
               >
-                <span class="text-gemini-dark-gray">↑</span>
+                <span className="text-gemini-dark-gray">↑</span>
                 <span>..</span>
               </button>
             </Show>
             <Show
               when={!loading()}
               fallback={
-                <div class="px-3 py-4 text-center text-xs text-gemini-comment">
+                <div className="px-3 py-4 text-center text-xs text-gemini-comment">
                   Loading...
                 </div>
               }
@@ -147,7 +152,7 @@ export const WorkspaceDialog: Component<WorkspaceDialogProps> = (props) => {
               <Show
                 when={directories().length > 0}
                 fallback={
-                  <div class="px-3 py-4 text-center text-xs text-gemini-comment">
+                  <div className="px-3 py-4 text-center text-xs text-gemini-comment">
                     No subdirectories
                   </div>
                 }
@@ -156,10 +161,10 @@ export const WorkspaceDialog: Component<WorkspaceDialogProps> = (props) => {
                   {(dir) => (
                     <button
                       onClick={() => loadDirectory(dir.path)}
-                      class="w-full px-3 py-2 text-left text-sm flex items-center gap-2 text-gemini-comment hover:bg-gemini-dark-gray hover:text-gemini-foreground transition-colors"
+                      className="w-full px-3 py-2 text-left text-sm flex items-center gap-2 text-gemini-comment hover:bg-gemini-dark-gray hover:text-gemini-foreground transition-colors"
                     >
-                      <span class="text-gemini-accent">📁</span>
-                      <span class="truncate">{dir.name}</span>
+                      <span className="text-gemini-accent">📁</span>
+                      <span className="truncate">{dir.name}</span>
                     </button>
                   )}
                 </For>
@@ -167,21 +172,21 @@ export const WorkspaceDialog: Component<WorkspaceDialogProps> = (props) => {
             </Show>
           </div>
 
-          <div class="mt-3 px-3 py-2 bg-gemini-dark-gray rounded text-xs text-gemini-foreground font-mono truncate">
+          <div className="mt-3 px-3 py-2 bg-gemini-dark-gray rounded text-xs text-gemini-foreground font-mono truncate">
             {currentPath() || homeDir()}
           </div>
         </div>
 
-        <div class="px-4 py-3 border-t border-gemini-dark-gray flex justify-end gap-2">
+        <div className="px-4 py-3 border-t border-gemini-dark-gray flex justify-end gap-2">
           <button
             onClick={props.onClose}
-            class="px-3 py-1.5 text-xs font-medium text-gemini-comment hover:text-gemini-foreground hover:bg-gemini-dark-gray rounded transition-colors"
+            className="px-3 py-1.5 text-xs font-medium text-gemini-comment hover:text-gemini-foreground hover:bg-gemini-dark-gray rounded transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSelect}
-            class="px-3 py-1.5 text-xs font-medium bg-gemini-accent hover:bg-gemini-accent text-gemini-background rounded transition-colors"
+            className="px-3 py-1.5 text-xs font-medium bg-gemini-accent hover:bg-gemini-accent text-gemini-background rounded transition-colors"
           >
             Select
           </button>

@@ -1,3 +1,8 @@
+/**
+ * @license
+ * Copyright 2026 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
+ */
 import { type Component, createMemo, For, Show } from 'solid-js';
 import type { ToolState, ToolPart } from './ReadTool.js';
 
@@ -56,15 +61,15 @@ export const TrackerTool: Component<{ part: ToolPart }> = (props) => {
   });
 
   return (
-    <div class="space-y-2">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2 text-sm">
-          <span class="text-purple-400 font-medium">Tracker</span>
-          <span class="text-gemini-comment">·</span>
-          <span class="text-gemini-gray text-xs capitalize">{toolName()}</span>
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-purple-400 font-medium">Tracker</span>
+          <span className="text-gemini-comment">·</span>
+          <span className="text-gemini-gray text-xs capitalize">{toolName()}</span>
         </div>
         <span
-          class={`text-xs px-2 py-0.5 rounded ${
+          className={`text-xs px-2 py-0.5 rounded ${
             state().status === 'completed'
               ? 'bg-green-900/50 text-green-400'
               : state().status === 'error'
@@ -77,18 +82,18 @@ export const TrackerTool: Component<{ part: ToolPart }> = (props) => {
       </div>
 
       <Show when={state().metadata?.error}>
-        <pre class="text-red-400 text-xs font-mono bg-red-900/20 rounded px-3 py-2 overflow-x-auto">
+        <pre className="text-red-400 text-xs font-mono bg-red-900/20 rounded px-3 py-2 overflow-x-auto">
           {state().metadata?.error as string}
         </pre>
       </Show>
 
       <Show when={tasks().length > 0}>
-        <div class="space-y-1">
+        <div className="space-y-1">
           <For each={tasks()}>
             {(task: Task) => (
-              <div class="flex items-start gap-2 p-2 bg-gemini-background rounded text-xs">
+              <div className="flex items-start gap-2 p-2 bg-gemini-background rounded text-xs">
                 <span
-                  class={`w-2 h-2 rounded-full mt-1 flex-shrink-0 ${
+                  className={`w-2 h-2 rounded-full mt-1 flex-shrink-0 ${
                     task.status === 'done'
                       ? 'bg-green-400'
                       : task.status === 'in_progress'
@@ -96,12 +101,12 @@ export const TrackerTool: Component<{ part: ToolPart }> = (props) => {
                         : 'bg-gray-500'
                   }`}
                 />
-                <div class="flex-1 min-w-0">
-                  <p class="text-gemini-foreground truncate">
+                <div className="flex-1 min-w-0">
+                  <p className="text-gemini-foreground truncate">
                     {task.title || task.id}
                   </p>
                   <Show when={task.status}>
-                    <span class="text-gemini-comment text-xs">
+                    <span className="text-gemini-comment text-xs">
                       {task.status}
                     </span>
                   </Show>
@@ -113,13 +118,13 @@ export const TrackerTool: Component<{ part: ToolPart }> = (props) => {
       </Show>
 
       <Show when={state().input}>
-        <div class="text-xs text-gemini-comment">
+        <div className="text-xs text-gemini-comment">
           Input: {JSON.stringify(state().input)}
         </div>
       </Show>
 
       <Show when={taskObj() && tasks().length === 0 && state().output}>
-        <pre class="text-gemini-gray text-xs font-mono bg-gemini-background rounded px-3 py-2 overflow-x-auto max-h-32">
+        <pre className="text-gemini-gray text-xs font-mono bg-gemini-background rounded px-3 py-2 overflow-x-auto max-h-32">
           {typeof state().output === 'string'
             ? state().output
             : JSON.stringify(state().output, null, 2)}

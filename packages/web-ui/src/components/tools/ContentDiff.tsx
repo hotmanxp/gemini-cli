@@ -1,3 +1,8 @@
+/**
+ * @license
+ * Copyright 2026 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
+ */
 import { type Component, createMemo, For, Show } from 'solid-js';
 import { parsePatch } from 'diff';
 import hljs from 'highlight.js';
@@ -110,15 +115,15 @@ export const ContentDiff: Component<ContentDiffProps> = (props) => {
   });
 
   return (
-    <div class="overflow-x-auto rounded-xl bg-gemini-background">
+    <div className="overflow-x-auto rounded-xl bg-gemini-background">
       <For each={rows()}>
         {(row) => (
           <div
-            class="grid grid-cols-2 gap-px bg-gemini-msg-bg"
+            className="grid grid-cols-2 gap-px bg-gemini-msg-bg"
             data-type={row.type}
           >
             <div
-              class="font-mono text-xs p-2 overflow-x-auto"
+              className="font-mono text-xs p-2 overflow-x-auto"
               classList={{
                 'bg-red-900/20':
                   row.type === 'removed' || row.type === 'modified',
@@ -131,7 +136,7 @@ export const ContentDiff: Component<ContentDiffProps> = (props) => {
               </Show>
             </div>
             <div
-              class="font-mono text-xs p-2 overflow-x-auto"
+              className="font-mono text-xs p-2 overflow-x-auto"
               classList={{
                 'bg-green-900/20':
                   row.type === 'added' || row.type === 'modified',

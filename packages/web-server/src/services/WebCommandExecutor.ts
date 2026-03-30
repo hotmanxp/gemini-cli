@@ -1,5 +1,9 @@
+/**
+ * @license
+ * Copyright 2026 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
+ */
 import type { CommandContext, SlashCommand } from './types.js';
-import { CommandKind } from './types.js';
 import type {
   CommandActionReturn,
   MessageActionReturn,
@@ -25,8 +29,8 @@ function createSubmitPromptAction(content: string): CommandActionReturn {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const webCommandActions: Record<string, any> = {
-  help: () => {
-    return createMessageAction(`## Gemini CLI Commands
+  help: () =>
+    createMessageAction(`## Gemini CLI Commands
 
 ### Session Management
 - \`/new\` - Start a new chat session
@@ -66,11 +70,10 @@ export const webCommandActions: Record<string, any> = {
 - \`/bug\` - Report a bug or issue
 - \`/upgrade\` - Check for upgrades
 
-Use \`/command\` or \`/\` to see all available commands.`);
-  },
+Use \`/command\` or \`/\` to see all available commands.`),
 
-  about: () => {
-    return createMessageAction(`## About Gemini CLI
+  about: () =>
+    createMessageAction(`## About Gemini CLI
 
 **Version**: 0.36.0
 
@@ -81,19 +84,17 @@ Gemini CLI is a command-line interface for Google's Gemini AI. It provides an in
 - Session management and context
 - Extensible through skills and MCP servers
 
-For more information, visit the documentation.`);
-  },
+For more information, visit the documentation.`),
 
-  stats: () => {
-    return createMessageAction(`## Session Statistics
+  stats: () =>
+    createMessageAction(`## Session Statistics
 
 Token usage and cost information will be displayed here.
 
-Use the StatsBar at the top of the chat to see current session stats.`);
-  },
+Use the StatsBar at the top of the chat to see current session stats.`),
 
-  privacy: () => {
-    return createMessageAction(`## Privacy Policy
+  privacy: () =>
+    createMessageAction(`## Privacy Policy
 
 Gemini CLI processes your conversations with Google's Gemini AI. Your prompts and AI responses may be logged for quality and debugging purposes.
 
@@ -102,11 +103,10 @@ Gemini CLI processes your conversations with Google's Gemini AI. Your prompts an
 - Session data is stored locally on your machine
 - No personal data is shared with third parties
 
-For more information, visit the official privacy documentation.`);
-  },
+For more information, visit the official privacy documentation.`),
 
-  policies: () => {
-    return createMessageAction(`## Active Policies
+  policies: () =>
+    createMessageAction(`## Active Policies
 
 The following policies are currently active:
 
@@ -114,11 +114,10 @@ The following policies are currently active:
 2. **Data Retention** - Conversation data is retained according to Google's data policies
 3. **Tool Execution** - File system operations require explicit user confirmation
 
-Use \`/permissions\` to manage folder access permissions.`);
-  },
+Use \`/permissions\` to manage folder access permissions.`),
 
-  bug: (_context: CommandContext, _args: string) => {
-    return createMessageAction(`## Report a Bug
+  bug: (_context: CommandContext, _args: string) =>
+    createMessageAction(`## Report a Bug
 
 To report a bug, please:
 1. Visit the Gemini CLI GitHub repository
@@ -128,80 +127,54 @@ To report a bug, please:
    - Actual behavior
    - Environment details (OS, Node version, etc.)
 
-Thank you for helping improve Gemini CLI!`);
-  },
+Thank you for helping improve Gemini CLI!`),
 
-  docs: () => {
-    return createSubmitPromptAction(
+  docs: () =>
+    createSubmitPromptAction(
       `Please open the Gemini CLI documentation at https://github.com/google/gemini-cli`,
-    );
-  },
+    ),
 
-  clear: (_context: CommandContext, _args: string) => {
-    return createMessageAction('__CLEAR_CHAT__');
-  },
+  clear: (_context: CommandContext, _args: string) =>
+    createMessageAction('__CLEAR_CHAT__'),
 
-  settings: () => {
-    return createMessageAction('__OPEN_SETTINGS__');
-  },
+  settings: () => createMessageAction('__OPEN_SETTINGS__'),
 
-  model: () => {
-    return createMessageAction('__OPEN_MODEL_SELECTION__');
-  },
+  model: () => createMessageAction('__OPEN_MODEL_SELECTION__'),
 
-  chat: () => {
-    return createMessageAction('__OPEN_SESSION_BROWSER__');
-  },
+  chat: () => createMessageAction('__OPEN_SESSION_BROWSER__'),
 
-  new: () => {
-    return createMessageAction('__NEW_SESSION__');
-  },
+  new: () => createMessageAction('__NEW_SESSION__'),
 
-  resume: () => {
-    return createMessageAction('__RESUME_SESSION__');
-  },
+  resume: () => createMessageAction('__RESUME_SESSION__'),
 
-  compress: () => {
-    return createMessageAction('__COMPRESS_CONTEXT__');
-  },
+  compress: () => createMessageAction('__COMPRESS_CONTEXT__'),
 
-  copy: () => {
-    return createMessageAction('Last output has been copied to clipboard.');
-  },
+  copy: () => createMessageAction('Last output has been copied to clipboard.'),
 
-  corgi: () => {
-    return createMessageAction('Corgi mode is not available in web UI.');
-  },
+  corgi: () => createMessageAction('Corgi mode is not available in web UI.'),
 
-  vim: () => {
-    return createMessageAction('Vim mode is not available in web UI.');
-  },
+  vim: () => createMessageAction('Vim mode is not available in web UI.'),
 
-  shells: () => {
-    return createMessageAction('Shell sessions are not available in web UI.');
-  },
+  shells: () =>
+    createMessageAction('Shell sessions are not available in web UI.'),
 
-  commands: () => {
-    return createSubmitPromptAction('/help');
-  },
+  commands: () => createSubmitPromptAction('/help'),
 
-  footer: () => {
-    return createMessageAction(`Gemini CLI v0.36.0 | Type /help for commands`);
-  },
+  footer: () =>
+    createMessageAction(`Gemini CLI v0.36.0 | Type /help for commands`),
 
-  shortcuts: () => {
-    return createMessageAction(`## Keyboard Shortcuts
+  shortcuts: () =>
+    createMessageAction(`## Keyboard Shortcuts
 
 - \`/\` - Open command palette
 - \`@\` - Reference files
 - \`↑↓\` - Navigate suggestions
 - \`Enter\` - Select suggestion
 - \`Esc\` - Dismiss suggestions
-- \`Ctrl+Enter\` - Send message`);
-  },
+- \`Ctrl+Enter\` - Send message`),
 
-  tools: () => {
-    return createMessageAction(`## Available Tools
+  tools: () =>
+    createMessageAction(`## Available Tools
 
 Gemini CLI supports the following tools:
 
@@ -212,11 +185,10 @@ Gemini CLI supports the following tools:
 - **Grep** - Search file contents
 - **Glob** - Find files by pattern
 
-Tools are executed by the AI and require appropriate permissions.`);
-  },
+Tools are executed by the AI and require appropriate permissions.`),
 
-  skills: () => {
-    return createMessageAction(`## Agent Skills
+  skills: () =>
+    createMessageAction(`## Agent Skills
 
 Skills extend Gemini CLI's capabilities. Use \`/skills\` to manage installed skills.
 
@@ -227,11 +199,10 @@ Available skill categories:
 - Code review
 - Refactoring
 
-Skills can be enabled/disabled per session.`);
-  },
+Skills can be enabled/disabled per session.`),
 
-  extensions: () => {
-    return createMessageAction(`## Extensions
+  extensions: () =>
+    createMessageAction(`## Extensions
 
 Extensions provide additional functionality to Gemini CLI.
 
@@ -241,11 +212,10 @@ Use \`/extensions\` to:
 - Update extensions
 - View extension settings
 
-Browse available extensions in the marketplace.`);
-  },
+Browse available extensions in the marketplace.`),
 
-  agents: () => {
-    return createMessageAction(`## Agent Configurations
+  agents: () =>
+    createMessageAction(`## Agent Configurations
 
 Agents are specialized AI assistants optimized for specific tasks.
 
@@ -255,11 +225,10 @@ Use \`/agents\` to:
 - Configure agent settings
 - Create custom agents
 
-Different agents excel at different tasks (coding, writing, analysis, etc.)`);
-  },
+Different agents excel at different tasks (coding, writing, analysis, etc.)`),
 
-  auth: () => {
-    return createMessageAction(`## Authentication
+  auth: () =>
+    createMessageAction(`## Authentication
 
 Gemini CLI supports multiple authentication methods:
 
@@ -269,11 +238,10 @@ Gemini CLI supports multiple authentication methods:
 
 Current authentication status: Active
 
-Use \`/auth\` to manage authentication settings.`);
-  },
+Use \`/auth\` to manage authentication settings.`),
 
-  permissions: () => {
-    return createMessageAction(`## Folder Permissions
+  permissions: () =>
+    createMessageAction(`## Folder Permissions
 
 Gemini CLI requires explicit permission to access folders.
 
@@ -282,86 +250,63 @@ Use \`/permissions\` to:
 - Revoke folder access
 - View currently trusted folders
 
-For security, always verify folder access requests.`);
-  },
+For security, always verify folder access requests.`),
 
-  theme: () => {
-    return createMessageAction(
+  theme: () =>
+    createMessageAction(
       'Theme selection is not available in web UI. The dark theme is always active.',
-    );
-  },
+    ),
 
-  profile: () => {
-    return createMessageAction(
-      'Profile management is not available in web UI.',
-    );
-  },
+  profile: () =>
+    createMessageAction('Profile management is not available in web UI.'),
 
-  directory: () => {
-    return createMessageAction(
+  directory: () =>
+    createMessageAction(
       'Directory management is not available in web UI. The current working directory is used.',
-    );
-  },
+    ),
 
-  editor: () => {
-    return createMessageAction(
+  editor: () =>
+    createMessageAction(
       'External editor integration is not available in web UI.',
-    );
-  },
+    ),
 
-  hooks: () => {
-    return createMessageAction(
+  hooks: () =>
+    createMessageAction(
       'Lifecycle hooks management is not available in web UI.',
-    );
-  },
+    ),
 
-  init: () => {
-    return createMessageAction(
-      'Project initialization is not available in web UI.',
-    );
-  },
+  init: () =>
+    createMessageAction('Project initialization is not available in web UI.'),
 
-  memory: () => {
-    return createMessageAction(
+  memory: () =>
+    createMessageAction(
       'Memory management is not available in web UI. Context is maintained automatically.',
-    );
-  },
+    ),
 
-  plan: () => {
-    return createMessageAction('Plan mode is not available in web UI.');
-  },
+  plan: () => createMessageAction('Plan mode is not available in web UI.'),
 
-  rewind: () => {
-    return createMessageAction(
+  rewind: () =>
+    createMessageAction(
       'Conversation rewind is not available in web UI. Start a new session for fresh context.',
-    );
-  },
+    ),
 
-  restore: () => {
-    return createMessageAction('File restore is not available in web UI.');
-  },
+  restore: () =>
+    createMessageAction('File restore is not available in web UI.'),
 
-  mcp: () => {
-    return createMessageAction(
-      'MCP server management is not available in web UI.',
-    );
-  },
+  mcp: () =>
+    createMessageAction('MCP server management is not available in web UI.'),
 
-  ide: () => {
-    return createMessageAction('IDE integration is not available in web UI.');
-  },
+  ide: () => createMessageAction('IDE integration is not available in web UI.'),
 
-  upgrade: () => {
-    return createMessageAction(
+  upgrade: () =>
+    createMessageAction(
       'Upgrade check is not available in web UI. Use the CLI version for upgrades.',
-    );
-  },
+    ),
 
-  quit: () => {
-    return createMessageAction(
+  quit: () =>
+    createMessageAction(
       'Quit is not available in web UI. Close the browser tab to exit.',
-    );
-  },
+    ),
 };
 
 export function createWebCommand(
