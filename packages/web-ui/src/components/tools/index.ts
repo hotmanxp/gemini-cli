@@ -9,6 +9,7 @@ export { EditTool } from './EditTool.js';
 export { BashTool } from './BashTool.js';
 export { GrepTool } from './GrepTool.js';
 export { GlobTool } from './GlobTool.js';
+export { LsTool } from './LsTool.js';
 export { TrackerTool } from './TrackerTool.js';
 export { DiffViewer } from './DiffViewer.js';
 export { ContentDiff } from './ContentDiff.js';

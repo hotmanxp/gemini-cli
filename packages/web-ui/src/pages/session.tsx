@@ -31,6 +31,7 @@ import {
   BashTool,
   GrepTool,
   GlobTool,
+  LsTool,
   TrackerTool,
   type ToolPart,
 } from '../components/tools/index.js';
@@ -700,14 +701,20 @@ export const Session: Component = () => {
                                 <Match
                                   when={
                                     (part as unknown as ToolPart).tool ===
-                                      'glob' ||
-                                    (part as unknown as ToolPart).tool ===
-                                      'list_directory'
+                                    'glob'
                                   }
                                 >
                                   <GlobTool
                                     part={part as unknown as ToolPart}
                                   />
+                                </Match>
+                                <Match
+                                  when={
+                                    (part as unknown as ToolPart).tool ===
+                                    'list_directory'
+                                  }
+                                >
+                                  <LsTool part={part as unknown as ToolPart} />
                                 </Match>
                                 <Match when={true}>
                                   <div className="text-xs">

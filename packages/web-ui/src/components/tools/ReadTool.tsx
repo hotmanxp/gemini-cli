@@ -3,7 +3,7 @@
  * Copyright 2026 Google LLC
  * SPDX-License-Identifier: Apache-2.0
  */
-import { type Component, createMemo, Show } from 'solid-js';
+import { type Component, createMemo, Show, createSignal } from 'solid-js';
 
 export interface ToolState {
   status: 'pending' | 'running' | 'completed' | 'error';
@@ -47,7 +47,10 @@ function ToolHeader(props: { name: string; target?: string }) {
       <span className="text-gemini-accent-blue font-medium">{props.name}</span>
       <Show when={props.target}>
         <span className="text-gemini-comment">·</span>
-        <span className="text-gemini-gray font-mono text-xs" title={props.target}>
+        <span
+          className="text-gemini-gray font-mono text-xs"
+          title={props.target}
+        >
           {getFileName(props.target)}
         </span>
       </Show>
@@ -83,9 +86,45 @@ function ToolDuration(props: { time?: { start: number; end: number } }) {
   );
 }
 
+function CollapsibleOutput(props: { content: string; maxLines?: number }) {
+  const [expanded, setExpanded] = createSignal(false);
+  const lines = createMemo(() => props.content.split('\n'));
+  const shouldCollapse = createMemo(
+    () => (props.maxLines ?? 3) > 0 && lines().length > (props.maxLines ?? 3),
+  );
+  const displayContent = createMemo(() =>
+    expanded() || !shouldCollapse()
+      ? props.content
+      : lines()
+          .slice(0, props.maxLines ?? 3)
+          .join('\n') + '\n...',
+  );
+
+  return (
+    <div className="relative">
+      <pre className="text-gemini-comment text-xs font-mono bg-gemini-background/50 rounded px-3 py-2 overflow-x-auto">
+        {displayContent()}
+      </pre>
+      <Show when={shouldCollapse()}>
+        <button
+          onClick={() => setExpanded(!expanded())}
+          className="mt-1 text-xs text-gemini-accent-blue hover:text-blue-300 cursor-pointer"
+        >
+          {expanded() ? '收起' : `展开全部 (${lines().length} 行)`}
+        </button>
+      </Show>
+    </div>
+  );
+}
+
 export const ReadTool: Component<{ part: ToolPart }> = (props) => {
   const state = createMemo(() => parseState(props.part.state));
-  const filePath = createMemo(() => (state().input?.filePath as string) || '');
+  const filePath = createMemo(
+    () =>
+      (state().input?.filePath as string) ||
+      (state().input?.file_path as string) ||
+      '',
+  );
   const preview = createMemo(
     () => state().metadata?.preview as string | undefined,
   );
@@ -111,9 +150,7 @@ export const ReadTool: Component<{ part: ToolPart }> = (props) => {
         </pre>
       </Show>
       <Show when={!error() && !preview() && state().output}>
-        <pre className="text-gemini-comment text-xs font-mono bg-gemini-background/50 rounded px-3 py-2">
-          {state().output}
-        </pre>
+        <CollapsibleOutput content={state().output!} maxLines={3} />
       </Show>
     </div>
   );
