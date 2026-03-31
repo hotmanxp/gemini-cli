@@ -22,6 +22,7 @@ import {
   ActivateSkillTool,
   type ResumedSessionData,
   PolicyDecision,
+  type CompletedToolCall,
 } from '@google/gemini-cli-core';
 
 import { type Tool, SdkTool } from './tool.js';
@@ -253,7 +254,7 @@ export class GeminiCliSession {
         return tool;
       };
 
-      const completedCalls = await scheduleAgentTools(
+      const completedCalls: CompletedToolCall[] = await scheduleAgentTools(
         this.config,
         toolCallsToSchedule,
         {
@@ -262,6 +263,13 @@ export class GeminiCliSession {
           signal: abortSignal,
         },
       );
+
+      for (const completedCall of completedCalls) {
+        yield {
+          type: GeminiEventType.ToolCallResponse,
+          value: completedCall.response,
+        };
+      }
 
       const functionResponses = completedCalls.flatMap(
         (call) => call.response.responseParts,
