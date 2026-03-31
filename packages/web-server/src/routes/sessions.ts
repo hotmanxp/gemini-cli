@@ -717,6 +717,15 @@ router.post('/:id/prompt', async (req: Request, res: Response) => {
             properties: { sessionId: session.id, message: result.data.message },
             timestamp: Date.now(),
           });
+        } else if (
+          result.type === 'message.updated' &&
+          'message' in result.data
+        ) {
+          eventBus.publish({
+            type: 'message.updated',
+            properties: { sessionId: session.id, message: result.data.message },
+            timestamp: Date.now(),
+          });
         }
       }
     }
@@ -811,16 +820,24 @@ function convertSdkEventToMessage(
     case GeminiEventType.ToolCallRequest: {
       const toolCall = event.value as {
         name: string;
-        args: Record<string, unknown>;
+        args: Record<string, unknown> | string;
         callId?: string;
       };
+      let args = toolCall.args;
+      if (typeof args === 'string') {
+        try {
+          args = JSON.parse(args) as Record<string, unknown>;
+        } catch {
+          args = {};
+        }
+      }
       const toolPart: ToolCallPart = {
         type: 'tool',
         tool: toolCall.name,
         callId: toolCall.callId,
         state: {
           status: 'running',
-          input: toolCall.args,
+          input: args,
         },
       };
       parts.push(toolPart as unknown as Part);
@@ -839,9 +856,10 @@ function convertSdkEventToMessage(
     }
     case GeminiEventType.ToolCallResponse: {
       const response = event.value as {
-        callId?: string;
-        output?: string;
-        error?: string;
+        callId: string;
+        responseParts: unknown[];
+        resultDisplay?: unknown;
+        error?: { message?: string };
       };
       let toolPartIndex = -1;
 
@@ -859,14 +877,41 @@ function convertSdkEventToMessage(
 
       if (toolPartIndex >= 0) {
         const toolPart = parts[toolPartIndex];
+        let output: string | undefined;
+        // First try resultDisplay
+        if (
+          response.resultDisplay !== undefined &&
+          response.resultDisplay !== ''
+        ) {
+          if (typeof response.resultDisplay === 'string') {
+            output = response.resultDisplay;
+          } else if (typeof response.resultDisplay === 'object') {
+            output = JSON.stringify(response.resultDisplay);
+          }
+        }
+        // If resultDisplay is empty, try to extract from responseParts
+        if (
+          !output &&
+          response.responseParts &&
+          response.responseParts.length > 0
+        ) {
+          const part = response.responseParts[0] as {
+            functionResponse?: {
+              response?: { output?: string };
+            };
+          };
+          if (part.functionResponse?.response?.output) {
+            output = part.functionResponse.response.output;
+          }
+        }
         toolPart.state = {
           status: response.error ? 'error' : 'completed',
           input: toolPart.state?.input,
-          output: response.output,
+          output,
           time: { start: Date.now(), end: Date.now() },
         };
         if (response.error) {
-          toolPart.state.metadata = { error: response.error };
+          toolPart.state.metadata = { error: response.error.message };
         }
       }
       return {
