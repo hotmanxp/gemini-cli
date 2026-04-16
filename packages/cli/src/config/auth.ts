@@ -42,5 +42,15 @@ export function validateAuthMethod(authMethod: string): string | null {
     return null;
   }
 
+  if (authMethod === AuthType.USE_MINIMAX) {
+    if (!process.env['MINIMAX_KEY']) {
+      return (
+        'When using MiniMax API, you must specify the MINIMAX_KEY environment variable.\n' +
+        'Update your environment and try again (no reload needed if using .env)!'
+      );
+    }
+    return null;
+  }
+
   return 'Invalid auth method selected.';
 }

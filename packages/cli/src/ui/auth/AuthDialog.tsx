@@ -75,6 +75,11 @@ export function AuthDialog({
       value: AuthType.USE_VERTEX_AI,
       key: AuthType.USE_VERTEX_AI,
     },
+    {
+      label: 'MiniMax API Key',
+      value: AuthType.USE_MINIMAX,
+      key: AuthType.USE_MINIMAX,
+    },
   ];
 
   if (settings.merged.security.auth.enforcedType) {

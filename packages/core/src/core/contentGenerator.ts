@@ -28,6 +28,9 @@ import { determineSurface } from '../utils/surface.js';
 import { RecordingContentGenerator } from './recordingContentGenerator.js';
 import { getVersion, resolveModel } from '../../index.js';
 import type { LlmRole } from '../telemetry/llmRole.js';
+// Static imports to avoid circular dependency and dynamic import issues
+import { createOpenAIContentGenerator } from './openaiContentGenerator/index.js';
+import type { OpenAIContentGeneratorConfig } from './openaiContentGenerator/types.js';
 
 /**
  * Interface abstracting the core functionalities for generating content and counting tokens.
@@ -62,6 +65,7 @@ export enum AuthType {
   USE_VERTEX_AI = 'vertex-ai',
   LEGACY_CLOUD_SHELL = 'cloud-shell',
   COMPUTE_ADC = 'compute-default-credentials',
+  USE_MINIMAX = 'minimax-api-key',
   GATEWAY = 'gateway',
 }
 
@@ -72,6 +76,7 @@ export enum AuthType {
  * 1. GOOGLE_GENAI_USE_GCA=true -> LOGIN_WITH_GOOGLE
  * 2. GOOGLE_GENAI_USE_VERTEXAI=true -> USE_VERTEX_AI
  * 3. GEMINI_API_KEY -> USE_GEMINI
+ * 4. MINIMAX_KEY -> USE_MINIMAX
  */
 export function getAuthTypeFromEnv(): AuthType | undefined {
   if (process.env['GOOGLE_GENAI_USE_GCA'] === 'true') {
@@ -82,6 +87,9 @@ export function getAuthTypeFromEnv(): AuthType | undefined {
   }
   if (process.env['GEMINI_API_KEY']) {
     return AuthType.USE_GEMINI;
+  }
+  if (process.env['MINIMAX_KEY']) {
+    return AuthType.USE_MINIMAX;
   }
   if (
     process.env['CLOUD_SHELL'] === 'true' ||
@@ -319,6 +327,27 @@ export async function createContentGenerator(
       });
       return new LoggingContentGenerator(googleGenAI.models, gcConfig);
     }
+
+    // MiniMax API Key authentication (OpenAI-compatible)
+    if (config.authType === AuthType.USE_MINIMAX) {
+      const minimaxModel =
+        process.env['MINIMAX_MODEL'] || 'MiniMax-M2.7-highspeed';
+      const minimaxConfig: OpenAIContentGeneratorConfig = {
+        ...config,
+        authType: AuthType.USE_MINIMAX,
+        apiKey: process.env['MINIMAX_KEY'] || config.apiKey,
+        baseUrl:
+          process.env['MINIMAX_BASE_URL'] || 'https://api.minimaxi.com/v1',
+        model: minimaxModel,
+      };
+      // Update gcConfig model so UI displays correct model
+      gcConfig.setModel(minimaxModel, false);
+      return createOpenAIContentGenerator(
+        minimaxConfig as ContentGeneratorConfig,
+        gcConfig,
+      );
+    }
+
     throw new Error(
       `Error creating contentGenerator: Unsupported authType: ${config.authType}`,
     );
