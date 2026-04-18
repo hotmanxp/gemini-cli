@@ -139,7 +139,7 @@ export const INFORMATIVE_TIPS = [
   'Update all or specific extensions with /extensions update',
   'Get help on commands with /help',
   'Manage IDE integration with /ide',
-  'Create a project-specific GEMINI.md file with /init',
+  'Create a project-specific AGENTS.md file with /init',
   'List configured MCP servers and tools with /mcp list',
   'Authenticate with an OAuth-enabled MCP server with /mcp auth',
   'Reload MCP servers with /mcp reload',

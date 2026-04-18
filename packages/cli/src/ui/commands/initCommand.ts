@@ -31,18 +31,18 @@ export const initCommand: SlashCommand = {
       };
     }
     const targetDir = context.services.agentContext.config.getTargetDir();
-    const geminiMdPath = path.join(targetDir, 'GEMINI.md');
+    const agentsMdPath = path.join(targetDir, 'AGENTS.md');
 
-    const result = performInit(fs.existsSync(geminiMdPath));
+    const result = performInit(fs.existsSync(agentsMdPath));
 
     if (result.type === 'submit_prompt') {
-      // Create an empty GEMINI.md file
-      fs.writeFileSync(geminiMdPath, '', 'utf8');
+      // Create an empty AGENTS.md file
+      fs.writeFileSync(agentsMdPath, '', 'utf8');
 
       context.ui.addItem(
         {
           type: 'info',
-          text: 'Empty GEMINI.md created. Now analyzing the project to populate it.',
+          text: 'Empty AGENTS.md created. Now analyzing the project to populate it.',
         },
         Date.now(),
       );
