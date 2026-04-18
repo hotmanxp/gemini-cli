@@ -428,6 +428,16 @@ const SETTINGS_SCHEMA = {
           'Enable the Topic & Update communication model for reduced chattiness and structured progress reporting.',
         showInDialog: true,
       },
+      allowExternalFileAccess: {
+        type: 'boolean',
+        label: 'Allow External File Access',
+        category: 'General',
+        requiresRestart: false,
+        default: true,
+        description:
+          'Allow viewing and editing files outside the project directory. When enabled, directory permission checks are skipped.',
+        showInDialog: true,
+      },
     },
   },
   output: {

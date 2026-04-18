@@ -68,3 +68,5 @@ temp_agents/
 
 # conductor extension and planning directories
 conductor/
+
+.agent_working_dir

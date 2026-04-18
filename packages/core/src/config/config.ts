@@ -709,6 +709,7 @@ export interface ConfigParameters {
   experimentalAgentHistorySummarization?: boolean;
   memoryBoundaryMarkers?: string[];
   topicUpdateNarration?: boolean;
+  allowExternalFileAccess?: boolean;
 
   disableLLMCorrection?: boolean;
   plan?: boolean;
@@ -947,6 +948,7 @@ export class Config implements McpContext, AgentLoopContext {
   private readonly experimentalContextManagementConfig?: string;
   private readonly memoryBoundaryMarkers: readonly string[];
   private readonly topicUpdateNarration: boolean;
+  private readonly allowExternalFileAccess: boolean;
   private readonly disableLLMCorrection: boolean;
   private readonly planEnabled: boolean;
   private readonly trackerEnabled: boolean;
@@ -990,7 +992,12 @@ export class Config implements McpContext, AgentLoopContext {
 
     this.targetDir = path.resolve(params.targetDir);
     this.folderTrust = params.folderTrust ?? false;
-    this.workspaceContext = new WorkspaceContext(this.targetDir, []);
+    this.allowExternalFileAccess = params.allowExternalFileAccess ?? true;
+    this.workspaceContext = new WorkspaceContext(
+      this.targetDir,
+      [],
+      this.allowExternalFileAccess,
+    );
     this.pendingIncludeDirectories = params.includeDirectories ?? [];
     this.debugMode = params.debugMode;
     this.question = params.question;
@@ -2515,6 +2522,10 @@ export class Config implements McpContext, AgentLoopContext {
 
   isTopicUpdateNarrationEnabled(): boolean {
     return this.topicUpdateNarration;
+  }
+
+  isExternalFileAccessAllowed(): boolean {
+    return this.allowExternalFileAccess;
   }
 
   isModelSteeringEnabled(): boolean {

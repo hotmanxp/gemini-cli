@@ -26,19 +26,23 @@ export class WorkspaceContext {
   private initialDirectories: Set<string>;
   private readOnlyPaths = new Set<string>();
   private onDirectoriesChangedListeners = new Set<() => void>();
+  private readonly allowExternalFileAccess: boolean;
 
   /**
    * Creates a new WorkspaceContext with the given initial directory and optional additional directories.
    * @param targetDir The initial working directory (usually cwd)
    * @param additionalDirectories Optional array of additional directories to include
+   * @param allowExternalFileAccess If true, skips workspace boundary checks for all paths
    */
   constructor(
     readonly targetDir: string,
     additionalDirectories: string[] = [],
+    allowExternalFileAccess: boolean = true,
   ) {
     this.addDirectory(targetDir);
     this.addDirectories(additionalDirectories);
     this.initialDirectories = new Set(this.directories);
+    this.allowExternalFileAccess = allowExternalFileAccess;
   }
 
   /**
@@ -179,6 +183,11 @@ export class WorkspaceContext {
    * @returns True if the path is within the workspace, false otherwise
    */
   isPathWithinWorkspace(pathToCheck: string): boolean {
+    // If external file access is allowed, always return true
+    if (this.allowExternalFileAccess) {
+      return true;
+    }
+
     try {
       const fullyResolvedPath = this.fullyResolvedPath(pathToCheck);
 
@@ -200,6 +209,11 @@ export class WorkspaceContext {
    * @returns True if the path is readable, false otherwise
    */
   isPathReadable(pathToCheck: string): boolean {
+    // If external file access is allowed, always return true
+    if (this.allowExternalFileAccess) {
+      return true;
+    }
+
     if (this.isPathWithinWorkspace(pathToCheck)) {
       return true;
     }

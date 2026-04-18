@@ -994,6 +994,7 @@ export async function loadCliConfig(
     topicUpdateNarration:
       settings.general?.topicUpdateNarration ??
       settings.experimental?.topicUpdateNarration,
+    allowExternalFileAccess: settings.general?.allowExternalFileAccess ?? true,
     noBrowser: !!process.env['NO_BROWSER'],
     summarizeToolOutput: settings.model?.summarizeToolOutput,
     ideMode,

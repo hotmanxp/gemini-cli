@@ -126,14 +126,14 @@ describe('WorkspaceContext with real filesystem', () => {
     });
 
     it('should reject paths outside workspace', () => {
-      const workspaceContext = new WorkspaceContext(cwd, [otherDir]);
+      const workspaceContext = new WorkspaceContext(cwd, [otherDir], false);
       const invalidPath = path.join(tempDir, 'outside-workspace', 'file.txt');
 
       expect(workspaceContext.isPathWithinWorkspace(invalidPath)).toBe(false);
     });
 
     it('should reject non-existent paths outside workspace', () => {
-      const workspaceContext = new WorkspaceContext(cwd, [otherDir]);
+      const workspaceContext = new WorkspaceContext(cwd, [otherDir], false);
       const invalidPath = path.join(tempDir, 'outside-workspace', 'file.txt');
 
       expect(workspaceContext.isPathWithinWorkspace(invalidPath)).toBe(false);
@@ -146,7 +146,7 @@ describe('WorkspaceContext with real filesystem', () => {
     });
 
     it('should handle edge cases (root, parent references)', () => {
-      const workspaceContext = new WorkspaceContext(cwd, [otherDir]);
+      const workspaceContext = new WorkspaceContext(cwd, [otherDir], false);
       const rootPath = path.parse(tempDir).root;
       const parentPath = path.dirname(cwd);
 
@@ -209,7 +209,7 @@ describe('WorkspaceContext with real filesystem', () => {
         });
 
         it('should reject dir paths', () => {
-          const workspaceContext = new WorkspaceContext(cwd);
+          const workspaceContext = new WorkspaceContext(cwd, [], false);
 
           expect(workspaceContext.isPathWithinWorkspace(symlinkDir)).toBe(
             false,
@@ -219,7 +219,7 @@ describe('WorkspaceContext with real filesystem', () => {
         it('should reject non-existent paths', () => {
           const filePath = path.join(symlinkDir, 'does-not-exist.txt');
 
-          const workspaceContext = new WorkspaceContext(cwd);
+          const workspaceContext = new WorkspaceContext(cwd, [], false);
 
           expect(workspaceContext.isPathWithinWorkspace(filePath)).toBe(false);
         });
@@ -227,7 +227,7 @@ describe('WorkspaceContext with real filesystem', () => {
         it('should reject non-existent deep paths', () => {
           const filePath = path.join(symlinkDir, 'deep', 'does-not-exist.txt');
 
-          const workspaceContext = new WorkspaceContext(cwd);
+          const workspaceContext = new WorkspaceContext(cwd, [], false);
 
           expect(workspaceContext.isPathWithinWorkspace(filePath)).toBe(false);
         });
@@ -237,7 +237,7 @@ describe('WorkspaceContext with real filesystem', () => {
           fs.mkdirSync(deepDir, { recursive: true });
           const filePath = path.join(deepDir, 'does-not-exist.txt');
 
-          const workspaceContext = new WorkspaceContext(cwd);
+          const workspaceContext = new WorkspaceContext(cwd, [], false);
 
           expect(workspaceContext.isPathWithinWorkspace(filePath)).toBe(false);
         });
@@ -250,7 +250,7 @@ describe('WorkspaceContext with real filesystem', () => {
         const symlinkFile = path.join(cwd, 'symlink-to-real-file');
         fs.symlinkSync(realFile, symlinkFile, 'file');
 
-        const workspaceContext = new WorkspaceContext(cwd);
+        const workspaceContext = new WorkspaceContext(cwd, [], false);
 
         expect(workspaceContext.isPathWithinWorkspace(symlinkFile)).toBe(false);
       });
@@ -261,13 +261,13 @@ describe('WorkspaceContext with real filesystem', () => {
         const symlinkFile = path.join(cwd, 'symlink-to-real-file');
         fs.symlinkSync(realFile, symlinkFile, 'file');
 
-        const workspaceContext = new WorkspaceContext(cwd);
+        const workspaceContext = new WorkspaceContext(cwd, [], false);
 
         expect(workspaceContext.isPathWithinWorkspace(symlinkFile)).toBe(false);
       });
 
       it('should handle circular symlinks gracefully', () => {
-        const workspaceContext = new WorkspaceContext(cwd);
+        const workspaceContext = new WorkspaceContext(cwd, [], false);
         const linkA = path.join(cwd, 'link-a');
         const linkB = path.join(cwd, 'link-b');
         // Create a circular dependency: linkA -> linkB -> linkA
@@ -441,6 +441,82 @@ describe('WorkspaceContext with real filesystem', () => {
       const nonExistent = path.join(tempDir, 'does-not-exist');
 
       expect(() => workspaceContext.addDirectory(nonExistent)).toThrow();
+    });
+  });
+});
+
+describe('allowExternalFileAccess', () => {
+  let tempDir: string;
+  let cwd: string;
+  let externalDir: string;
+
+  beforeEach(() => {
+    tempDir = fs.realpathSync(
+      fs.mkdtempSync(path.join(os.tmpdir(), 'workspace-context-external-')),
+    );
+    cwd = path.join(tempDir, 'project');
+    externalDir = path.join(tempDir, 'external-project');
+
+    fs.mkdirSync(cwd, { recursive: true });
+    fs.mkdirSync(externalDir, { recursive: true });
+  });
+
+  afterEach(() => {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  describe('when allowExternalFileAccess is true (default)', () => {
+    it('should allow paths outside workspace for isPathWithinWorkspace', () => {
+      const workspaceContext = new WorkspaceContext(cwd, [], true);
+      const externalPath = path.join(externalDir, 'file.txt');
+
+      expect(workspaceContext.isPathWithinWorkspace(externalPath)).toBe(true);
+    });
+
+    it('should allow paths outside workspace for isPathReadable', () => {
+      const workspaceContext = new WorkspaceContext(cwd, [], true);
+      const externalPath = path.join(externalDir, 'file.txt');
+
+      expect(workspaceContext.isPathReadable(externalPath)).toBe(true);
+    });
+
+    it('should allow paths outside workspace even with additional directories', () => {
+      const workspaceContext = new WorkspaceContext(cwd, [], true);
+      const totallyExternalPath = path.join(
+        os.tmpdir(),
+        'totally-external',
+        'file.txt',
+      );
+
+      expect(workspaceContext.isPathWithinWorkspace(totallyExternalPath)).toBe(
+        true,
+      );
+    });
+  });
+
+  describe('when allowExternalFileAccess is false', () => {
+    it('should reject paths outside workspace for isPathWithinWorkspace', () => {
+      const workspaceContext = new WorkspaceContext(cwd, [], false);
+      const externalPath = path.join(externalDir, 'file.txt');
+
+      expect(workspaceContext.isPathWithinWorkspace(externalPath)).toBe(false);
+    });
+
+    it('should reject paths outside workspace for isPathReadable', () => {
+      const workspaceContext = new WorkspaceContext(cwd, [], false);
+      const externalPath = path.join(externalDir, 'file.txt');
+
+      expect(workspaceContext.isPathReadable(externalPath)).toBe(false);
+    });
+
+    it('should still allow paths within workspace', () => {
+      const workspaceContext = new WorkspaceContext(cwd, [], false);
+      const internalPath = path.join(cwd, 'src', 'file.txt');
+      fs.mkdirSync(path.dirname(internalPath), { recursive: true });
+      fs.writeFileSync(internalPath, 'content');
+
+      expect(workspaceContext.isPathWithinWorkspace(internalPath)).toBe(true);
+      expect(workspaceContext.isPathReadable(internalPath)).toBe(true);
     });
   });
 });
