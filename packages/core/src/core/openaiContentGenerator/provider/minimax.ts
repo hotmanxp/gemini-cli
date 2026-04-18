@@ -39,7 +39,7 @@ export class MiniMaxOpenAICompatibleProvider extends DefaultOpenAICompatibleProv
 
   override buildRequest(
     request: OpenAI.Chat.ChatCompletionCreateParams,
-    userPromptId: string,
+    _userPromptId: string,
   ): OpenAI.Chat.ChatCompletionCreateParams {
     return {
       ...request,
