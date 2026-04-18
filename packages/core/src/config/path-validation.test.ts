@@ -46,7 +46,7 @@ describe('Config Path Validation', () => {
   });
 
   it('should allow access to ~/.gemini if it is added to the workspace', () => {
-    const geminiMdPath = path.join(globalGeminiDir, 'GEMINI.md');
+    const geminiMdPath = path.join(globalGeminiDir, 'AGENTS.md');
 
     // Before adding, it should be denied
     expect(config.isPathAllowed(geminiMdPath)).toBe(false);

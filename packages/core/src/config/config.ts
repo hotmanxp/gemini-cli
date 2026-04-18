@@ -2782,7 +2782,7 @@ export class Config implements McpContext, AgentLoopContext {
 
   /**
    * Updates the system instruction with the latest user memory.
-   * Whenever the user memory (GEMINI.md files) is updated.
+   * Whenever the user memory (AGENTS.md files) is updated.
    */
   updateSystemInstructionIfInitialized(): void {
     const geminiClient = this.geminiClient;

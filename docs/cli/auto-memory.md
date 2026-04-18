@@ -27,7 +27,7 @@ You'll use Auto Memory when you want to:
 
 Auto Memory complements—but does not replace—the
 [`save_memory` tool](../tools/memory.md), which captures single facts into
-`GEMINI.md`. Auto Memory captures multi-step procedures into skills.
+`AGENTS.md`. Auto Memory captures multi-step procedures into skills.
 
 ## Prerequisites
 
@@ -138,6 +138,6 @@ start. Existing inbox items remain on disk; you can either drain them with
 
 - Learn how skills are discovered and activated in [Agent Skills](./skills.md).
 - Explore the [memory management tutorial](./tutorials/memory-management.md) for
-  the complementary `save_memory` and `GEMINI.md` workflows.
+  the complementary `save_memory` and `AGENTS.md` workflows.
 - Review the experimental settings catalog in
   [Settings](./settings.md#experimental).

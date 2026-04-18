@@ -127,8 +127,8 @@ vi.mock('../tools/read-many-files');
 vi.mock('../tools/memoryTool', () => ({
   MemoryTool: vi.fn(),
   setGeminiMdFilename: vi.fn(),
-  getCurrentGeminiMdFilename: vi.fn(() => 'GEMINI.md'), // Mock the original filename
-  DEFAULT_CONTEXT_FILENAME: 'GEMINI.md',
+  getCurrentGeminiMdFilename: vi.fn(() => 'AGENTS.md'), // Mock the original filename
+  DEFAULT_CONTEXT_FILENAME: 'AGENTS.md',
   GEMINI_DIR: '.gemini',
 }));
 
@@ -3346,7 +3346,7 @@ describe('Config JIT Initialization', () => {
         .fn()
         .mockReturnValue('Environment Memory\n\nMCP Instructions'),
       getUserProjectMemory: vi.fn().mockReturnValue(''),
-      getLoadedPaths: vi.fn().mockReturnValue(new Set(['/path/to/GEMINI.md'])),
+      getLoadedPaths: vi.fn().mockReturnValue(new Set(['/path/to/AGENTS.md'])),
     } as unknown as MemoryContextManager;
     (MemoryContextManager as unknown as Mock).mockImplementation(
       () => mockMemoryContextManager,
@@ -3393,7 +3393,7 @@ describe('Config JIT Initialization', () => {
 
     // Verify state update (delegated to MemoryContextManager)
     expect(config.getGeminiMdFileCount()).toBe(1);
-    expect(config.getGeminiMdFilePaths()).toEqual(['/path/to/GEMINI.md']);
+    expect(config.getGeminiMdFilePaths()).toEqual(['/path/to/AGENTS.md']);
   });
 
   it('should NOT initialize MemoryContextManager when experimentalJitContext is disabled', async () => {

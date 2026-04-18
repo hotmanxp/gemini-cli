@@ -16,7 +16,7 @@ import { performInit } from '@google/gemini-cli-core';
 
 export const initCommand: SlashCommand = {
   name: 'init',
-  description: 'Analyzes the project and creates a tailored GEMINI.md file',
+  description: 'Analyzes the project and creates a tailored AGENTS.md file',
   kind: CommandKind.BUILT_IN,
   autoExecute: true,
   action: async (

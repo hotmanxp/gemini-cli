@@ -6,7 +6,7 @@ preferences, and project details across sessions.
 ## Technical reference
 
 This tool appends information to the `## Gemini Added Memories` section of your
-global `GEMINI.md` file (typically located at `~/.gemini/GEMINI.md`).
+global `AGENTS.md` file (typically located at `~/.gemini/AGENTS.md`).
 
 ### Arguments
 
@@ -31,5 +31,5 @@ global `GEMINI.md` file (typically located at `~/.gemini/GEMINI.md`).
 
 - Follow the [Memory management guide](../cli/tutorials/memory-management.md)
   for practical examples.
-- Learn how the [Project context (GEMINI.md)](../cli/gemini-md.md) system loads
+- Learn how the [Project context (AGENTS.md)](../cli/gemini-md.md) system loads
   this information.
