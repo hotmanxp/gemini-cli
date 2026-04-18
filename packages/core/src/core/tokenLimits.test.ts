@@ -35,6 +35,10 @@ describe('tokenLimit', () => {
     expect(tokenLimit(undefined)).toBe(DEFAULT_TOKEN_LIMIT);
   });
 
+  it('should return the correct token limit for MiniMax-M2.7-highspeed', () => {
+    expect(tokenLimit('MiniMax-M2.7-highspeed')).toBe(204_800);
+  });
+
   it('should have the correct default token limit value', () => {
     expect(DEFAULT_TOKEN_LIMIT).toBe(1_048_576);
   });

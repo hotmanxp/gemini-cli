@@ -27,6 +27,8 @@ export function tokenLimit(model: Model): TokenCount {
     case DEFAULT_GEMINI_FLASH_MODEL:
     case DEFAULT_GEMINI_FLASH_LITE_MODEL:
       return 1_048_576;
+    case 'MiniMax-M2.7-highspeed':
+      return 204_800;
     default:
       return DEFAULT_TOKEN_LIMIT;
   }
