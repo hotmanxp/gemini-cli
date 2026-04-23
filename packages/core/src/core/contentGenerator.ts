@@ -107,9 +107,21 @@ export type ContentGeneratorConfig = {
   proxy?: string;
   baseUrl?: string;
   customHeaders?: Record<string, string>;
+  vertexAiRouting?: VertexAiRoutingConfig;
 };
 
+export type VertexAiRequestType = 'dedicated' | 'shared';
+export type VertexAiSharedRequestType = 'priority' | 'flex';
+
+export interface VertexAiRoutingConfig {
+  requestType?: VertexAiRequestType;
+  sharedRequestType?: VertexAiSharedRequestType;
+}
+
 const LOCAL_HOSTNAMES = ['localhost', '127.0.0.1', '[::1]'];
+const VERTEX_AI_REQUEST_TYPE_HEADER = 'X-Vertex-AI-LLM-Request-Type';
+const VERTEX_AI_SHARED_REQUEST_TYPE_HEADER =
+  'X-Vertex-AI-LLM-Shared-Request-Type';
 
 function validateBaseUrl(baseUrl: string): void {
   let url: URL;
@@ -130,6 +142,7 @@ export async function createContentGeneratorConfig(
   apiKey?: string,
   baseUrl?: string,
   customHeaders?: Record<string, string>,
+  vertexAiRouting?: VertexAiRoutingConfig,
 ): Promise<ContentGeneratorConfig> {
   const geminiApiKey =
     apiKey ||
@@ -148,6 +161,7 @@ export async function createContentGeneratorConfig(
     proxy: config?.getProxy(),
     baseUrl,
     customHeaders,
+    vertexAiRouting,
   };
 
   // If we are using Google auth or we are in Cloud Shell, there is nothing else to validate for now
@@ -287,6 +301,21 @@ export async function createContentGenerator(
       let headers: Record<string, string> = { ...baseHeaders };
       if (config.customHeaders) {
         headers = { ...headers, ...config.customHeaders };
+      }
+      if (
+        config.authType === AuthType.USE_VERTEX_AI &&
+        config.vertexAiRouting
+      ) {
+        const { requestType, sharedRequestType } = config.vertexAiRouting;
+        headers = {
+          ...headers,
+          ...(requestType
+            ? { [VERTEX_AI_REQUEST_TYPE_HEADER]: requestType }
+            : {}),
+          ...(sharedRequestType
+            ? { [VERTEX_AI_SHARED_REQUEST_TYPE_HEADER]: sharedRequestType }
+            : {}),
+        };
       }
       if (gcConfig?.getUsageStatisticsEnabled()) {
         const installationManager = new InstallationManager();
