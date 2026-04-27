@@ -181,6 +181,7 @@ describe('gemini.tsx main function cleanup', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env['GEMINI_CLI_NO_RELAUNCH'] = 'true';
+    vi.stubEnv('GEMINI_CLI_TRUST_WORKSPACE', 'true');
   });
 
   afterEach(() => {
@@ -189,9 +190,8 @@ describe('gemini.tsx main function cleanup', () => {
   });
 
   it.skip('should log error when cleanupExpiredSessions fails', async () => {
-    const { loadCliConfig, parseArguments } = await import(
-      './config/config.js'
-    );
+    const { loadCliConfig, parseArguments } =
+      await import('./config/config.js');
     const { loadSettings } = await import('./config/settings.js');
     cleanupMockState.shouldThrow = true;
     cleanupMockState.called = false;
@@ -260,9 +260,8 @@ describe('gemini.tsx main function cleanup', () => {
   });
 
   it('should register SessionEnd hook exactly once in non-interactive mode', async () => {
-    const { loadCliConfig, parseArguments } = await import(
-      './config/config.js'
-    );
+    const { loadCliConfig, parseArguments } =
+      await import('./config/config.js');
     const { registerCleanup } = await import('./utils/cleanup.js');
 
     const mockHookSystem = {
@@ -305,6 +304,7 @@ describe('gemini.tsx main function cleanup', () => {
       getMessageBus: () => ({ subscribe: vi.fn() }),
       getEnableHooks: vi.fn(() => true),
       getHookSystem: vi.fn(() => undefined),
+      getExperimentalGemma: vi.fn(() => false),
       initialize: vi.fn(),
       storage: { initialize: vi.fn().mockResolvedValue(undefined) },
       getContentGeneratorConfig: vi.fn(),
