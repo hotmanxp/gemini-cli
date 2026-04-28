@@ -1,0 +1,9 @@
+{
+  "profile": "openai",
+  "env": {
+    "OPENAI_BASE_URL": "https://api.minimaxi.com/anthropic",
+    "OPENAI_MODEL": "MiniMax-M2.7-highspeed",
+    "OPENAI_API_KEY": "sk-cp-3CTQoclrT2UA0CZ8x-fpZSdl4wXqzL6F_1y5C3ZaUNWc-4bR7ne6qqlupv9v7bRfEP2ZsBvpdKQHRkJBa9ueENjYpk2Hq8ZRriM1e9bPMY4Avp3Fhwzf6Es"
+  },
+  "createdAt": "2026-04-28T14:39:01.656Z"
+}
