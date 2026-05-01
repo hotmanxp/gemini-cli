@@ -13,6 +13,7 @@ import {
   type OutputPayload,
   type ConsoleLogPayload,
   type UserFeedbackPayload,
+  type CoreEvents,
   createSessionId,
   logUserPrompt,
   AuthType,
@@ -76,7 +77,7 @@ import {
   type InitializationResult,
 } from './core/initializer.js';
 import { validateAuthMethod } from './config/auth.js';
-import { runAcpClient } from './acp/acpClient.js';
+import { runAcpClient } from './acp/acpStdioTransport.js';
 import { validateNonInteractiveAuth } from './validateNonInterActiveAuth.js';
 import { appEvents, AppEvent } from './utils/events.js';
 import { SessionError, SessionSelector } from './utils/sessionUtils.js';
@@ -125,7 +126,11 @@ export function getNodeMemoryArgs(isDebugMode: boolean): string[] {
     );
   }
 
-  if (process.env['GEMINI_CLI_NO_RELAUNCH']) {
+  if (
+    process.env['IS_BINARY'] === 'true' ||
+    process.env['GEMINI_CLI_NO_RELAUNCH'] ||
+    process.env['SANDBOX']
+  ) {
     return [];
   }
 
@@ -261,6 +266,7 @@ export async function startInteractiveUI(
 }
 
 export async function main() {
+  let config: Config | undefined;
   const cliStartupHandle = startupProfiler.start('cli_startup');
 
   // Listen for admin controls from parent process (IPC) in non-sandbox mode. In
@@ -273,7 +279,7 @@ export async function main() {
   const cleanupStdio = patchStdio();
   registerSyncCleanup(() => {
     // This is needed to ensure we don't lose any buffered output.
-    initializeOutputListenersAndFlush();
+    initializeOutputListenersAndFlush(config);
     cleanupStdio();
   });
 
@@ -385,7 +391,6 @@ export async function main() {
     },
   });
   consolePatcher.patch();
-  registerCleanup(consolePatcher.cleanup);
 
   dns.setDefaultResultOrder(
     validateDnsResolutionOrder(settings.merged.advanced.dnsResolutionOrder),
@@ -410,7 +415,9 @@ export async function main() {
 
   const partialConfig = await loadCliConfig(settings.merged, sessionId, argv, {
     projectHooks: settings.workspace.settings.hooks,
+    skipExtensions: true,
   });
+
   adminControlsListner.setConfig(partialConfig);
 
   // Refresh auth to fetch remote admin settings from CCPA and before entering
@@ -534,7 +541,7 @@ export async function main() {
   // may have side effects.
   {
     const loadConfigHandle = startupProfiler.start('load_cli_config');
-    const config = await loadCliConfig(settings.merged, sessionId, argv, {
+    config = await loadCliConfig(settings.merged, sessionId, argv, {
       projectHooks: settings.workspace.settings.hooks,
       worktreeSettings: worktreeInfo,
     });
@@ -548,8 +555,9 @@ export async function main() {
     adminControlsListner.setConfig(config);
 
     if (config.isInteractive() && settings.merged.general.devtools) {
-      const { setupInitialActivityLogger } =
-        await import('./utils/devtoolsService.js');
+      const { setupInitialActivityLogger } = await import(
+        './utils/devtoolsService.js'
+      );
       setupInitialActivityLogger(config);
     }
 
@@ -566,6 +574,12 @@ export async function main() {
     registerCleanup(async () => {
       await config.getHookSystem()?.fireSessionEndEvent(SessionEndReason.Exit);
     });
+
+    // Register ConsolePatcher cleanup last to ensure logs from shutdown hooks
+    // are correctly redirected to stderr (especially for non-interactive JSON output).
+    if (!config.getAcpMode()) {
+      registerCleanup(consolePatcher.cleanup);
+    }
 
     // Launch cleanup expired sessions as a background task
     cleanupExpiredSessions(config, settings.merged).catch((e) => {
@@ -773,7 +787,7 @@ export async function main() {
       debugLogger.log('Session ID: %s', sessionId);
     }
 
-    initializeOutputListenersAndFlush();
+    initializeOutputListenersAndFlush(config);
 
     await runNonInteractive({
       config,
@@ -788,7 +802,7 @@ export async function main() {
   }
 }
 
-export function initializeOutputListenersAndFlush() {
+export function initializeOutputListenersAndFlush(config?: Config) {
   // If there are no listeners for output, make sure we flush so output is not
   // lost.
   if (coreEvents.listenerCount(CoreEvent.Output) === 0) {
@@ -800,24 +814,43 @@ export function initializeOutputListenersAndFlush() {
         writeToStdout(payload.chunk, payload.encoding);
       }
     });
-
-    if (coreEvents.listenerCount(CoreEvent.ConsoleLog) === 0) {
-      coreEvents.on(CoreEvent.ConsoleLog, (payload: ConsoleLogPayload) => {
-        if (payload.type === 'error' || payload.type === 'warn') {
-          writeToStderr(payload.content + '\n');
-        } else {
-          writeToStderr(payload.content + '\n');
-        }
-      });
-    }
-
-    if (coreEvents.listenerCount(CoreEvent.UserFeedback) === 0) {
-      coreEvents.on(CoreEvent.UserFeedback, (payload: UserFeedbackPayload) => {
-        writeToStderr(payload.message + '\n');
-      });
-    }
   }
-  coreEvents.drainBacklogs();
+
+  if (coreEvents.listenerCount(CoreEvent.ConsoleLog) === 0) {
+    coreEvents.on(CoreEvent.ConsoleLog, (payload: ConsoleLogPayload) => {
+      if (payload.type === 'error' || payload.type === 'warn') {
+        writeToStderr(payload.content + '\n');
+      } else {
+        writeToStderr(payload.content + '\n');
+      }
+    });
+  }
+
+  if (coreEvents.listenerCount(CoreEvent.UserFeedback) === 0) {
+    coreEvents.on(CoreEvent.UserFeedback, (payload: UserFeedbackPayload) => {
+      writeToStderr(payload.message + '\n');
+    });
+  }
+
+  const outputFormat = config?.getOutputFormat();
+  const forceToStderr = outputFormat === 'json' || config === undefined;
+
+  coreEvents.drainBacklogs(
+    <K extends keyof CoreEvents>(event: K, args: CoreEvents[K]) => {
+      if (forceToStderr && event === (CoreEvent.Output as string)) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+        const payload = args[0] as OutputPayload;
+        if (!payload.isStderr) {
+          return {
+            event,
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+            args: [{ ...payload, isStderr: true }] as unknown as CoreEvents[K],
+          };
+        }
+      }
+      return { event, args };
+    },
+  );
 }
 
 function setupAdminControlsListener() {
