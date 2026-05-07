@@ -683,7 +683,7 @@ included directory memory
     expect(childOccurrences).toBe(1);
   });
 
-  describe('EISDIR handling for GEMINI.md as a directory', () => {
+  describe('EISDIR handling for AGENTS.md as a directory', () => {
     it('readGeminiMdFiles returns null content (without throwing) when path is a directory', async () => {
       const dirAsFilePath = await createEmptyDir(
         path.join(cwd, DEFAULT_CONTEXT_FILENAME),
@@ -696,8 +696,8 @@ included directory memory
       expect(results[0].content).toBeNull();
     });
 
-    it('loadServerHierarchicalMemory ignores a GEMINI.md directory and returns empty memory', async () => {
-      // Create a directory named GEMINI.md where a regular file would be expected.
+    it('loadServerHierarchicalMemory ignores a AGENTS.md directory and returns empty memory', async () => {
+      // Create a directory named AGENTS.md where a regular file would be expected.
       await createEmptyDir(path.join(cwd, DEFAULT_CONTEXT_FILENAME));
 
       const result = flattenResult(
@@ -715,10 +715,10 @@ included directory memory
       expect(result.memoryContent).toBe('');
     });
 
-    it('falls back to a real GEMINI.md file at a higher level when a directory shadows the same name lower in the tree', async () => {
-      // Lower in the tree (cwd): a directory named GEMINI.md (invalid).
+    it('falls back to a real AGENTS.md file at a higher level when a directory shadows the same name lower in the tree', async () => {
+      // Lower in the tree (cwd): a directory named AGENTS.md (invalid).
       await createEmptyDir(path.join(cwd, DEFAULT_CONTEXT_FILENAME));
-      // Higher in the tree (projectRoot): a real GEMINI.md file (valid).
+      // Higher in the tree (projectRoot): a real AGENTS.md file (valid).
       const projectContextFile = await createTestFile(
         path.join(projectRoot, DEFAULT_CONTEXT_FILENAME),
         'Project root memory content',
@@ -740,8 +740,8 @@ included directory memory
       expect(result.filePaths).toContain(projectContextFile);
     });
 
-    it('silently skips a GEMINI.md symlink that points to a directory', async () => {
-      // Create a real directory elsewhere and symlink GEMINI.md to it.
+    it('silently skips a AGENTS.md symlink that points to a directory', async () => {
+      // Create a real directory elsewhere and symlink AGENTS.md to it.
       const realDir = await createEmptyDir(path.join(cwd, '.geminimd-target'));
       const symlinkPath = path.join(cwd, DEFAULT_CONTEXT_FILENAME);
       try {

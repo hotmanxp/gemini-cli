@@ -411,12 +411,12 @@ export async function readGeminiMdFiles(
             (error as NodeJS.ErrnoException).code === 'EISDIR';
 
           if (isEISDIR) {
-            // A directory exists where a GEMINI.md file is expected.
+            // A directory exists where a AGENTS.md file is expected.
             // This is valid in some project structures (e.g. a folder named
-            // GEMINI.md held for organisational purposes) — skip it silently
+            // AGENTS.md held for organisational purposes) — skip it silently
             // instead of surfacing a confusing warning to the user.
             debugLogger.debug(
-              '[DEBUG] [MemoryDiscovery] Skipping directory at GEMINI.md path:',
+              '[DEBUG] [MemoryDiscovery] Skipping directory at AGENTS.md path:',
               filePath,
             );
           } else {
@@ -518,7 +518,7 @@ export async function getUserProjectMemoryPaths(
     );
     return [preferredMemoryPath];
   } catch {
-    // Fall back to the legacy private GEMINI.md file if the project has not
+    // Fall back to the legacy private AGENTS.md file if the project has not
     // been migrated to MEMORY.md yet.
   }
 

@@ -2269,7 +2269,7 @@ const SETTINGS_SCHEMA = {
         requiresRestart: true,
         default: true,
         description:
-          'Enable Just-In-Time (JIT) context loading. Defaults to true; set to false to opt out and load all GEMINI.md files into the system instruction up-front.',
+          'Enable Just-In-Time (JIT) context loading. Defaults to true; set to false to opt out and load all AGENTS.md files into the system instruction up-front.',
         showInDialog: false,
       },
       useOSC52Paste: {
@@ -2409,7 +2409,7 @@ const SETTINGS_SCHEMA = {
         requiresRestart: true,
         default: true,
         description:
-          'Disable the built-in save_memory tool and let the main agent persist project context by editing markdown files directly with edit/write_file. Route facts across four tiers: team-shared conventions go to project GEMINI.md files, project-specific personal notes go to the per-project private memory folder (MEMORY.md as index + sibling .md files for detail), and cross-project personal preferences go to the global ~/.gemini/GEMINI.md (the only file under ~/.gemini/ that the agent can edit — settings, credentials, etc. remain off-limits). Set to false to fall back to the legacy save_memory tool.',
+          'Disable the built-in save_memory tool and let the main agent persist project context by editing markdown files directly with edit/write_file. Route facts across four tiers: team-shared conventions go to project AGENTS.md files, project-specific personal notes go to the per-project private memory folder (MEMORY.md as index + sibling .md files for detail), and cross-project personal preferences go to the global ~/.gemini/AGENTS.md (the only file under ~/.gemini/ that the agent can edit — settings, credentials, etc. remain off-limits). Set to false to fall back to the legacy save_memory tool.',
         showInDialog: true,
       },
       stressTestProfile: {

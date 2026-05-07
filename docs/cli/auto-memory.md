@@ -31,7 +31,7 @@ You'll use Auto Memory when you want to:
 
 Auto Memory complements—but does not replace—the
 [`save_memory` tool](../tools/memory.md), which captures single facts into
-`GEMINI.md` when the agent explicitly calls it. Auto Memory infers candidates
+`AGENTS.md` when the agent explicitly calls it. Auto Memory infers candidates
 from past sessions, writes reviewable patches or skill drafts, and never applies
 them without your approval.
 
@@ -81,7 +81,7 @@ UI, consume your interactive turns, or surface tool prompts.
     inbox items.
 4.  **Safety boundaries.** Auto Memory writes candidates to a review inbox. It
     cannot directly edit active memory files, settings, credentials, or project
-    `GEMINI.md` files.
+    `AGENTS.md` files.
 5.  **Patch validation.** Skill update patches are parsed and dry-run before
     they are surfaced. Memory patches are parsed, target-allowlisted, and
     applied atomically only when you approve them from the inbox.
@@ -105,7 +105,7 @@ updates. From there you can:
 - **Review** memory diffs before they touch active files.
 - **Apply** or dismiss private and global memory patches. Private patches target
   the project memory directory; global patches target only your personal
-  `~/.gemini/GEMINI.md` file.
+  `~/.gemini/AGENTS.md` file.
 
 Promoted skills become discoverable in the next session and follow the standard
 [skill discovery precedence](./skills.md#skill-discovery-tiers). Applied memory
@@ -149,7 +149,7 @@ start. Existing inbox items remain on disk; you can either drain them with
   incidents.
 - Auto Memory does not extract memory or skills from the current session. It
   only considers sessions that have been idle for three hours or more.
-- Project or workspace shared instructions in project `GEMINI.md` files are not
+- Project or workspace shared instructions in project `AGENTS.md` files are not
   auto-extractable. Auto Memory can propose private project memory, global
   personal memory, and skills.
 - Inbox items are stored per project. Skills extracted in one workspace are not
@@ -160,6 +160,6 @@ start. Existing inbox items remain on disk; you can either drain them with
 
 - Learn how skills are discovered and activated in [Agent Skills](./skills.md).
 - Explore the [memory management tutorial](./tutorials/memory-management.md) for
-  the complementary explicit-memory and `GEMINI.md` workflows.
+  the complementary explicit-memory and `AGENTS.md` workflows.
 - Review the experimental settings catalog in
   [Settings](./settings.md#experimental).

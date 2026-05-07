@@ -120,7 +120,7 @@ npm install -g @google/gemini-cli@preview
   [#26262](https://github.com/google-gemini/gemini-cli/pull/26262)
 - feat(extensions): add 'delete' as an alias for /extensions uninstall in
   [#25660](https://github.com/google-gemini/gemini-cli/pull/25660)
-- fix(core): silently skip GEMINI.md paths that are directories (EISDIR) in
+- fix(core): silently skip AGENTS.md paths that are directories (EISDIR) in
   [#25662](https://github.com/google-gemini/gemini-cli/pull/25662)
 - fix(ci): checkout PR branch instead of main in bot workflow in
   [#26289](https://github.com/google-gemini/gemini-cli/pull/26289)
@@ -174,7 +174,7 @@ npm install -g @google/gemini-cli@preview
   [#26332](https://github.com/google-gemini/gemini-cli/pull/26332)
 - docs(sdk): add JSDoc to exported interfaces in packages/sdk/src/types.ts in
   [#26441](https://github.com/google-gemini/gemini-cli/pull/26441)
-- perf: skip redundant GEMINI.md loading in partialConfig in
+- perf: skip redundant AGENTS.md loading in partialConfig in
   [#26443](https://github.com/google-gemini/gemini-cli/pull/26443)
 - Enhance React guidelines in
   [#22667](https://github.com/google-gemini/gemini-cli/pull/22667)
