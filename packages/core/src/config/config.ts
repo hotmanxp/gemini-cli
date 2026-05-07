@@ -1451,7 +1451,24 @@ export class Config implements McpContext, AgentLoopContext {
 
     // Add plans directory to workspace context for plan file storage
     if (this.planEnabled) {
-      const plansDir = this.storage.getPlansDir();
+      let plansDir: string;
+      try {
+        plansDir = this.storage.getPlansDir();
+      } catch (error) {
+        // Fallback to the default plan dir if any error occurs
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        coreEvents.emitFeedback(
+          'warning',
+          'Invalid custom plans directory: ' +
+            errorMessage +
+            '. Falling back to default project temp directory.',
+          error,
+        );
+        this.storage.setCustomPlansDir(undefined);
+        plansDir = this.storage.getPlansDir();
+      }
+
       try {
         await fs.promises.access(plansDir);
         this.workspaceContext.addDirectory(plansDir);
@@ -2460,8 +2477,9 @@ export class Config implements McpContext, AgentLoopContext {
     if (this.experimentalJitContext && this.memoryContextManager) {
       await this.memoryContextManager.refresh();
     } else {
-      const { refreshServerHierarchicalMemory } =
-        await import('../utils/memoryDiscovery.js');
+      const { refreshServerHierarchicalMemory } = await import(
+        '../utils/memoryDiscovery.js'
+      );
       await refreshServerHierarchicalMemory(this);
     }
     if (this._geminiClient?.isInitialized()) {
@@ -3687,11 +3705,17 @@ export class Config implements McpContext, AgentLoopContext {
   }
 
   getAgentSessionNoninteractiveEnabled(): boolean {
-    return this.agentSessionNoninteractiveEnabled;
+    return (
+      process.env['GEMINI_CLI_EXP_AGENT'] === 'true' ||
+      this.agentSessionNoninteractiveEnabled
+    );
   }
 
   getAgentSessionInteractiveEnabled(): boolean {
-    return this.agentSessionInteractiveEnabled;
+    return (
+      process.env['GEMINI_CLI_EXP_AGENT'] === 'true' ||
+      this.agentSessionInteractiveEnabled
+    );
   }
 
   /**
