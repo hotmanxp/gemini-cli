@@ -831,7 +831,7 @@ included directory memory
       );
     });
 
-    it('should fall back to legacy GEMINI.md when MEMORY.md is absent', async () => {
+    it('should fall back to legacy AGENTS.md when MEMORY.md is absent', async () => {
       const memoryDir = await createEmptyDir(path.join(testRootDir, 'memdir3'));
       const legacyFile = await createTestFile(
         path.join(memoryDir, DEFAULT_CONTEXT_FILENAME),
@@ -843,7 +843,7 @@ included directory memory
       expect(result).toContain(legacyFile);
     });
 
-    it('should return empty array when neither MEMORY.md nor GEMINI.md exists', async () => {
+    it('should return empty array when neither MEMORY.md nor AGENTS.md exists', async () => {
       const memoryDir = await createEmptyDir(path.join(testRootDir, 'memdir4'));
 
       const result = await getUserProjectMemoryPaths(memoryDir);
@@ -975,7 +975,7 @@ included directory memory
             const normalizedPath = String(filePath).replace(/\\/g, '/');
             return {
               dev: 1,
-              ino: normalizedPath.endsWith('/GEMINI.md') ? 101 : 202,
+              ino: normalizedPath.endsWith('/AGENTS.md') ? 101 : 202,
             };
           }),
         };
@@ -986,7 +986,7 @@ included directory memory
         const memoryTool = await import('../tools/memoryTool.js');
         const memoryDiscovery = await import('./memoryDiscovery.js');
         vi.mocked(paths.homedir).mockReturnValue('/home/tester');
-        memoryTool.setGeminiMdFilename(['GEMINI.md', 'gemini.md']);
+        memoryTool.setGeminiMdFilename(['AGENTS.md', 'AGENTS.md']);
 
         const result = await memoryDiscovery.getEnvironmentMemoryPaths(
           ['/case-root'],
@@ -994,8 +994,8 @@ included directory memory
         );
 
         expect(result).toEqual([
-          paths.toAbsolutePath('/case-root/GEMINI.md'),
-          paths.toAbsolutePath('/case-root/gemini.md'),
+          paths.toAbsolutePath('/case-root/AGENTS.md'),
+          paths.toAbsolutePath('/case-root/AGENTS.md'),
         ]);
       } finally {
         platformSpy.mockRestore();
