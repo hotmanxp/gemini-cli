@@ -24,6 +24,7 @@ export interface WhisperModelManagerEvents {
 const ALLOWED_MODELS = [
   'ggml-tiny.en.bin',
   'ggml-base.en.bin',
+  'ggml-base.bin',
   'ggml-large-v3-turbo-q5_0.bin',
   'ggml-large-v3-turbo-q8_0.bin',
 ];

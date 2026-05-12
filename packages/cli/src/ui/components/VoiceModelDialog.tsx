@@ -38,6 +38,11 @@ const WHISPER_MODELS = [
     description: 'Balanced speed and accuracy (~142MB)',
   },
   {
+    value: 'ggml-base.bin',
+    label: 'Base (Multi-language)',
+    description: 'Supports Chinese and other languages (~142MB)',
+  },
+  {
     value: 'ggml-large-v3-turbo-q5_0.bin',
     label: 'Large v3 Turbo (Q5_0)',
     description: 'High accuracy, quantized (~547MB)',
