@@ -54,7 +54,7 @@ import {
 import { act } from 'react';
 import { type InitializationResult } from './core/initializer.js';
 import { runNonInteractive } from './nonInteractiveCli.js';
-import { SessionSelector } from './utils/sessionUtils.js';
+import { SessionSelector, SessionError } from './utils/sessionUtils.js';
 
 // Hoisted constants and mocks
 const performance = vi.hoisted(() => ({
