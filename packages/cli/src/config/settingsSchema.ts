@@ -214,18 +214,18 @@ const SETTINGS_SCHEMA = {
         label: 'Default Approval Mode',
         category: 'General',
         requiresRestart: false,
-        default: 'yolo',
+        default: 'default',
         description: oneLine`
           The default approval mode for tool execution.
           'default' prompts for approval, 'auto_edit' auto-approves edit tools,
-          'plan' is read-only mode, and 'yolo' auto-approves all actions.
+          and 'plan' is read-only mode. YOLO mode (auto-approve all actions) can
+          only be enabled via command line (--yolo or --approval-mode=yolo).
         `,
         showInDialog: true,
         options: [
           { value: 'default', label: 'Default' },
           { value: 'auto_edit', label: 'Auto Edit' },
           { value: 'plan', label: 'Plan' },
-          { value: 'yolo', label: 'YOLO' },
         ],
       },
       devtools: {
@@ -429,14 +429,14 @@ const SETTINGS_SCHEMA = {
           'Enable the Topic & Update communication model for reduced chattiness and structured progress reporting.',
         showInDialog: true,
       },
-      allowExternalFileAccess: {
+      logRagSnippets: {
         type: 'boolean',
-        label: 'Allow External File Access',
+        label: 'Log RAG Snippets',
         category: 'General',
         requiresRestart: false,
-        default: true,
+        default: false,
         description:
-          'Allow viewing and editing files outside the project directory. When enabled, directory permission checks are skipped.',
+          'Log full Code Customization (RAG) retrieved snippets to a local file for debugging.',
         showInDialog: true,
       },
     },
@@ -643,7 +643,7 @@ const SETTINGS_SCHEMA = {
         requiresRestart: false,
         default: false,
         description:
-          'Hide the context summary (AGENTS.md, MCP servers) above the input.',
+          'Hide the context summary (GEMINI.md, MCP servers) above the input.',
         showInDialog: true,
       },
       footer: {
@@ -1422,7 +1422,7 @@ const SETTINGS_SCHEMA = {
         requiresRestart: true,
         default: ['.git'] as string[],
         description:
-          'File or directory names that mark the boundary for AGENTS.md discovery. ' +
+          'File or directory names that mark the boundary for GEMINI.md discovery. ' +
           'The upward traversal stops at the first directory containing any of these markers. ' +
           'An empty array disables parent traversal.',
         showInDialog: false,
@@ -1449,7 +1449,7 @@ const SETTINGS_SCHEMA = {
         requiresRestart: false,
         default: false,
         description: oneLine`
-          Controls how /memory reload loads AGENTS.md files.
+          Controls how /memory reload loads GEMINI.md files.
           When true, include directories are scanned; when false, only the current directory is used.
         `,
         showInDialog: true,
@@ -2262,16 +2262,6 @@ const SETTINGS_SCHEMA = {
           'Enables extension loading/unloading within the CLI session.',
         showInDialog: false,
       },
-      jitContext: {
-        type: 'boolean',
-        label: 'JIT Context Loading',
-        category: 'Experimental',
-        requiresRestart: true,
-        default: true,
-        description:
-          'Enable Just-In-Time (JIT) context loading. Defaults to true; set to false to opt out and load all AGENTS.md files into the system instruction up-front.',
-        showInDialog: false,
-      },
       useOSC52Paste: {
         type: 'boolean',
         label: 'Use OSC 52 Paste',
@@ -2401,16 +2391,6 @@ const SETTINGS_SCHEMA = {
             },
           },
         },
-      },
-      memoryV2: {
-        type: 'boolean',
-        label: 'Memory v2',
-        category: 'Experimental',
-        requiresRestart: true,
-        default: true,
-        description:
-          'Disable the built-in save_memory tool and let the main agent persist project context by editing markdown files directly with edit/write_file. Route facts across four tiers: team-shared conventions go to project AGENTS.md files, project-specific personal notes go to the per-project private memory folder (MEMORY.md as index + sibling .md files for detail), and cross-project personal preferences go to the global ~/.gemini/AGENTS.md (the only file under ~/.gemini/ that the agent can edit — settings, credentials, etc. remain off-limits). Set to false to fall back to the legacy save_memory tool.',
-        showInDialog: true,
       },
       stressTestProfile: {
         type: 'boolean',
@@ -3481,7 +3461,11 @@ export const SETTINGS_SCHEMA_DEFINITIONS: Record<
       family: { type: 'string' },
       isPreview: { type: 'boolean' },
       isVisible: { type: 'boolean' },
-      dialogDescription: { type: 'string' },
+      dialogDescription: {
+        type: 'string',
+        description:
+          "A description of the model to display in the model selection dialog. For the 'auto' alias, this value is dynamically generated and any value provided here will be ignored.",
+      },
       features: {
         type: 'object',
         properties: {

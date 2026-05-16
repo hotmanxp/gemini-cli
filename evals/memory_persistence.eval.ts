@@ -11,11 +11,7 @@ import {
   loadConversationRecord,
   SESSION_FILE_PREFIX,
 } from '@google/gemini-cli-core';
-import {
-  evalTest,
-  assertModelHasOutput,
-  checkModelOutputContent,
-} from './test-helper.js';
+import { evalTest, assertModelHasOutput } from './test-helper.js';
 
 function findDir(base: string, name: string): string | null {
   if (!fs.existsSync(base)) return null;
@@ -77,336 +73,13 @@ async function waitForSessionScratchpad(
   return loadLatestSessionRecord(homeDir, sessionId);
 }
 
-describe('save_memory', () => {
-  const TEST_PREFIX = 'Save memory test: ';
-  const rememberingFavoriteColor = "Agent remembers user's favorite color";
-  evalTest('ALWAYS_PASSES', {
-    suiteName: 'default',
-    suiteType: 'behavioral',
-    name: rememberingFavoriteColor,
-    params: {
-      settings: {
-        experimental: { memoryV2: false },
-      },
-    },
-
-    prompt: `remember that my favorite color is  blue.
-  
-    what is my favorite color? tell me that and surround it with $ symbol`,
-    assert: async (rig, result) => {
-      const wasToolCalled = await rig.waitForToolCall('save_memory');
-      expect(wasToolCalled, 'Expected save_memory tool to be called').toBe(
-        true,
-      );
-
-      assertModelHasOutput(result);
-      checkModelOutputContent(result, {
-        expectedContent: 'blue',
-        testName: `${TEST_PREFIX}${rememberingFavoriteColor}`,
-      });
-    },
-  });
-  const rememberingCommandRestrictions = 'Agent remembers command restrictions';
-  evalTest('USUALLY_PASSES', {
-    suiteName: 'default',
-    suiteType: 'behavioral',
-    name: rememberingCommandRestrictions,
-    params: {
-      settings: {
-        experimental: { memoryV2: false },
-      },
-    },
-
-    prompt: `I don't want you to ever run npm commands.`,
-    assert: async (rig, result) => {
-      const wasToolCalled = await rig.waitForToolCall('save_memory');
-      expect(wasToolCalled, 'Expected save_memory tool to be called').toBe(
-        true,
-      );
-
-      assertModelHasOutput(result);
-      checkModelOutputContent(result, {
-        expectedContent: [/not run npm commands|remember|ok/i],
-        testName: `${TEST_PREFIX}${rememberingCommandRestrictions}`,
-      });
-    },
-  });
-
-  const rememberingWorkflow = 'Agent remembers workflow preferences';
-  evalTest('USUALLY_PASSES', {
-    suiteName: 'default',
-    suiteType: 'behavioral',
-    name: rememberingWorkflow,
-    params: {
-      settings: {
-        experimental: { memoryV2: false },
-      },
-    },
-
-    prompt: `I want you to always lint after building.`,
-    assert: async (rig, result) => {
-      const wasToolCalled = await rig.waitForToolCall('save_memory');
-      expect(wasToolCalled, 'Expected save_memory tool to be called').toBe(
-        true,
-      );
-
-      assertModelHasOutput(result);
-      checkModelOutputContent(result, {
-        expectedContent: [/always|ok|remember|will do/i],
-        testName: `${TEST_PREFIX}${rememberingWorkflow}`,
-      });
-    },
-  });
-
-  const ignoringTemporaryInformation =
-    'Agent ignores temporary conversation details';
-  evalTest('ALWAYS_PASSES', {
-    suiteName: 'default',
-    suiteType: 'behavioral',
-    name: ignoringTemporaryInformation,
-    params: {
-      settings: {
-        experimental: { memoryV2: false },
-      },
-    },
-
-    prompt: `I'm going to get a coffee.`,
-    assert: async (rig, result) => {
-      await rig.waitForTelemetryReady();
-      const wasToolCalled = rig
-        .readToolLogs()
-        .some((log) => log.toolRequest.name === 'save_memory');
-      expect(
-        wasToolCalled,
-        'save_memory should not be called for temporary information',
-      ).toBe(false);
-
-      assertModelHasOutput(result);
-      checkModelOutputContent(result, {
-        testName: `${TEST_PREFIX}${ignoringTemporaryInformation}`,
-        forbiddenContent: [/remember|will do/i],
-      });
-    },
-  });
-
-  const rememberingPetName = "Agent remembers user's pet's name";
-  evalTest('ALWAYS_PASSES', {
-    suiteName: 'default',
-    suiteType: 'behavioral',
-    name: rememberingPetName,
-    params: {
-      settings: {
-        experimental: { memoryV2: false },
-      },
-    },
-
-    prompt: `Please remember that my dog's name is Buddy.`,
-    assert: async (rig, result) => {
-      const wasToolCalled = await rig.waitForToolCall('save_memory');
-      expect(wasToolCalled, 'Expected save_memory tool to be called').toBe(
-        true,
-      );
-
-      assertModelHasOutput(result);
-      checkModelOutputContent(result, {
-        expectedContent: [/Buddy/i],
-        testName: `${TEST_PREFIX}${rememberingPetName}`,
-      });
-    },
-  });
-
-  const rememberingCommandAlias = 'Agent remembers custom command aliases';
-  evalTest('ALWAYS_PASSES', {
-    suiteName: 'default',
-    suiteType: 'behavioral',
-    name: rememberingCommandAlias,
-    params: {
-      settings: {
-        experimental: { memoryV2: false },
-      },
-    },
-
-    prompt: `When I say 'start server', you should run 'npm run dev'.`,
-    assert: async (rig, result) => {
-      const wasToolCalled = await rig.waitForToolCall('save_memory');
-      expect(wasToolCalled, 'Expected save_memory tool to be called').toBe(
-        true,
-      );
-
-      assertModelHasOutput(result);
-      checkModelOutputContent(result, {
-        expectedContent: [/npm run dev|start server|ok|remember|will do/i],
-        testName: `${TEST_PREFIX}${rememberingCommandAlias}`,
-      });
-    },
-  });
-
-  const savingDbSchemaLocationAsProjectMemory =
-    'Agent saves workspace database schema location as project memory';
-  evalTest('USUALLY_PASSES', {
-    suiteName: 'default',
-    suiteType: 'behavioral',
-    name: savingDbSchemaLocationAsProjectMemory,
-    params: {
-      settings: {
-        experimental: { memoryV2: false },
-      },
-    },
-    prompt: `The database schema for this workspace is located in \`db/schema.sql\`.`,
-    assert: async (rig, result) => {
-      const wasToolCalled = await rig.waitForToolCall(
-        'save_memory',
-        undefined,
-        (args) => {
-          try {
-            const params = JSON.parse(args);
-            return params.scope === 'project';
-          } catch {
-            return false;
-          }
-        },
-      );
-      expect(
-        wasToolCalled,
-        'Expected save_memory to be called with scope="project" for workspace-specific information',
-      ).toBe(true);
-
-      assertModelHasOutput(result);
-    },
-  });
-
-  const rememberingCodingStyle =
-    "Agent remembers user's coding style preference";
-  evalTest('ALWAYS_PASSES', {
-    suiteName: 'default',
-    suiteType: 'behavioral',
-    name: rememberingCodingStyle,
-    params: {
-      settings: {
-        experimental: { memoryV2: false },
-      },
-    },
-
-    prompt: `I prefer to use tabs instead of spaces for indentation.`,
-    assert: async (rig, result) => {
-      const wasToolCalled = await rig.waitForToolCall('save_memory');
-      expect(wasToolCalled, 'Expected save_memory tool to be called').toBe(
-        true,
-      );
-
-      assertModelHasOutput(result);
-      checkModelOutputContent(result, {
-        expectedContent: [/tabs instead of spaces|ok|remember|will do/i],
-        testName: `${TEST_PREFIX}${rememberingCodingStyle}`,
-      });
-    },
-  });
-
-  const savingBuildArtifactLocationAsProjectMemory =
-    'Agent saves workspace build artifact location as project memory';
-  evalTest('USUALLY_PASSES', {
-    suiteName: 'default',
-    suiteType: 'behavioral',
-    name: savingBuildArtifactLocationAsProjectMemory,
-    params: {
-      settings: {
-        experimental: { memoryV2: false },
-      },
-    },
-    prompt: `In this workspace, build artifacts are stored in the \`dist/artifacts\` directory.`,
-    assert: async (rig, result) => {
-      const wasToolCalled = await rig.waitForToolCall(
-        'save_memory',
-        undefined,
-        (args) => {
-          try {
-            const params = JSON.parse(args);
-            return params.scope === 'project';
-          } catch {
-            return false;
-          }
-        },
-      );
-      expect(
-        wasToolCalled,
-        'Expected save_memory to be called with scope="project" for workspace-specific information',
-      ).toBe(true);
-
-      assertModelHasOutput(result);
-    },
-  });
-
-  const savingMainEntryPointAsProjectMemory =
-    'Agent saves workspace main entry point as project memory';
-  evalTest('USUALLY_PASSES', {
-    suiteName: 'default',
-    suiteType: 'behavioral',
-    name: savingMainEntryPointAsProjectMemory,
-    params: {
-      settings: {
-        experimental: { memoryV2: false },
-      },
-    },
-    prompt: `The main entry point for this workspace is \`src/index.js\`.`,
-    assert: async (rig, result) => {
-      const wasToolCalled = await rig.waitForToolCall(
-        'save_memory',
-        undefined,
-        (args) => {
-          try {
-            const params = JSON.parse(args);
-            return params.scope === 'project';
-          } catch {
-            return false;
-          }
-        },
-      );
-      expect(
-        wasToolCalled,
-        'Expected save_memory to be called with scope="project" for workspace-specific information',
-      ).toBe(true);
-
-      assertModelHasOutput(result);
-    },
-  });
-
-  const rememberingBirthday = "Agent remembers user's birthday";
-  evalTest('ALWAYS_PASSES', {
-    suiteName: 'default',
-    suiteType: 'behavioral',
-    name: rememberingBirthday,
-    params: {
-      settings: {
-        experimental: { memoryV2: false },
-      },
-    },
-
-    prompt: `My birthday is on June 15th.`,
-    assert: async (rig, result) => {
-      const wasToolCalled = await rig.waitForToolCall('save_memory');
-      expect(wasToolCalled, 'Expected save_memory tool to be called').toBe(
-        true,
-      );
-
-      assertModelHasOutput(result);
-      checkModelOutputContent(result, {
-        expectedContent: [/June 15th|ok|remember|will do/i],
-        testName: `${TEST_PREFIX}${rememberingBirthday}`,
-      });
-    },
-  });
-
+describe('memory persistence', () => {
   const proactiveMemoryFromLongSession =
     'Agent saves preference from earlier in conversation history';
   evalTest('USUALLY_PASSES', {
     suiteName: 'default',
     suiteType: 'behavioral',
     name: proactiveMemoryFromLongSession,
-    params: {
-      settings: {
-        experimental: { memoryV2: true },
-      },
-    },
     messages: [
       {
         id: 'msg-1',
@@ -462,14 +135,14 @@ describe('save_memory', () => {
     prompt:
       'Please save any persistent preferences or facts about me from our conversation to memory.',
     assert: async (rig, result) => {
-      // Under experimental.memoryV2, the agent persists memories by
-      // editing markdown files directly with write_file or replace — not via
-      // a save_memory subagent. The user said "I always prefer Vitest over
+      // The agent persists memories by editing markdown files directly with
+      // write_file or replace. The user said
+      // "I always prefer Vitest over
       // Jest for testing in all my projects" — that matches the new
       // cross-project cue phrase ("across all my projects"), so under the
       // 4-tier model the correct destination is the global personal memory
-      // file (~/.gemini/AGENTS.md). It must NOT land in a committed project
-      // AGENTS.md (that tier is for team conventions) or the per-project
+      // file (~/.gemini/GEMINI.md). It must NOT land in a committed project
+      // GEMINI.md (that tier is for team conventions) or the per-project
       // private memory folder (that tier is for project-specific personal
       // notes). The chat history mixes this durable preference with
       // transient debugging chatter, so the eval also verifies the agent
@@ -491,7 +164,7 @@ describe('save_memory', () => {
       });
       expect(
         wroteVitestToGlobal,
-        'Expected the cross-project Vitest preference to be written to the global personal memory file (~/.gemini/AGENTS.md) via write_file or replace',
+        'Expected the cross-project Vitest preference to be written to the global personal memory file (~/.gemini/GEMINI.md) via write_file or replace',
       ).toBe(true);
 
       const leakedToCommittedProject = writeCalls.some((log) => {
@@ -504,7 +177,7 @@ describe('save_memory', () => {
       });
       expect(
         leakedToCommittedProject,
-        'Cross-project Vitest preference must NOT be mirrored into a committed project ./AGENTS.md (that tier is for team-shared conventions only)',
+        'Cross-project Vitest preference must NOT be mirrored into a committed project ./GEMINI.md (that tier is for team-shared conventions only)',
       ).toBe(false);
 
       const leakedToPrivateProject = writeCalls.some((log) => {
@@ -522,17 +195,12 @@ describe('save_memory', () => {
     },
   });
 
-  const memoryV2RoutesTeamConventionsToProjectGemini =
-    'Agent routes team-shared project conventions to ./AGENTS.md';
+  const memoryRoutesTeamConventionsToProjectGemini =
+    'Agent routes team-shared project conventions to ./GEMINI.md';
   evalTest('USUALLY_PASSES', {
     suiteName: 'default',
     suiteType: 'behavioral',
-    name: memoryV2RoutesTeamConventionsToProjectGemini,
-    params: {
-      settings: {
-        experimental: { memoryV2: true },
-      },
-    },
+    name: memoryRoutesTeamConventionsToProjectGemini,
     messages: [
       {
         id: 'msg-1',
@@ -573,12 +241,12 @@ describe('save_memory', () => {
     ],
     prompt: 'Please save the preferences I mentioned earlier to memory.',
     assert: async (rig, result) => {
-      // Under experimental.memoryV2, the prompt enforces an explicit
-      // one-tier-per-fact rule: team-shared project conventions (the team's
-      // test command, project-wide indentation rules) belong in the
-      // committed project-root ./AGENTS.md and must NOT be mirrored or
-      // cross-referenced into the private project memory folder
-      // (~/.gemini/tmp/<hash>/memory/). The global ~/.gemini/AGENTS.md must
+      // The prompt enforces an explicit one-tier-per-fact rule: team-shared
+      // project conventions (the team's test command, project-wide
+      // indentation rules) belong in the committed project-root ./GEMINI.md
+      // and must NOT be mirrored or cross-referenced into the private project
+      // memory folder
+      // (~/.gemini/tmp/<hash>/memory/). The global ~/.gemini/GEMINI.md must
       // never be touched in this mode either.
       await rig.waitForToolCall('write_file').catch(() => {});
       const writeCalls = rig
@@ -599,12 +267,12 @@ describe('save_memory', () => {
 
       expect(
         wroteToProjectRoot(/npm run test/i),
-        'Expected the team test-command convention to be written to the project-root ./AGENTS.md',
+        'Expected the team test-command convention to be written to the project-root ./GEMINI.md',
       ).toBe(true);
 
       expect(
         wroteToProjectRoot(/2[- ]space/i),
-        'Expected the project-wide "2-space indentation" convention to be written to the project-root ./AGENTS.md',
+        'Expected the project-wide "2-space indentation" convention to be written to the project-root ./GEMINI.md',
       ).toBe(true);
 
       const leakedToPrivateMemory = writeCalls.some((log) => {
@@ -628,25 +296,20 @@ describe('save_memory', () => {
       });
       expect(
         leakedToGlobal,
-        'Project preferences must NOT be written to the global ~/.gemini/AGENTS.md',
+        'Project preferences must NOT be written to the global ~/.gemini/GEMINI.md',
       ).toBe(false);
 
       assertModelHasOutput(result);
     },
   });
 
-  const memoryV2SessionScratchpad =
+  const memorySessionScratchpad =
     'Session summary persists memory scratchpad for memory-saving sessions';
   evalTest('USUALLY_PASSES', {
     suiteName: 'default',
     suiteType: 'behavioral',
-    name: memoryV2SessionScratchpad,
+    name: memorySessionScratchpad,
     sessionId: 'memory-scratchpad-eval',
-    params: {
-      settings: {
-        experimental: { memoryV2: true },
-      },
-    },
     messages: [
       {
         id: 'msg-1',
@@ -695,7 +358,7 @@ describe('save_memory', () => {
 
       expect(
         writeCalls.length,
-        'Expected memoryV2 save flow to edit a markdown memory file',
+        'Expected memory save flow to edit a markdown memory file',
       ).toBeGreaterThan(0);
 
       await rig.run({
@@ -732,17 +395,12 @@ describe('save_memory', () => {
     },
   });
 
-  const memoryV2RoutesUserProject =
+  const memoryRoutesUserProject =
     'Agent routes personal-to-user project notes to user-project memory';
   evalTest('USUALLY_PASSES', {
     suiteName: 'default',
     suiteType: 'behavioral',
-    name: memoryV2RoutesUserProject,
-    params: {
-      settings: {
-        experimental: { memoryV2: true },
-      },
-    },
+    name: memoryRoutesUserProject,
     prompt: `Please remember my personal local dev setup for THIS project's Postgres database. This is private to my machine — do NOT commit it to the repo.
 
 Connection details:
@@ -761,13 +419,13 @@ Quirks to remember:
 - The migrations runner sometimes hangs on my machine if I forget step 1; kill it with Ctrl+C and rerun.
 - I keep an extra \`scratch\` schema for ad-hoc experiments — never reference it from project code.`,
     assert: async (rig, result) => {
-      // Under experimental.memoryV2 with the Private Project Memory bullet
-      // surfaced in the prompt, a fact that is project-specific AND
-      // personal-to-the-user (must not be committed) should land in the
-      // private project memory folder under ~/.gemini/tmp/<hash>/memory/. The
-      // detailed note should be written to a sibling markdown file, with
+      // With the Private Project Memory bullet surfaced in the prompt, a fact
+      // that is project-specific AND personal-to-the-user (must not be
+      // committed) should land in the private project memory folder under
+      // ~/.gemini/tmp/<hash>/memory/. The detailed note should be written to a
+      // sibling markdown file, with
       // MEMORY.md updated as the index. It must NOT go to committed
-      // ./AGENTS.md or the global ~/.gemini/AGENTS.md.
+      // ./GEMINI.md or the global ~/.gemini/GEMINI.md.
       await rig.waitForToolCall('write_file').catch(() => {});
       const writeCalls = rig
         .readToolLogs()
@@ -797,7 +455,7 @@ Quirks to remember:
       ).toBe(true);
 
       // Defensive: should NOT have written this private note to the
-      // committed project AGENTS.md or the global AGENTS.md.
+      // committed project GEMINI.md or the global GEMINI.md.
       const leakedToCommittedProject = writeCalls.some((log) => {
         const args = log.toolRequest.args;
         return (
@@ -808,7 +466,7 @@ Quirks to remember:
       });
       expect(
         leakedToCommittedProject,
-        'Personal-to-user note must NOT be written to the committed project AGENTS.md',
+        'Personal-to-user note must NOT be written to the committed project GEMINI.md',
       ).toBe(false);
 
       const leakedToGlobal = writeCalls.some((log) => {
@@ -821,32 +479,27 @@ Quirks to remember:
       });
       expect(
         leakedToGlobal,
-        'Personal-to-user project note must NOT be written to the global ~/.gemini/AGENTS.md',
+        'Personal-to-user project note must NOT be written to the global ~/.gemini/GEMINI.md',
       ).toBe(false);
 
       assertModelHasOutput(result);
     },
   });
 
-  const memoryV2RoutesCrossProjectToGlobal =
-    'Agent routes cross-project personal preferences to ~/.gemini/AGENTS.md';
+  const memoryRoutesCrossProjectToGlobal =
+    'Agent routes cross-project personal preferences to ~/.gemini/GEMINI.md';
   evalTest('USUALLY_PASSES', {
     suiteName: 'default',
     suiteType: 'behavioral',
-    name: memoryV2RoutesCrossProjectToGlobal,
-    params: {
-      settings: {
-        experimental: { memoryV2: true },
-      },
-    },
+    name: memoryRoutesCrossProjectToGlobal,
     prompt:
       'Please remember this about me in general: across all my projects I always prefer Prettier with single quotes and trailing commas, and I always prefer tabs over spaces for indentation. These are my personal coding-style defaults that follow me into every workspace.',
     assert: async (rig, result) => {
-      // Under experimental.memoryV2 with the Global Personal Memory
-      // tier surfaced in the prompt, a fact that explicitly applies to the
-      // user "across all my projects" / "in every workspace" must land in
-      // the global ~/.gemini/AGENTS.md (the cross-project tier). It must
-      // NOT be mirrored into a committed project-root ./AGENTS.md (that
+      // With the Global Personal Memory tier surfaced in the prompt, a fact
+      // that explicitly applies to the user "across all my projects" / "in
+      // every workspace" must land in the global ~/.gemini/GEMINI.md (the
+      // cross-project tier). It must
+      // NOT be mirrored into a committed project-root ./GEMINI.md (that
       // tier is for team-shared conventions) or into the per-project
       // private memory folder (that tier is for project-specific personal
       // notes). Each fact lives in exactly one tier across all four tiers.
@@ -869,12 +522,12 @@ Quirks to remember:
 
       expect(
         wroteToGlobal(/Prettier/i),
-        'Expected the cross-project Prettier preference to be written to the global personal memory file (~/.gemini/AGENTS.md)',
+        'Expected the cross-project Prettier preference to be written to the global personal memory file (~/.gemini/GEMINI.md)',
       ).toBe(true);
 
       expect(
         wroteToGlobal(/tabs/i),
-        'Expected the cross-project "tabs over spaces" preference to be written to the global personal memory file (~/.gemini/AGENTS.md)',
+        'Expected the cross-project "tabs over spaces" preference to be written to the global personal memory file (~/.gemini/GEMINI.md)',
       ).toBe(true);
 
       const leakedToCommittedProject = writeCalls.some((log) => {
@@ -887,7 +540,7 @@ Quirks to remember:
       });
       expect(
         leakedToCommittedProject,
-        'Cross-project personal preferences must NOT be mirrored into a committed project ./AGENTS.md (that tier is for team-shared conventions only)',
+        'Cross-project personal preferences must NOT be mirrored into a committed project ./GEMINI.md (that tier is for team-shared conventions only)',
       ).toBe(false);
 
       const leakedToPrivateProject = writeCalls.some((log) => {
