@@ -237,6 +237,7 @@ export interface GemmaModelRouterSettings {
 export interface ADKSettings {
   agentSessionNoninteractiveEnabled?: boolean;
   agentSessionInteractiveEnabled?: boolean;
+  agentSessionSubagentEnabled?: boolean;
 }
 
 export interface ExtensionSetting {
@@ -914,6 +915,7 @@ export class Config implements McpContext, AgentLoopContext {
   private readonly gemmaModelRouter: GemmaModelRouterSettings;
   private readonly agentSessionNoninteractiveEnabled: boolean;
   private readonly agentSessionInteractiveEnabled: boolean;
+  private readonly agentSessionSubagentEnabled: boolean;
 
   private readonly retryFetchErrors: boolean;
   private readonly maxAttempts: number;
@@ -1366,6 +1368,8 @@ export class Config implements McpContext, AgentLoopContext {
       params.adk?.agentSessionNoninteractiveEnabled ?? false;
     this.agentSessionInteractiveEnabled =
       params.adk?.agentSessionInteractiveEnabled ?? false;
+    this.agentSessionSubagentEnabled =
+      params.adk?.agentSessionSubagentEnabled ?? false;
     this.retryFetchErrors = params.retryFetchErrors ?? true;
     this.maxAttempts = Math.min(
       params.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
@@ -2578,6 +2582,10 @@ export class Config implements McpContext, AgentLoopContext {
 
   isContextManagementEnabled(): boolean {
     return this.contextManagement.enabled;
+  }
+
+  isAgentSessionSubagentEnabled(): boolean {
+    return this.agentSessionSubagentEnabled;
   }
 
   getMemoryBoundaryMarkers(): readonly string[] {
