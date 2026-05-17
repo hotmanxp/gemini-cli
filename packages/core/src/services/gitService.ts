@@ -14,6 +14,34 @@ import {
   type SimpleGit,
   type SimpleGitOptions,
 } from 'simple-git';
+
+// Extended unsafe options not yet in simple-git types
+interface SimpleGitUnsafeOptions {
+  allowUnsafeAlias?: boolean;
+  allowUnsafeAskPass?: boolean;
+  allowUnsafeConfigEnvCount?: boolean;
+  allowUnsafeConfigPaths?: boolean;
+  allowUnsafeCredentialHelper?: boolean;
+  allowUnsafeCustomBinary?: boolean;
+  allowUnsafeDiffExternal?: boolean;
+  allowUnsafeDiffTextConv?: boolean;
+  allowUnsafeEditor?: boolean;
+  allowUnsafeFilter?: boolean;
+  allowUnsafeFsMonitor?: boolean;
+  allowUnsafeGitProxy?: boolean;
+  allowUnsafeGpgProgram?: boolean;
+  allowUnsafeHooksPath?: boolean;
+  allowUnsafeMergeDriver?: boolean;
+  allowUnsafePack?: boolean;
+  allowUnsafePager?: boolean;
+  allowUnsafeProtocolOverride?: boolean;
+  allowUnsafeSshCommand?: boolean;
+  allowUnsafeTemplateDir?: boolean;
+}
+
+interface ExtendedSimpleGitOptions extends SimpleGitOptions {
+  unsafe?: SimpleGitUnsafeOptions;
+}
 import type { Storage } from '../config/storage.js';
 import { debugLogger } from '../utils/debugLogger.js';
 import {
@@ -31,7 +59,7 @@ export const SHADOW_REPO_AUTHOR_EMAIL = 'gemini-cli@google.com';
  * isolated state management tool, and we want to ensure it works reliably
  * regardless of the user's local environment (e.g., PAGER, EDITOR, or SSH settings).
  */
-const SHADOW_REPO_GIT_OPTIONS: Partial<SimpleGitOptions> = {
+const SHADOW_REPO_GIT_OPTIONS: Partial<ExtendedSimpleGitOptions> = {
   unsafe: {
     allowUnsafeAlias: true,
     allowUnsafeAskPass: true,

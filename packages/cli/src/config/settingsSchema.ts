@@ -200,6 +200,16 @@ const SETTINGS_SCHEMA = {
         description: 'The preferred editor to open files in.',
         showInDialog: false,
       },
+      allowExternalFileAccess: {
+        type: 'boolean',
+        label: 'Allow External File Access',
+        category: 'General',
+        requiresRestart: false,
+        default: true,
+        description:
+          'Allow external tools and plugins to access files outside the project directory.',
+        showInDialog: true,
+      },
       vimMode: {
         type: 'boolean',
         label: 'Vim Mode',
@@ -218,13 +228,13 @@ const SETTINGS_SCHEMA = {
         description: oneLine`
           The default approval mode for tool execution.
           'default' prompts for approval, 'auto_edit' auto-approves edit tools,
-          and 'plan' is read-only mode. YOLO mode (auto-approve all actions) can
-          only be enabled via command line (--yolo or --approval-mode=yolo).
+          'yolo' auto-approves all actions, and 'plan' is read-only mode.
         `,
         showInDialog: true,
         options: [
           { value: 'default', label: 'Default' },
           { value: 'auto_edit', label: 'Auto Edit' },
+          { value: 'yolo', label: 'YOLO' },
           { value: 'plan', label: 'Plan' },
         ],
       },
@@ -2143,6 +2153,10 @@ const SETTINGS_SCHEMA = {
               {
                 value: 'ggml-base.en.bin',
                 label: 'Base (EN) - Balanced (~142MB)',
+              },
+              {
+                value: 'ggml-base.bin',
+                label: 'Base (Multi-language) - Supports Chinese (~142MB)',
               },
               {
                 value: 'ggml-large-v3-turbo-q5_0.bin',
