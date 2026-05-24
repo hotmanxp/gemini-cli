@@ -1,0 +1,12 @@
+{
+  "tasks": [
+    {
+      "id": "cda023e0",
+      "cron": "7 * * * *",
+      "prompt": "cd /Users/ethan/code/gemini-cli && git fetch upstream main && NEW_COMMITS=$(git log HEAD..upstream/main --oneline | wc -l) && if [ \"$NEW_COMMITS\" -gt \"0\" ]; then echo \"有 $NEW_COMMITS 个新提交，开始同步...\" && git stash && git merge upstream/main --no-edit && npm run build && npm test && git add -A && git commit -m \"chore: sync upstream/main ($(date '+%Y-%m-%d %H:%M'))\" --no-verify || echo \"合并或构建失败，请检查\"; else echo \"无新提交\"; fi",
+      "createdAt": 1779553392340,
+      "lastFiredAt": 1779599509545,
+      "recurring": true
+    }
+  ]
+}
