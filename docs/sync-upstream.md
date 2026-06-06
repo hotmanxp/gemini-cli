@@ -219,12 +219,12 @@ PARTIAL** before the merge; the merge was conflict-free.
 
 #### Verification (4-phase, post-merge, **no unit tests**)
 
-| Phase                  | Result                                               |
-| ---------------------- | ---------------------------------------------------- |
-| 1. `npm run build`     | ok, all packages built                               |
-| 2. `npm run typecheck` | 0 errors across 5 workspaces                         |
-| 3. TUI smoke           | skipped this run (MINIMAX_KEY not set in this shell) |
-| 4. Debug log scan      | n/a (no TUI session run)                             |
+| Phase                  | Result                                                                                                                                                                         |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1. `npm run build`     | ok, all packages built                                                                                                                                                         |
+| 2. `npm run typecheck` | 0 errors across 5 workspaces                                                                                                                                                   |
+| 3. TUI smoke           | ok — `MiniMax-M2.7-highspeed` responded "Ok." to `say ok and stop`, 22854 input / 23 output / 20 thoughts tokens, 0 errors in `~/.gemini/tmp/gemini-cli/chats/session-*.jsonl` |
+| 4. Debug log scan      | clean — 0 errors, 0 anomalies, 1 user message + 1 gemini response in the session log                                                                                           |
 
 **Pre-existing unit-test status (not run, NOT part of sync verification):** The
 40 failing tests on the post-merge commit are identical to the failures on
