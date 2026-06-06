@@ -70,3 +70,7 @@ temp_agents/
 conductor/
 
 .agent_working_dir
+
+# Codegraph local runtime files
+.codegraph/daemon.pid
+.codegraph/daemon.pid.lock
