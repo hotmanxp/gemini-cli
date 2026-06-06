@@ -2356,7 +2356,7 @@ const SETTINGS_SCHEMA = {
         label: 'Dynamic Model Configuration',
         category: 'Experimental',
         requiresRestart: true,
-        default: false,
+        default: true,
         description:
           'Enable dynamic model configuration (definitions, resolutions, and chains) via settings.',
         showInDialog: false,

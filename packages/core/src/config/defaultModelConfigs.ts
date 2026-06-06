@@ -131,6 +131,18 @@ export const DEFAULT_MODEL_CONFIGS: ModelConfigServiceConfig = {
         model: 'gemma-4-26b-a4b-it',
       },
     },
+    'MiniMax-M3': {
+      extends: 'chat-base-3',
+      modelConfig: {
+        model: 'MiniMax-M3',
+      },
+    },
+    'MiniMax-M2.7-highspeed': {
+      extends: 'base',
+      modelConfig: {
+        model: 'MiniMax-M2.7-highspeed',
+      },
+    },
 
     // Bases for the internal model configs.
     'gemini-2.5-flash-base': {

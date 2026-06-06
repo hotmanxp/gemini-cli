@@ -3442,8 +3442,8 @@
         "dynamicModelConfiguration": {
           "title": "Dynamic Model Configuration",
           "description": "Enable dynamic model configuration (definitions, resolutions, and chains) via settings.",
-          "markdownDescription": "Enable dynamic model configuration (definitions, resolutions, and chains) via settings.\n\n- Category: `Experimental`\n- Requires restart: `yes`\n- Default: `false`",
-          "default": false,
+          "markdownDescription": "Enable dynamic model configuration (definitions, resolutions, and chains) via settings.\n\n- Category: `Experimental`\n- Requires restart: `yes`\n- Default: `true`",
+          "default": true,
           "type": "boolean"
         },
         "gemmaModelRouter": {

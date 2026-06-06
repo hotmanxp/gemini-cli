@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import type { Config } from '../config/config.js';
 import {
   DEFAULT_GEMINI_FLASH_LITE_MODEL,
   DEFAULT_GEMINI_FLASH_MODEL,
@@ -35,7 +36,31 @@ export function tokenLimit(model: Model): TokenCount {
       return 1_048_576;
     case 'MiniMax-M2.7-highspeed':
       return 204_800;
+    case 'MiniMax-M3':
+      return 1_048_576; // 1M context, multimodal
     default:
       return DEFAULT_TOKEN_LIMIT;
   }
+}
+
+/**
+ * Resolves the input context window for `model`. When a `Config` is provided
+ * and the dynamic model configuration experiment is enabled, the registry
+ * (`ModelConfigService.modelDefinitions[model].contextWindow`) is consulted
+ * first; this is the canonical, model-self-described source of truth.
+ *
+ * Falls back to the legacy hard-coded lookup for the legacy path or models
+ * without a `contextWindow` registered.
+ */
+export function getTokenLimitFromConfig(
+  model: Model,
+  config?: Config,
+): TokenCount {
+  if (config?.getExperimentalDynamicModelConfiguration?.() === true) {
+    const definition = config.modelConfigService?.getModelDefinition(model);
+    if (definition?.contextWindow && definition.contextWindow > 0) {
+      return definition.contextWindow;
+    }
+  }
+  return tokenLimit(model);
 }

@@ -388,8 +388,7 @@ export async function createContentGenerator(
 
     // MiniMax API Key authentication (OpenAI-compatible)
     if (config.authType === AuthType.USE_MINIMAX) {
-      const minimaxModel =
-        process.env['MINIMAX_MODEL'] || 'MiniMax-M2.7-highspeed';
+      const minimaxModel = process.env['MINIMAX_MODEL'] || 'MiniMax-M3';
       const minimaxConfig: OpenAIContentGeneratorConfig = {
         ...config,
         authType: AuthType.USE_MINIMAX,

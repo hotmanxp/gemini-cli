@@ -23,6 +23,7 @@ export interface IModelConfigService {
         family?: string;
         isPreview?: boolean;
         displayName?: string;
+        contextWindow?: number;
         features?: {
           thinking?: boolean;
           multimodalToolUse?: boolean;
@@ -533,7 +534,7 @@ export function supportsMultimodalFunctionResponse(
         ?.multimodalToolUse === true
     );
   }
-  return model.startsWith('gemini-3-');
+  return model.startsWith('gemini-3-') || model === 'MiniMax-M3';
 }
 
 /**

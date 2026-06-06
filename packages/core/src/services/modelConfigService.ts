@@ -70,6 +70,11 @@ export interface ModelDefinition {
   isVisible?: boolean;
   /** A short description of the model for the dialog. */
   dialogDescription?: string;
+  /**
+   * The model's input context window size, in tokens. When set, this is the
+   * preferred source for `tokenLimit(model)` lookups in the dynamic path.
+   */
+  contextWindow?: number;
   features?: {
     // Whether the model supports thinking.
     thinking?: boolean;

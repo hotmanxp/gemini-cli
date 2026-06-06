@@ -1143,7 +1143,7 @@ export class Config implements McpContext, AgentLoopContext {
     this.disabledSkills = params.disabledSkills ?? [];
     this.adminSkillsEnabled = params.adminSkillsEnabled ?? true;
     this.modelAvailabilityService = new ModelAvailabilityService();
-    this.dynamicModelConfiguration = params.dynamicModelConfiguration ?? false;
+    this.dynamicModelConfiguration = params.dynamicModelConfiguration ?? true;
 
     // HACK: The settings loading logic doesn't currently merge the default
     // generation config with the user's settings. This means if a user provides

@@ -387,6 +387,16 @@ describe('supportsMultimodalFunctionResponse', () => {
     expect(supportsMultimodalFunctionResponse('gemini-3-pro')).toBe(true);
   });
 
+  it('should return true for MiniMax-M3 model', () => {
+    expect(supportsMultimodalFunctionResponse('MiniMax-M3')).toBe(true);
+  });
+
+  it('should return false for MiniMax-M2.7-highspeed', () => {
+    expect(supportsMultimodalFunctionResponse('MiniMax-M2.7-highspeed')).toBe(
+      false,
+    );
+  });
+
   it('should return false for gemini-2 models', () => {
     expect(supportsMultimodalFunctionResponse('gemini-2.5-pro')).toBe(false);
     expect(supportsMultimodalFunctionResponse('gemini-2.5-flash')).toBe(false);
