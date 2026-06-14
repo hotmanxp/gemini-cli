@@ -33,6 +33,8 @@ import type { LlmRole } from '../telemetry/llmRole.js';
 // Static imports to avoid circular dependency and dynamic import issues
 import { createOpenAIContentGenerator } from './openaiContentGenerator/index.js';
 import type { OpenAIContentGeneratorConfig } from './openaiContentGenerator/types.js';
+import { ModelMappingContentGenerator } from './modelMappingContentGenerator.js';
+import { CCPA_AI_MODEL_MAPPINGS } from '../config/models.js';
 
 /**
  * Interface abstracting the core functionalities for generating content and counting tokens.
@@ -290,11 +292,14 @@ export async function createContentGenerator(
     ) {
       const httpOptions = { headers: baseHeaders };
       return new LoggingContentGenerator(
-        await createCodeAssistContentGenerator(
-          httpOptions,
-          config.authType,
-          gcConfig,
-          sessionId,
+        new ModelMappingContentGenerator(
+          await createCodeAssistContentGenerator(
+            httpOptions,
+            config.authType,
+            gcConfig,
+            sessionId,
+          ),
+          CCPA_AI_MODEL_MAPPINGS,
         ),
         gcConfig,
       );

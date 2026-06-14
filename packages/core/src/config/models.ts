@@ -575,3 +575,7 @@ export function isActiveModel(
     );
   }
 }
+
+export const CCPA_AI_MODEL_MAPPINGS: Record<string, string> = {
+  [DEFAULT_GEMINI_3_5_FLASH_MODEL]: SECONDARY_GEMINI_3_5_FLASH_MODEL,
+};
