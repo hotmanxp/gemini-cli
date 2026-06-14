@@ -511,10 +511,13 @@ describe('SettingsDialog', () => {
         expect(setValueSpy).toHaveBeenCalled();
       });
 
+      // First setting in dialog is now general.allowExternalFileAccess
+      // (upstream SettingsDialog reordered; vimMode is no longer first).
+      // Test the first setting toggle instead of vimMode.
       expect(setValueSpy).toHaveBeenCalledWith(
         SettingScope.User,
-        'general.vimMode',
-        true,
+        'general.allowExternalFileAccess',
+        false,
       );
 
       unmount();
@@ -685,10 +688,11 @@ describe('SettingsDialog', () => {
       });
       await waitUntilReady();
 
+      // First setting in dialog is now general.allowExternalFileAccess
       expect(setValueSpy).toHaveBeenCalledWith(
         SettingScope.User,
-        'general.vimMode',
-        true,
+        'general.allowExternalFileAccess',
+        false,
       );
 
       unmount();
@@ -717,10 +721,11 @@ describe('SettingsDialog', () => {
       });
       await waitUntilReady();
 
+      // First setting in dialog is now general.allowExternalFileAccess
       expect(setValueSpy).toHaveBeenCalledWith(
         SettingScope.Workspace,
-        'general.vimMode',
-        true,
+        'general.allowExternalFileAccess',
+        false,
       );
 
       unmount();

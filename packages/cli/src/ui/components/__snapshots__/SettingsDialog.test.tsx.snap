@@ -10,7 +10,10 @@ exports[`SettingsDialog > Initial Rendering > should render settings list with v
 │ ╰──────────────────────────────────────────────────────────────────────────────────────────────╯ │
 │                                                                                                  │
 │  ▲                                                                                               │
-│  ● Vim Mode                                                                               false  │
+│  ● Allow External File Access                                                              true  │
+│    Allow external tools and plugins to access files outside the project directory.               │
+│                                                                                                  │
+│    Vim Mode                                                                               false  │
 │    Enable Vim keybindings                                                                        │
 │                                                                                                  │
 │    Default Approval Mode                                                                Default  │
@@ -30,9 +33,6 @@ exports[`SettingsDialog > Initial Rendering > should render settings list with v
 │                                                                                                  │
 │    Plan Directory                                                                     undefined  │
 │    The directory where planning artifacts are stored. If not specified, defaults t…              │
-│                                                                                                  │
-│    Plan Model Routing                                                                      true  │
-│    Automatically switch between Pro and Flash models based on Plan Mode status. Uses Pr…         │
 │                                                                                                  │
 │  ▼                                                                                               │
 │                                                                                                  │
@@ -54,8 +54,8 @@ exports[`SettingsDialog > Initial Rendering > should render the bottom border co
 │ ╭──────────────────────────────────────────────────────────────────────────────────────────────╮ │
 │ ╰─Search to filter─────────────────────────────────────────────────────────────────────────────╯ │
 │  ▲                                                                                               │
-│  ● Vim Mode                                                                               false  │
-│  ▼ Enable Vim keybindings                                                                        │
+│  ● Allow External File Access                                                              true  │
+│  ▼ Allow external tools and plugins to access files outside the project directory.               │
 │                                                                                                  │
 │    Apply To                                                                                      │
 │  ● User Settings                                                                                 │
@@ -74,7 +74,10 @@ exports[`SettingsDialog > Snapshot Tests > should render 'accessibility settings
 │ ╰──────────────────────────────────────────────────────────────────────────────────────────────╯ │
 │                                                                                                  │
 │  ▲                                                                                               │
-│  ● Vim Mode                                                                               true*  │
+│  ● Allow External File Access                                                              true  │
+│    Allow external tools and plugins to access files outside the project directory.               │
+│                                                                                                  │
+│    Vim Mode                                                                               true*  │
 │    Enable Vim keybindings                                                                        │
 │                                                                                                  │
 │    Default Approval Mode                                                                Default  │
@@ -94,9 +97,6 @@ exports[`SettingsDialog > Snapshot Tests > should render 'accessibility settings
 │                                                                                                  │
 │    Plan Directory                                                                     undefined  │
 │    The directory where planning artifacts are stored. If not specified, defaults t…              │
-│                                                                                                  │
-│    Plan Model Routing                                                                      true  │
-│    Automatically switch between Pro and Flash models based on Plan Mode status. Uses Pr…         │
 │                                                                                                  │
 │  ▼                                                                                               │
 │                                                                                                  │
@@ -120,7 +120,10 @@ exports[`SettingsDialog > Snapshot Tests > should render 'all boolean settings d
 │ ╰──────────────────────────────────────────────────────────────────────────────────────────────╯ │
 │                                                                                                  │
 │  ▲                                                                                               │
-│  ● Vim Mode                                                                              false*  │
+│  ● Allow External File Access                                                              true  │
+│    Allow external tools and plugins to access files outside the project directory.               │
+│                                                                                                  │
+│    Vim Mode                                                                              false*  │
 │    Enable Vim keybindings                                                                        │
 │                                                                                                  │
 │    Default Approval Mode                                                                Default  │
@@ -140,9 +143,6 @@ exports[`SettingsDialog > Snapshot Tests > should render 'all boolean settings d
 │                                                                                                  │
 │    Plan Directory                                                                     undefined  │
 │    The directory where planning artifacts are stored. If not specified, defaults t…              │
-│                                                                                                  │
-│    Plan Model Routing                                                                      true  │
-│    Automatically switch between Pro and Flash models based on Plan Mode status. Uses Pr…         │
 │                                                                                                  │
 │  ▼                                                                                               │
 │                                                                                                  │
@@ -166,7 +166,10 @@ exports[`SettingsDialog > Snapshot Tests > should render 'default state' correct
 │ ╰──────────────────────────────────────────────────────────────────────────────────────────────╯ │
 │                                                                                                  │
 │  ▲                                                                                               │
-│  ● Vim Mode                                                                               false  │
+│  ● Allow External File Access                                                              true  │
+│    Allow external tools and plugins to access files outside the project directory.               │
+│                                                                                                  │
+│    Vim Mode                                                                               false  │
 │    Enable Vim keybindings                                                                        │
 │                                                                                                  │
 │    Default Approval Mode                                                                Default  │
@@ -186,9 +189,6 @@ exports[`SettingsDialog > Snapshot Tests > should render 'default state' correct
 │                                                                                                  │
 │    Plan Directory                                                                     undefined  │
 │    The directory where planning artifacts are stored. If not specified, defaults t…              │
-│                                                                                                  │
-│    Plan Model Routing                                                                      true  │
-│    Automatically switch between Pro and Flash models based on Plan Mode status. Uses Pr…         │
 │                                                                                                  │
 │  ▼                                                                                               │
 │                                                                                                  │
@@ -212,7 +212,10 @@ exports[`SettingsDialog > Snapshot Tests > should render 'file filtering setting
 │ ╰──────────────────────────────────────────────────────────────────────────────────────────────╯ │
 │                                                                                                  │
 │  ▲                                                                                               │
-│  ● Vim Mode                                                                               false  │
+│  ● Allow External File Access                                                              true  │
+│    Allow external tools and plugins to access files outside the project directory.               │
+│                                                                                                  │
+│    Vim Mode                                                                               false  │
 │    Enable Vim keybindings                                                                        │
 │                                                                                                  │
 │    Default Approval Mode                                                                Default  │
@@ -232,9 +235,6 @@ exports[`SettingsDialog > Snapshot Tests > should render 'file filtering setting
 │                                                                                                  │
 │    Plan Directory                                                                     undefined  │
 │    The directory where planning artifacts are stored. If not specified, defaults t…              │
-│                                                                                                  │
-│    Plan Model Routing                                                                      true  │
-│    Automatically switch between Pro and Flash models based on Plan Mode status. Uses Pr…         │
 │                                                                                                  │
 │  ▼                                                                                               │
 │                                                                                                  │
@@ -258,6 +258,9 @@ exports[`SettingsDialog > Snapshot Tests > should render 'focused on scope selec
 │ ╰──────────────────────────────────────────────────────────────────────────────────────────────╯ │
 │                                                                                                  │
 │  ▲                                                                                               │
+│    Allow External File Access                                                              true  │
+│    Allow external tools and plugins to access files outside the project directory.               │
+│                                                                                                  │
 │    Vim Mode                                                                               false  │
 │    Enable Vim keybindings                                                                        │
 │                                                                                                  │
@@ -278,9 +281,6 @@ exports[`SettingsDialog > Snapshot Tests > should render 'focused on scope selec
 │                                                                                                  │
 │    Plan Directory                                                                     undefined  │
 │    The directory where planning artifacts are stored. If not specified, defaults t…              │
-│                                                                                                  │
-│    Plan Model Routing                                                                      true  │
-│    Automatically switch between Pro and Flash models based on Plan Mode status. Uses Pr…         │
 │                                                                                                  │
 │  ▼                                                                                               │
 │                                                                                                  │
@@ -304,7 +304,10 @@ exports[`SettingsDialog > Snapshot Tests > should render 'mixed boolean and numb
 │ ╰──────────────────────────────────────────────────────────────────────────────────────────────╯ │
 │                                                                                                  │
 │  ▲                                                                                               │
-│  ● Vim Mode                                                                              false*  │
+│  ● Allow External File Access                                                              true  │
+│    Allow external tools and plugins to access files outside the project directory.               │
+│                                                                                                  │
+│    Vim Mode                                                                              false*  │
 │    Enable Vim keybindings                                                                        │
 │                                                                                                  │
 │    Default Approval Mode                                                                Default  │
@@ -324,9 +327,6 @@ exports[`SettingsDialog > Snapshot Tests > should render 'mixed boolean and numb
 │                                                                                                  │
 │    Plan Directory                                                                     undefined  │
 │    The directory where planning artifacts are stored. If not specified, defaults t…              │
-│                                                                                                  │
-│    Plan Model Routing                                                                      true  │
-│    Automatically switch between Pro and Flash models based on Plan Mode status. Uses Pr…         │
 │                                                                                                  │
 │  ▼                                                                                               │
 │                                                                                                  │
@@ -350,7 +350,10 @@ exports[`SettingsDialog > Snapshot Tests > should render 'tools and security set
 │ ╰──────────────────────────────────────────────────────────────────────────────────────────────╯ │
 │                                                                                                  │
 │  ▲                                                                                               │
-│  ● Vim Mode                                                                               false  │
+│  ● Allow External File Access                                                              true  │
+│    Allow external tools and plugins to access files outside the project directory.               │
+│                                                                                                  │
+│    Vim Mode                                                                               false  │
 │    Enable Vim keybindings                                                                        │
 │                                                                                                  │
 │    Default Approval Mode                                                                Default  │
@@ -370,9 +373,6 @@ exports[`SettingsDialog > Snapshot Tests > should render 'tools and security set
 │                                                                                                  │
 │    Plan Directory                                                                     undefined  │
 │    The directory where planning artifacts are stored. If not specified, defaults t…              │
-│                                                                                                  │
-│    Plan Model Routing                                                                      true  │
-│    Automatically switch between Pro and Flash models based on Plan Mode status. Uses Pr…         │
 │                                                                                                  │
 │  ▼                                                                                               │
 │                                                                                                  │
@@ -396,7 +396,10 @@ exports[`SettingsDialog > Snapshot Tests > should render 'various boolean settin
 │ ╰──────────────────────────────────────────────────────────────────────────────────────────────╯ │
 │                                                                                                  │
 │  ▲                                                                                               │
-│  ● Vim Mode                                                                               true*  │
+│  ● Allow External File Access                                                              true  │
+│    Allow external tools and plugins to access files outside the project directory.               │
+│                                                                                                  │
+│    Vim Mode                                                                               true*  │
 │    Enable Vim keybindings                                                                        │
 │                                                                                                  │
 │    Default Approval Mode                                                                Default  │
@@ -416,9 +419,6 @@ exports[`SettingsDialog > Snapshot Tests > should render 'various boolean settin
 │                                                                                                  │
 │    Plan Directory                                                                     undefined  │
 │    The directory where planning artifacts are stored. If not specified, defaults t…              │
-│                                                                                                  │
-│    Plan Model Routing                                                                      true  │
-│    Automatically switch between Pro and Flash models based on Plan Mode status. Uses Pr…         │
 │                                                                                                  │
 │  ▼                                                                                               │
 │                                                                                                  │

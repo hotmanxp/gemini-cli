@@ -29,16 +29,16 @@
     <rect x="27" y="119" width="9" height="17" fill="#005f00" />
     <text x="27" y="121" fill="#d7ffd7" textLength="9" lengthAdjust="spacingAndGlyphs">●</text>
     <rect x="36" y="119" width="9" height="17" fill="#005f00" />
-    <rect x="45" y="119" width="72" height="17" fill="#005f00" />
-    <text x="45" y="121" fill="#d7ffd7" textLength="72" lengthAdjust="spacingAndGlyphs">Vim Mode</text>
-    <rect x="117" y="119" width="711" height="17" fill="#005f00" />
-    <rect x="828" y="119" width="45" height="17" fill="#005f00" />
-    <text x="828" y="121" fill="#d7ffd7" textLength="45" lengthAdjust="spacingAndGlyphs">false</text>
+    <rect x="45" y="119" width="234" height="17" fill="#005f00" />
+    <text x="45" y="121" fill="#d7ffd7" textLength="234" lengthAdjust="spacingAndGlyphs">Allow External File Access</text>
+    <rect x="279" y="119" width="558" height="17" fill="#005f00" />
+    <rect x="837" y="119" width="36" height="17" fill="#005f00" />
+    <text x="837" y="121" fill="#d7ffd7" textLength="36" lengthAdjust="spacingAndGlyphs">true</text>
     <text x="891" y="121" fill="#878787" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
     <text x="0" y="138" fill="#878787" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
     <text x="27" y="138" fill="#afafaf" textLength="9" lengthAdjust="spacingAndGlyphs">▼</text>
-    <rect x="45" y="136" width="198" height="17" fill="#005f00" />
-    <text x="45" y="138" fill="#afafaf" textLength="198" lengthAdjust="spacingAndGlyphs">Enable Vim keybindings</text>
+    <rect x="45" y="136" width="711" height="17" fill="#005f00" />
+    <text x="45" y="138" fill="#afafaf" textLength="711" lengthAdjust="spacingAndGlyphs">Allow external tools and plugins to access files outside the project directory.</text>
     <text x="891" y="138" fill="#878787" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
     <text x="0" y="155" fill="#878787" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
     <text x="891" y="155" fill="#878787" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
