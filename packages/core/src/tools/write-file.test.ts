@@ -83,7 +83,7 @@ const mockConfigInternal = {
   getBaseLlmClient: vi.fn(), // Initialize as a plain mock function
   getFileSystemService: () => fsService,
   getIdeMode: vi.fn(() => false),
-  getWorkspaceContext: () => new WorkspaceContext(rootDir, [plansDir]),
+  getWorkspaceContext: () => new WorkspaceContext(rootDir, [plansDir], false),
   getApiKey: () => 'test-key',
   getModel: () => 'test-model',
   getSandbox: () => false,
@@ -145,7 +145,7 @@ describe('WriteFileTool', () => {
       fs.mkdirSync(plansDir, { recursive: true });
     }
 
-    const workspaceContext = new WorkspaceContext(rootDir, [plansDir]);
+    const workspaceContext = new WorkspaceContext(rootDir, [plansDir], false);
     const mockStorage = {
       getProjectTempDir: vi.fn().mockReturnValue('/tmp/project'),
     };

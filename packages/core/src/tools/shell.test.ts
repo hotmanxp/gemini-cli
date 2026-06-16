@@ -127,7 +127,7 @@ describe('ShellTool', () => {
       getSummarizeToolOutputConfig: vi.fn().mockReturnValue(undefined),
       getWorkspaceContext: vi
         .fn()
-        .mockReturnValue(new WorkspaceContext(tempRootDir)),
+        .mockReturnValue(new WorkspaceContext(tempRootDir, [], false)),
       storage: {
         getProjectTempDir: vi.fn().mockReturnValue('/tmp/project'),
       },

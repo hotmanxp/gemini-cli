@@ -46,7 +46,7 @@ describe('LSTool', () => {
     mockConfig = {
       getTargetDir: () => tempRootDir,
       getWorkspaceContext: () =>
-        new WorkspaceContext(tempRootDir, [tempSecondaryDir]),
+        new WorkspaceContext(tempRootDir, [tempSecondaryDir], false),
       getFileService: () => new FileDiscoveryService(tempRootDir),
       getFileFilteringOptions: () => ({
         respectGitIgnore: true,

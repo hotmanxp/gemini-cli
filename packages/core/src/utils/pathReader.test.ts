@@ -24,16 +24,31 @@ const createMockConfig = (
     respectGitIgnore?: boolean;
     respectGeminiIgnore?: boolean;
   } = {},
+  options: {
+    allowExternalFileAccess?: boolean;
+  } = {},
 ): Config => {
   const { respectGitIgnore = true, respectGeminiIgnore = true } = fileFiltering;
-  const workspace = new WorkspaceContext(cwd, otherDirs);
+  const { allowExternalFileAccess = false } = options;
+  const workspace = new WorkspaceContext(
+    cwd,
+    otherDirs,
+    allowExternalFileAccess,
+  );
   const fileSystemService = new StandardFileSystemService();
+  // Fallback passthrough so security tests can exercise pathReader without
+  // crafting a custom FileDiscoveryService for every case.
+  const fileService: FileDiscoveryService =
+    mockFileService ??
+    ({
+      filterFiles: (files: string[]) => files,
+    } as unknown as FileDiscoveryService);
   return {
     getWorkspaceContext: () => workspace,
     // TargetDir is used by processSingleFileContent to generate relative paths in errors/output
     getTargetDir: () => cwd,
     getFileSystemService: () => fileSystemService,
-    getFileService: () => mockFileService,
+    getFileService: () => fileService,
     getFileFilteringRespectGitIgnore: () => respectGitIgnore,
     getFileFilteringRespectGeminiIgnore: () => respectGeminiIgnore,
   } as unknown as Config;
